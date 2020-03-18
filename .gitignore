@@ -1,0 +1,14 @@
+### Some MNT prefixes to ignore
+###############################
+
+## Temp or old versions of files that still reference
+z*
+
+## MNT exploration or reference scripts/graphics
+side-*
+ref_*
+pdfs/exploration/*
+
+## Logs
+logs/*
+rdas
