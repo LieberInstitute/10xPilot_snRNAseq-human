@@ -12,3 +12,7 @@ pdfs/exploration/*
 ## Logs
 logs/*
 rdas
+
+## Misc
+R_batchsub.sh
+.RData
