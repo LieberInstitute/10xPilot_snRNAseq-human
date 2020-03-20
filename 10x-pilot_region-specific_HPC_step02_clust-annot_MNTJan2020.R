@@ -215,10 +215,12 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  # Added MNT 20Mar2020
+  'Tcell' = c('TRAC','SKAP1','CCL5')
 )
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_Feb2020.pdf",
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/zold_regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_Feb2020.pdf",
     height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -276,6 +278,33 @@ save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda")
 
 
+
+### MNT 20Mar2020 === === ===
+# Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+table(sce.hpc$cellType)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
+# Then rename "Ambig.glial" to "Tcell" (26 nuclei)
+#     (A posteriori - from downstream marker exploration)
+sce.hpc.temp <- sce.hpc
+sce.hpc.temp$cellType <- droplevels(sce.hpc.temp$cellType)
+sce.hpc.temp$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc.temp$cellType))
+
+
+pdf("pdfs/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.hpc.temp, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:7], length(markers.mathys.custom[[i]])))
+  )
+}
+dev.off()
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 

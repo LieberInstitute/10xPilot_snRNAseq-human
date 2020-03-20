@@ -222,7 +222,7 @@ markers.mathys.custom = list(
   'endothelial' = c('CLDN5', 'FLT1', 'VTN')
 )
 
-pdf("pdfs/regionSpecific_DLPFC-n2_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=8)
+pdf("pdfs/zold_regionSpecific_DLPFC-n2_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
@@ -261,6 +261,30 @@ sce.dlpfc$cellType <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedClus
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda")
 
+
+
+### MNT 20Mar2020 === === ===
+  # Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+table(sce.dlpfc$cellType)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.dlpfc <- sce.dlpfc[ ,sce.dlpfc$cellType != "Ambig.lowNtrxts"]
+sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
+
+
+pdf("pdfs/regionSpecific_DLPFC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]])))
+  )
+}
+dev.off()
 
 
     ## -> proceed to 'step03_markerDetxn-analyses[...].R'
