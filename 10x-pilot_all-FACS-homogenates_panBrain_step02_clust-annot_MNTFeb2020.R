@@ -307,6 +307,110 @@ save(sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRef
 
 
 
+### MNT 20Mar2020 === === ===
+  # Add region-specific annotations
+
+load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
+    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+
+## Amyg
+load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy)
+
+## DLPFC
+load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
+    rm(chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc)
+
+## HPC
+load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+    rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc)
+# Change an annotation
+sce.hpc$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc$cellType))
+
+## NAc
+load("rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
+    rm(chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac)
+
+## sACC
+load("rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
+    rm(chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc)
+
+
+regions <- list(sce.amy, sce.dlpfc, sce.hpc, sce.nac, sce.sacc)
+
+BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
+
+sce.all.n12$cellType.RS <- NA
+
+for(r in regions){
+  matchTo <- paste0(colnames(r),".",r$sample)
+  BC.sample.sub <- BC.sample.ii %in% matchTo
+  sce.all.n12$cellType.RS[BC.sample.sub] <- as.character(r$cellType[match(BC.sample.ii[BC.sample.sub], matchTo)])
+}
+
+table(sce.all.n12$cellType.RS)
+sce.all.n12$cellType.RS <- factor(sce.all.n12$cellType.RS)
+table(sce.all.n12$cellType.RS)
+
+
+# Getting rid of sub-cell types in sACC sample and the pan-brain assignments to compare
+table(ss(as.character(sce.all.n12$cellType.RS),"\\.",1) ==
+        ss(as.character(sce.all.n12$cellType),"\\.",1))
+    # FALSE  TRUE
+    #   836 33234       - 33234/(836+ 33234) = 97.5% congruence
+
+# Region specific
+table(ss(as.character(sce.all.n12$cellType.RS),"\\.",1))
+    #Ambig Astro Excit Inhib Micro Oligo   OPC Tcell
+    #  414  3863  2927  2662  2987 18664  2527    26
+
+table( ss(as.character(sce.all.n12$cellType),"\\.",1))
+    #Ambig Astro Excit Inhib Micro Oligo   OPC
+    #   32  3828  2848  3110  3077 18614  2561
+
+
+## Pretty good - let's save
+save(sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda")
+
+
+
+
+## A bit on "Ambig.hiVCAN"
+CTids <- splitit(sce.all.n12$cellType)
+sapply(CTids, function(x){quantile(sce.all.n12[ ,x]$sum)})
+    # Ambig.hiVCAN  Astro.1  Astro.2 Excit.1  Excit.2  Excit.3 Excit.4   Excit.5
+    # 0%         400.00   640.00   299.00    2919   4331.0    981.0    6934   4625.00
+    # 25%        813.75  5109.25   661.75   32795  31245.5  28993.0   12159  31875.00
+    # 50%       1063.00  7567.00   859.00   49699  41311.0  40330.5   18112  46351.00
+    # 75%       2864.25 11068.50  1150.50   67486  56835.0  58606.5   33203  61969.75
+    # 100%     25711.00 34702.00 18940.00  196431 127499.0 165583.0   68229 118374.00
+    # Excit.6 Excit.7  Excit.8   Inhib.1 Inhib.2 Inhib.3  Inhib.4  Inhib.5
+    # 0%      787.00    4507  3641.00    101.00     781  2841.0  1569.00   822.00
+    # 25%    9955.75   32680  7541.00    213.25   29238 26476.0 14009.25 24697.25
+    # 50%   19465.50   43737 10025.00  17730.50   38642 35681.0 22541.50 33093.50
+    # 75%   46144.50   53954 12912.25  30153.50   50639 44494.5 33442.75 43756.00
+    # 100% 150461.00  100139 23657.00 110271.00  121477 77108.0 93619.00 88046.00
+    # Micro Oligo   OPC
+    # 0%     126   328  1139
+    # 25%   3194  4388  7511
+    # 50%   4655  6266 10415
+    # 75%   6182  8531 13839
+    # 100% 25323 31312 34023      
+
+sce.all.n12$cellType.RS[sce.all.n12$cellType=="Ambig.hiVCAN"]
+    # [1] Inhib   Excit   OPC     OPC     OPC     OPC     OPC     OPC     OPC
+    # [10] Oligo   Micro   OPC     OPC     OPC     OPC     Micro   OPC     OPC
+    # [19] OPC     OPC     OPC     Micro   OPC     OPC     OPC     OPC     OPC
+    # [28] OPC     Excit.2 Oligo   Excit.2 Excit.4
+
+        # so looks like it's just mostly OPC nuclei that had less N transcripts captured
+
 
 ## Misc exploration ======================================================================
 
