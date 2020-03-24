@@ -115,15 +115,12 @@ for(i in 1:length(pilot.neun)){
 sapply(pilot.neun, dim)
     #     nac.neun.5207 nac.neun.5182
     #[1,]         33538         33538
-    #[2,]          4682          460
+    #[2,]          4682          4602
 
-# Save 
+# Temp save 
 save(pilot.neun, e.out, file="rdas/NeuN-sortedNAc_n2_processing-QC_MNTMar2020.rda")
 
 
-      ### === === === === === === === =
-        # MNT pick up later, 05Mar2020
-      ### === === === === === === === =
 
 
 ### Mito rate QC ===

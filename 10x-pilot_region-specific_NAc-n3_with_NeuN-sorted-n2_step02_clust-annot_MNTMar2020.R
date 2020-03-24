@@ -117,21 +117,72 @@ save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-comb
     sum(attr(reducedDim(sce.nac.all), "percentVar")[1:100]) # 46.92% - not much more
 
     ## *** FIND THIS PCA_opt-skip STEP IN "side-Rscript_exploringALL-NAc-samples_100PCs_MNT06Mar.R"
+    ## === === === === === === === ==
+
+
+    ### skip ==============
+    ## Explore that $chosen PC space: "rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda" MNT 23Mar2020
+    load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+        # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all
     
+    metadata(pc.choice.nac.all) # 87
+    rm(list=setdiff(ls(), "pc.choice.nac.all"))
+    
+    # Bring in explored object(s) with clustering, etc. at 100 PCs
+    load("rdas/zref_NeuN-sortedNAc-with-homs_exploreTop100pcs_MNT_06Mar2020.rda", verbose=T)
+        # sce.nac.all, sce.nac.10pcs, chosen.hvgs.nac.all, ref.sampleInfo, clusterRefTab.nac.all
+    
+    
+    # Add into new reducedDim entry 
+    reducedDim(sce.nac.all, "PCA_opt") <- reducedDim(sce.nac.all, "PCA")[ ,1:(metadata(pc.choice.nac.all)$chosen)]
+    
+    # Run clustering to compare prelimClusters-on-100 PCs
+    snn.gr.87 <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
+    clusters.k20.87 <- igraph::cluster_walktrap(snn.gr.87)$membership
+    table(clusters.k20.87)
+        ## Previously (w/ 100 PCs):
+        #    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
+        #  279 1732  275 1948 1948  718  300  293  161  188 1588 1845  133   27   56  857
+        #   17   18   19   20   21   22
+        #  184  384  136  103   25   61
+    
+        ## in this "PCA_opt"
+        #clusters.k20.87
+        #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
+        #1847  276  266  300 1925 1739  719  161  301 1619 1913  181  132   56  882  183
+        #  17   18   19   20   21   22
+        # 384   31  139   62  100   25
+    
+    # To test if same/similar to the above, may have to pseudo-bulk-HC, then compare assignments
+    
+    sce.nac.all$prelimCluster.87 <- factor(clusters.k20.87)
+    table(sce.nac.all$prelimCluster, sce.nac.all$prelimCluster.87)
+        ## Kind of an identity line
+    table(sce.nac.all$prelimCluster.87, sce.nac.all$lessCollapsed)
+        ## For the most part they assign to a unique 'lessCollapsed' cluster
+    table(sce.nac.all$prelimCluster.87, sce.nac.all$collapsedCluster)
+        ## same here
+    
+        ## Seems like 'prelimCluster.87' 18 & 20 pertain to the 'ambig.lowNtrxts' cluster in the
+         # 100-PC analysis (collapsedCluster 6, or prelimCluster 14 & 22)
+    
+         # --> Nevertheless, proceed taking the $chosen dimensions for due diligence
+         # === === === ===
+    
+    rm(list=ls())
+    # end skip/explore ========================
 
 
-### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda",
-     verbose=TRUE)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.n12
+### Resume work in optimal PC space
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all
 
+## How many PCs is optimal?:
+metadata(pc.choice.nac.all)$chosen
+    # 87
 
-# How many PCs is optimal?:
-metadata(pc.choice.n12)$chosen
-    ## 204
-
-## Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.nac.all, "PCA_opt") <- reducedDim(sce.nac.all, "PCA")[ ,1:(metadata(pc.choice.n12)$chosen)]
+# Assign this chosen ( PCs) to 'PCA_opt'
+reducedDim(sce.nac.all, "PCA_opt") <- reducedDim(sce.nac.all, "PCA")[ ,1:(metadata(pc.choice.nac.all)$chosen)]
 
 
 ## t-SNE
@@ -144,39 +195,26 @@ set.seed(109)
 sce.nac.all <- runUMAP(sce.nac.all, dimred="PCA_opt")
 
 
-## Add some phenodata
-sce.nac.all$region <- ss(sce.nac.all$sample,".5",1)
-sce.nac.all$donor <- paste0("Br",ss(sce.nac.all$sample,"y.",2))
-
-df.processDate <- data.frame(sample=unique(sce.nac.all$sample))
-df.processDate$date <- ifelse(df.processDate$sample =="hpc.5161","08May19", "23Jul19")
-df.processDate$date
-
-sce.nac.all$processDate <- ifelse(sce.nac.all$sample=="amy.5161", "04Sep19", "25Sep19")
-
-
-## Make some pd to add to colData
-ref.sampleInfo <- data.frame(sampleID = unique(sce.nac.all$sample))
-ref.sampleInfo$realBatch <- ifelse(ref.sampleInfo$sampleID %in% c("dlpfc.5212", "hpc.5287", "nac.5161", "nac.5212"),
-                                   "R2.Jul23", "R1.May08")
-ref.sampleInfo$realBatch <- ifelse(ref.sampleInfo$sampleID %in% c("dlpfc.5161", "hpc.5212", "nac.5287", "amy.5161"),
-                                   "R3.Sep04", ref.sampleInfo$realBatch)
-ref.sampleInfo$realBatch <- ifelse(ref.sampleInfo$sampleID %in% c("amy.5212", "sacc.5161", "sacc.5212", "nac.5182", "nac.5207"),
-                                   "R4.Sep25", ref.sampleInfo$realBatch)
-
-ref.sampleInfo$protocol <- "Frank"
-ref.sampleInfo$protocol <- ifelse(ref.sampleInfo$realBatch=="R2.Jul23", "pseudoSort", ref.sampleInfo$protocol)
+### Add some colData - use "rdas/REFERENCE_sampleInfo_n14.rda" previously generated in explore phase
+load("rdas/REFERENCE_sampleInfo_n14.rda", verbose=T)
+    # ref.sampleInfo 
 
 # Add to sce.nac.all colData
-sce.nac.all$region <- ss(sce.nac.all$sample,".5",1)
+sce.nac.all$region <- ss(sce.nac.all$sample,"\\.", 1)
 sce.nac.all$donor <- paste0("Br",substr(sce.nac.all$sample, start=nchar(sce.nac.all$sample)-3, stop=nchar(sce.nac.all$sample)))
 sce.nac.all$processDate <- ref.sampleInfo$realBatch[match(sce.nac.all$sample, ref.sampleInfo$sampleID)]
-sce.nac.all$protocol <- ref.sampleInfo$protocol[match(sce.nac.all$processDate, ref.sampleInfo$realBatch)]
+sce.nac.all$protocol <- ref.sampleInfo$protocol[match(sce.nac.all$sample, ref.sampleInfo$sampleID)]
 
+table(sce.nac.all$protocol, sce.nac.all$donor)
+    #           Br5161 Br5182 Br5207 Br5212 Br5287
+    #Frank           0      0      0      0    707
+    #Frank.NeuN      0   4267   4426      0      0
+    #pseudoSort   2067      0      0   1774      0
 
 # Save for now
-save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.n12, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda")
+save(sce.nac.all, chosen.hvgs.nac.all, ref.sampleInfo, pc.choice.nac.all,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+
 
 
 ### Clustering: Two-step ======================================================
@@ -185,7 +223,10 @@ save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.n12, ref.sampleInfo,
 snn.gr <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
-    ## 
+    ##   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
+    # 1847  276  266  300 1925 1739  719  161  301 1619 1913  181  132   56  882  183
+    #   17   18   19   20   21   22
+    #  384   31  139   62  100   25   (as above)
 
 # Assign as 'prelimCluster'
 sce.nac.all$prelimCluster <- factor(clusters.k20)
@@ -201,22 +242,12 @@ sce.nac.all$prelimCluster <- factor(clusters.k20)
 # Will need to split out by single-vs-multiple-nuclei-containing prelimClusters bc
 #`rowSums()` doesn't like the former
 clusIndexes = splitit(sce.nac.all$prelimCluster)
-clusIndexes.single <- unlist(clusIndexes[which(lengths(clusIndexes)==1)])
-clusIndexes.mult <- clusIndexes[which(lengths(clusIndexes)>1)]
-    
 
-prelimCluster.PBcounts.mult <- sapply(clusIndexes.mult, function(ii){
+prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
   rowSums(assays(sce.nac.all)$counts[ ,ii])
-  }
+ }
 )
-    ## of dim [1] 33538   242
-
-prelimCluster.PBcounts <- cbind(prelimCluster.PBcounts.mult,
-                                as.matrix(assays(sce.nac.all)$counts[ ,clusIndexes.single]))
-colnames(prelimCluster.PBcounts)[243:247] <- as.character(243:247)
-
-    # And btw...
-    table(rowSums(prelimCluster.PBcounts)==0)  # 3500 TRUE
+    ## of dim 33538    22
 
 
 # Compute LSFs at this level
@@ -234,52 +265,140 @@ tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
 dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
 # Just for observation
-myplclust(tree.clusCollapsed, main="Pan-region (n=12) prelim-kNN-cluster relationships",
+myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=5) prelim-kNN-cluster relationships",
           cex.main=1, cex.lab=0.8, cex=0.6)
+
+# 18 and 20 clear outliers (as predicted earlier)
+sapply(clusIndexes, function(x) {quantile(sce.nac.all[ ,x]$sum)})
+  # yep they're driven by low transcript capture
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=900)
+                               minClusterSize=2, deepSplit=1, cutHeight=400)
 
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-    ## cutHeight at 900 looks best; proceed with this
+    ## cutHeight at [400] looks best; proceed with this
 
-## Add new labels to those prelimClusters cut off   - unneededfor pan-brain analysis
-#clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1)
+## Add new labels to those prelimClusters cut off
+#    - going to just put 18 & 20 together (see above)
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,1,2)
 
-labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
+labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("pdfs/panBrain-n12_HC-prelimCluster-relationships_Feb2020.pdf", width=13, height=6)
-par(cex=0.45, font=2, mar=c(5,7,4,0))
-#plot(dend, main="Pan-region (n=12) prelim-kNN-cluster relationships", cex.main=2.5)
-myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
-          main="Pan-region (n=12) prelim-kNN-cluster relationships", cex.main=2.5)
+pdf("pdfs/regionSpecific_NAc-ALL-n5_HC-prelimCluster-relationships_Mar2020.pdf")
+par(cex=1.2, font=2)
+myplclust(tree.clusCollapsed, lab.col=tableau10medium[clust.treeCut],
+          main="All NAc (n=5) prelim-kNN-cluster relationships")
 dev.off()
 
+
+## After deciding to make a lessCollapsed partitioning of these (below):
+clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.nac.all$merged.man.b
+
+pdf("pdfs/regionSpecific_NAc-ALL-n5_HC-prelimCluster-relationships_lessCollapsedCols_Mar2020.pdf")
+par(cex=1.2, font=2)
+myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
+          main="All NAc (n=5) prelim-kNN-cluster relationships")
+dev.off()
 
 # Make reference for new cluster assignment
 clusterRefTab.nac.all <- data.frame(origClust=order.dendrogram(dend),
-                                merged=clust.treeCut[order.dendrogram(dend)])
+                                    merged=clust.treeCut[order.dendrogram(dend)])
+
+# Add more manual merging/partitioning of these prelim clusters - mainly in collapsedCluster 1/2...
+clusterRefTab.nac.all$merged.man <- clusterRefTab.nac.all$merged
+clusterRefTab.nac.all$merged.man[clusterRefTab.nac.all$merged %in% c(1:2)] <-  c(1, rep(2,5), 8:14)
+    ## Justification for these, generally, is looking at how do samples separate by
+     # prelimCluster - if sample-specific, merging is more liberal.
+
+# A less-less-collapsed version to separate D1/D2 prelim clusters
+clusterRefTab.nac.all$merged.man.b <- clusterRefTab.nac.all$merged.man
+clusterRefTab.nac.all$merged.man.b[5:8] <- c(15,16,15,16)
 
 
-# Assign as 'collapsedCluster'
+## Assign as 'collapsedCluster' or 'lessCollapsed'
 sce.nac.all$collapsedCluster <- factor(clusterRefTab.nac.all$merged[match(sce.nac.all$prelimCluster,
                                                                           clusterRefTab.nac.all$origClust)])
 
-# Print some visualizations:
-pdf("pdfs/panBrain-n12_reducedDims-with-collapsedClusters_Feb2020.pdf")
-plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="region", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="processDate", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="sample", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="sum", point_alpha=0.5)
-plotUMAP(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5)
-dev.off()
+#sce.nac.all$lessCollapsed <- factor(clusterRefTab.nac.all$merged.man[match(sce.nac.all$prelimCluster,
+#                                                                           clusterRefTab.nac.all$origClust)])
 
+# Go with this:
+sce.nac.all$lessCollapsed <- factor(clusterRefTab.nac.all$merged.man.b[match(sce.nac.all$prelimCluster,
+                                                                               clusterRefTab.nac.all$origClust)])
+
+
+table(sce.nac.all$collapsedCluster, sce.nac.all$sample)
+    #   nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
+    # 1      257      299       86          4012          4182
+    # 2       18       19       14           248           241
+    # 3     1454      854      499             0             0
+    # 4      149      384       12             0             0
+    # 5       98      104       37             0             0
+    # 6       19       42       22             7             3
+    # 7       72       72       37             0             0
+
+table(sce.nac.all$lessCollapsed, sce.nac.all$sample)
+    # nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
+    # 1         2        0        0           117            13
+    # 2         0      266        0             0             0
+    # 3      1454      854      499             0             0
+    # 4       149      384       12             0             0
+    # 5        98      104       37             0             0
+    # 6        19       42       22             7             3
+    # 7        72       72       37             0             0
+    # 8        10        3        0           285             3
+    # 9         9        6        3           134           148
+    # 10       17        8        6           369           319
+    # 11        1        3        0            16             5
+    # 12        1        1        1            42            11
+    # 13        7        7        9            86           167
+    # 14        9        8        4           104            58
+    # 15      178        2       72          1505          1829
+    # 16       41       14        5          1602          1870
+
+## original prelim cluster
+table(sce.nac.all$prelimCluster, sce.nac.all$sample)
+    #    nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
+    # 1       153        0       66          1395           233
+    # 2         7        7        9            86           167
+    # 3         0      266        0             0             0
+    # 4         9        6        3           134           148
+    # 5      1417       15      493             0             0
+    # 6        25        2        6           110          1596
+    # 7        17        8        6           369           319
+    # 8       149        0       12             0             0
+    # 9        10        3        0           285             3
+    # 10       32       13        5          1538            31
+    # 11        9        1        0            64          1839
+    # 12       72       72       37             0             0
+    # 13        2        0        0           117            13
+    # 14        1        1        1            42            11
+    # 15       37      839        6             0             0
+    # 16        9        8        4           104            58
+    # 17        0      384        0             0             0
+    # 18        1       30        0             0             0
+    # 19       98        4       37             0             0
+    # 20       18       12       22             7             3
+    # 21        0      100        0             0             0
+    # 22        1        3        0            16             5
+
+
+
+# Print some visualizations:
+pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Mar2020.pdf")
+plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.nac.all, colour_by="processDate", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac.all, colour_by="sample", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac.all, colour_by="lessCollapsed", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac.all, colour_by="sum", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+# UMAP
+plotUMAP(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("UMAP on opt PCs", )
+dev.off()
 
 
 ## Print marker genes for annotation
@@ -291,124 +410,72 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  # Kristen's MSN markers - not printed for the broader collapsed clusters
+  'MSNs.D1' = c("DRD1", "PDYN", "TAC1"),
+  'MSNs.D2' = c("DRD2", "PENK"),
+  'MSNs.pan' = c("PPP1R1B","BCL11B")# "CTIP2")
 )
 
-pdf("pdfs/panBrain-n12_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=12)
+## Print broad cell type markers
+pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:19], length(markers.mathys.custom[[i]])))
+                   x="lessCollapsed", colour_by="lessCollapsed", point_alpha=0.5, point_size=.7,
+                   add_legend=F) +
+      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+                   width = 0.3, colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]]))) +
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
 
-# Any driven by low n transcripts, overall?
-newClusIndex <- splitit(sce.nac.all$collapsedCluster)
-sapply(newClusIndex, function(x) {quantile(sce.nac.all[,x]$sum)})
-    #
 
-## Add annotations, looking at marker gene expression
-annotationTab.pan <- data.frame(cluster=c(1, 2, 3, 4, 5,
-                                          6, 7, 8, 9, 10,
-                                          11, 12, 13, 14, 15,
-                                          16, 17, 18, 19),
-                                cellType=c("Excit.1", "Inhib.1", "Excit.2", "Astro.1", "Inhib.2",
-                                           "Excit.3", "Inhib.3", "Inhib.4", "Excit.4", "OPC",
-                                           "Oligo","Micro","Inhib.5","Excit.5","Excit.6",
-                                           "Ambig.hiVCAN","Excit.7","Astro.2","Excit.8")
-                                )
+# Check nuclear library sizes for annotation of 'lessCollapsed' cluster 6:
+clusIndexes <- splitit(sce.nac.all$lessCollapsed)
+sapply(clusIndexes, function(x) {quantile(sce.nac.all[ ,x]$sum)})
+    #             1        2       3     4       5    6     7     8        9      10
+    # 0%    1422.00  2471.00   365.0   635  1379.0  101  1247  2371  1197.00  2739.0
+    # 25%  12988.75 19138.00  3618.5  6305  6937.5  133  3205 12217 19541.50 16635.5
+    # 50%  16667.50 27300.00  5569.0  8380  9145.0  284  4525 15150 23778.00 20483.0
+    # 75%  21967.75 37641.75  8010.5 10767 11354.0  608  6323 18557 30245.25 24723.5
+    # 100% 44444.00 68589.00 31312.0 32867 31898.0 1648 12537 39311 69559.00 67355.0
+    #         11       12      13    14       15       16
+    # 0%    6603  6143.00  3473.0  1388  3895.00  1801.00
+    # 25%  15968 11429.75 14588.5 10748 20340.00 18638.50
+    # 50%  20199 15010.50 18914.0 13472 24847.50 22881.50
+    # 75%  33506 24642.25 24444.5 17118 30074.75 28108.75
+    # 100% 60522 68219.00 67288.0 43590 85460.00 84761.00
 
-sce.nac.all$cellType <- annotationTab.pan$cellType[match(sce.nac.all$collapsedCluster,
-                                                         annotationTab.pan$cluster)]
+
+## Add annotations for 'lessCollapsed' clusters, looking at marker gene expression
+annotationTab.nac.all <- data.frame(cluster=c(1, 2, 3, 4, 5,
+                                              6, 7, 8, 9, 10,
+                                              11, 12, 13, 14, 15,
+                                              16),
+                                    cellType=c("MSN.D1.1", "MSN.broad", "Oligo", "Astro", "OPC",
+                                               "ambig.lowNtrxts", "Micro", "MSN.D1.2", "MSN.D2.1","MSN.D1.3",
+                                               "Inhib.1","Inhib.2","Inhib.3","Inhib.4","MSN.D1.4",
+                                               "MSN.D2.2")
+)
+
+sce.nac.all$cellType <- annotationTab.nac.all$cellType[match(sce.nac.all$lessCollapsed,
+                                                                 annotationTab.nac.all$cluster)]
+
 
 ## Save
-save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.n12, ref.sampleInfo, clusterRefTab.nac.all,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda")
+save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo, 
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+
+
+      ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
 
 
-## Misc exploration ======================================================================
-
-# Is 16 maybe pericytes? Looking at genes from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5057134/
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("VTN", "IFITM1"),
-               x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
-               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                            geom = "crossbar", width = 0.3,
-                                            colour=rep(tableau20[1:19], 2))
-    ## (no expression of either of these)
-
-## How well correlated is the expression of those Ambig.hiVCAN nuclei anyway?
- #    Let's say compared to "Astro.2", which also has a low distribution of n transcripts
- #    (collapsedCluster 18)
-library(pheatmap)
-
-table(sce.nac.all$cellType, sce.nac.all$region)
-
-clustIdx.18 <- which(sce.nac.all$collapsedCluster==18)  # "Astro.2"
-clustIdx.16 <- which(sce.nac.all$collapsedCluster==16)
 
 
-quantile(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.18])), probs=seq(0.05,1,by=0.05))
-    #         5%       10%       15%       20%       25%       30%       35%       40%
-    #  0.1435597 0.1550650 0.1635447 0.1710807 0.1772498 0.1833153 0.1881462 0.1927772
-    #        45%       50%       55%       60%       65%       70%       75%       80%
-    #  0.1974163 0.2016515 0.2070635 0.2124137 0.2177567 0.2237208 0.2296916 0.2373880
-    #        85%       90%       95%      100%
-    #  0.2479811 0.2656165 0.3195865 1.0000000      - so actually pretty poor...
-
-pheatmap(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.18])),
-         labels_row=F, labels_col=F)
-
-
-quantile(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.16])), probs=seq(0.05,1,by=0.05))
-    #         5%       10%       15%       20%       25%       30%       35%       40%
-    #  0.1139671 0.1440696 0.1624547 0.1762752 0.1880453 0.1962381 0.2028947 0.2085750
-    #        45%       50%       55%       60%       65%       70%       75%       80%
-    #  0.2163537 0.2201661 0.2272381 0.2393277 0.2517573 0.2621352 0.2746192 0.2888875
-    #        85%       90%       95%      100%
-    #  0.3063891 0.3572942 0.4383301 1.0000000      - a little better with this 'Ambig.hiVCAN'
-
-pheatmap(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.inhib2])),
-         labels_row=F, labels_col=F)
-
-
-# Showing pairwise correlation is good with more robust clusters...
-clustIdx.inhib2 <- which(sce.nac.all$cellType=="Inhib.2")
-pheatmap(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.inhib2])),
-         labels_row=F, labels_col=F)
-    ## much better
-quantile(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.inhib2])), probs=seq(0.05,1,by=0.05))
-    #         5%       10%       15%       20%       25%       30%       35%       40%
-    #  0.6184637 0.6865806 0.7100607 0.7239689 0.7342448 0.7425027 0.7498117 0.7564875
-    #        45%       50%       55%       60%       65%       70%       75%       80%
-    #  0.7629176 0.7689357 0.7750985 0.7810500 0.7871078 0.7932005 0.7995850 0.8064660
-    #        85%       90%       95%      100%
-    #  0.8138758 0.8225428 0.8345357 1.0000000
-
-    # Is this because it's a bigger cluster?
-    clustIdx.excit4 <- which(sce.nac.all$cellType=="Excit.4")
-    pheatmap(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.excit4])),
-         labels_row=F, labels_col=F)
-    quantile(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.excit4])), probs=seq(0.05,1,by=0.05))
-        ## less good as "Inhib.2", but still much better than collapsedCluster 16 & 18
-
-    ## What about collapsedCluster 19?  On second glance, it expresses many markers...
-     #      (notably VCAN; some PLP1; and more SLC17A6 than SLC17A7)
-    clustIdx.excit8 <- which(sce.nac.all$cellType=="Excit.8")
-    pheatmap(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.excit8])),
-             labels_row=F, labels_col=F)
-    quantile(cor(as.matrix(assay(sce.nac.all, "logcounts")[ ,clustIdx.excit8])), probs=seq(0.05,1,by=0.05))
-        ## Overall still pretty good, but less than "Excit.4"
-    
-## For reference === === === === ===
-table(sce.nac.all$cellType, sce.nac.all$region)
-    
-    #
 
 
 
