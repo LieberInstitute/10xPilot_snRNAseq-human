@@ -213,7 +213,11 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  # Kristen's MSN markers - not printed for the broader collapsed clusters
+  'MSNs.D1' = c("DRD1", "PDYN", "TAC1"),
+  'MSNs.D2' = c("DRD2", "PENK"),
+  'MSNs.pan' = c("PPP1R1B","BCL11B")# "CTIP2")
 )
 
 pdf("pdfs/regionSpecific_NAc-n3_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=8)
@@ -269,6 +273,31 @@ sce.nac$cellType <- annotationTab.nac$cellType[match(sce.nac$collapsedCluster,
 save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda")
 
+
+### MNT 25Mar2020 === === ===
+# Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+table(sce.nac$cellType)
+
+# First drop "Ambig.lowNtrxts" (52 nuclei)
+sce.nac <- sce.nac[ ,sce.nac$cellType != "Ambig.lowNtrxts"]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
+
+
+pdf("pdfs/regionSpecific_NAc-n3_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) + 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
 
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'

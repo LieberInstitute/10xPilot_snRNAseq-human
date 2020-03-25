@@ -275,7 +275,9 @@ for(i in 1:length(markers.mathys.custom)){
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()

@@ -292,6 +292,32 @@ sapply(newClusIndex, function(x) {quantile(sce.sacc[,x]$sum)})
 
 
 
+### MNT 25Mar2020 === === ===
+# Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+
+table(sce.sacc$cellType)
+
+# First drop "Ambig.lowNtrxts" (43 nuclei)
+sce.sacc <- sce.sacc[ ,sce.sacc$cellType != "Ambig.lowNtrxts"]
+sce.sacc$cellType <- droplevels(sce.sacc$cellType)
+
+pdf("pdfs/regionSpecific_sACC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   add_legend=F) +
+      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+                   width = 0.3, colour=rep(tableau10medium[1:10], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 

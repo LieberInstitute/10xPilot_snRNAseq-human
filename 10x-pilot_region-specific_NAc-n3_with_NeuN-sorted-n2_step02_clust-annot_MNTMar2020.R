@@ -418,18 +418,17 @@ markers.mathys.custom = list(
 )
 
 ## Print broad cell type markers
-pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+#pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="lessCollapsed", colour_by="lessCollapsed", point_alpha=0.5, point_size=.7,
                    add_legend=F) +
       stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-                   width = 0.3, colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]]))) +
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+                   width = 0.3, colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]])))
   )
 }
-dev.off()
+#dev.off()
 
 
 # Check nuclear library sizes for annotation of 'lessCollapsed' cluster 6:
@@ -469,13 +468,29 @@ save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
 
 
+# Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
+table(sce.dlpfc$cellType)
+
+# First drop "Ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType != "ambig.lowNtrxts"]
+sce.nac.all$cellType <- droplevels(sce.nac.all$cellType)
+
+pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   add_legend=F) +
+      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+                   width = 0.3, colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
-
-
-
-
-
-
 
 
 

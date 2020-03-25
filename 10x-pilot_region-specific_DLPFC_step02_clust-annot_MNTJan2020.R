@@ -263,7 +263,7 @@ save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sam
 
 
 
-### MNT 20Mar2020 === === ===
+### MNT 25Mar2020 === === ===
   # Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
@@ -281,7 +281,9 @@ for(i in 1:length(markers.mathys.custom)){
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
