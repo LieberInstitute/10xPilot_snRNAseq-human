@@ -285,7 +285,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
      verbose=T)
 table(sce.hpc$cellType)
 
-# First drop "Ambig.lowNtrxts" (168 nuclei)
+# First drop "Ambig.lowNtrxts" (101 nuclei)
 sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
 # Then rename "Ambig.glial" to "Tcell" (26 nuclei)
 #     (A posteriori - from downstream marker exploration)

@@ -482,6 +482,482 @@ sapply(names(markerList.PB.manual), function(x){
 
 
 
+
+### Top markers to print / potentially test with RNA-scope === === === ===
+load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_manualContrasts_MNTMar2020.rda',
+     verbose=T)
+    # eb_contrasts.dlpfc.broad, eb_list.dlpfc.broad, sce.dlpfc.PB
+
+# follow chunk 'How does this compare to results of `findMarkers()`?' for fdr & t mats
+
+
+markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0]
+})
+names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
+lengths(markerList.PB.manual)
+    # Astro Excit Inhib Micro Oligo   OPC
+    #    76   130    28   494    74    22
+
+markerTs.fdr.001 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0, x])
+})
+
+names(markerTs.fdr.001) <- colnames(fdrs0_contrasts)
+
+markerList.sorted <- lapply(markerTs.fdr.001, function(x){
+  x[,1][order(x, decreasing=TRUE)]
+})
+
+genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
+
+
+## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
+    rm(chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo)
+
+# As before, first drop "Ambig.lowNtrxts" (168 nuclei)
+sce.dlpfc <- sce.dlpfc[ ,sce.dlpfc$cellType != "Ambig.lowNtrxts"]
+sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
+
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot)){
+  print(
+    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(genes2plot[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
+  )
+}
+dev.off()
+
+
+## What if just subset on protein-coding first?
+library(rtracklayer)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
+    # gtf
+
+table(gtf$gene_biotype)
+    #        antisense       IG_C_gene IG_C_pseudogene       IG_D_gene       IG_J_gene
+    #             5497              14               9              37              18
+    #  IG_J_pseudogene       IG_V_gene IG_V_pseudogene         lincRNA  protein_coding
+    #                3             144             188            7484           19912
+    #        TR_C_gene       TR_D_gene       TR_J_gene TR_J_pseudogene       TR_V_gene
+    #                6               4              79               4             106
+    #  TR_V_pseudogene
+    #               33
+
+table(rownames(sce.dlpfc) %in% gtf$gene_name)
+    # FALSE  TRUE
+    #    48 33490    - probably because of the `uniquify`
+table(rowData(sce.dlpfc)$Symbol %in% gtf$gene_name)
+    #  TRUE
+    # 33538
+
+# Are they the same order?
+table(rowData(sce.dlpfc)$ID == gtf$gene_id) # all TRUE
+
+table(!rowSums(assay(sce.dlpfc, "counts"))==0)  # 28111     - good
+keepVec <- !rowSums(assay(sce.dlpfc, "counts"))==0
+
+gtf <- gtf[keepVec, ]
+# Then
+table(gtf$gene_id == rowData(sce.dlpfc.PB)$ID)  # all 28111 TRUE      - good
+
+## Make pt-coding list
+markerList.sorted.pt <- lapply(markerList.sorted, function(x){
+  x[names(x) %in% gtf$gene_name[gtf$gene_biotype=="protein_coding"]]
+})
+
+lengths(markerList.sorted)
+    # Astro Excit Inhib Micro Oligo   OPC
+    #    76   130    28   494    74    22
+
+lengths(markerList.sorted.pt)
+    #Astro Excit Inhib Micro Oligo   OPC
+    #   51    36    19   397    40     9
+
+
+
+genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
+
+# Plot these
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot.pt)){
+  print(
+    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(genes2plot.pt[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
+  )
+}
+dev.off()
+
+
+## How much they intersect with the top protein-coding-agnostic set?
+sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
+    # $Astro
+    #   [1] "SIX5"     "OTOS"     "ZIC5"     "CRACR2B"  "OTX1"     "KCNE5"
+    #   [7] "C6orf223" "P2RY2"    "DMRTA1"   "TMPRSS3"  "RASL12"   "IGFN1"
+    #   [13] "TFAP2C"   "GDPD2"    "C22orf31" "LAMA1"
+    # 
+    # $Excit
+    #   [1] "OR14I1"   "CD200R1L" "TNNT2"    "ROS1"     "C4orf54"
+    # 
+    # $Inhib
+    #   [1] "DLX5"    "DLX2"    "PRLHR"   "DLX6"    "DLX1"    "SLC32A1" "SP9"
+    #   [8] "LHX6"    "NKX6-3"  "CHRNA2"  "PLSCR5"  "DEPDC1"  "CARD10"
+    # 
+    # $Micro
+    #   [1] "RNASE6"   "IL1B"     "VSIG4"    "MPEG1"    "RGS18"    "RGS1"
+    #   [7] "CCL3"     "GIMAP6"   "TREM2"    "NCF4"     "TREML1"   "IL1A"
+    #   [13] "SERPINA1"
+    # 
+    # $Oligo
+    #   [1] "FFAR1"   "HOXD1"   "GPIHBP1" "SMIM6"   "NGFR"    "LYRM9"   "SLC5A11"
+    #   [8] "RNASE1"  "TMEM88B" "NIPAL4"
+    # 
+    # $OPC
+    #   [1] "NR0B1"   "CPXM1"   "KCNG4"   "DCAF4L2" "B3GNT7"  "COL20A1" "KIF18B"
+    #   [8] "CCKAR"
+
+
+
+
+### Modeling of spatially-registered neuronal subtypes ================================
+  # Added MNT late-Mar/Apr2020
+
+## First load previous sce.dlpfc.PB & Re-run duplicate correlation
+#            - want to use at the level of just broad cellType**:
+    load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_manualContrasts_MNTMar2020.rda',
+         verbose=T)
+    # eb_contrasts.dlpfc.broad, eb_list.dlpfc.broad, sce.dlpfc.PB
+    
+    ## Extract the count data
+    mat <- assays(sce.dlpfc.PB)$logcounts
+    
+    ## Build a group model
+    mod <- with(colData(sce.dlpfc.st.PB), model.matrix(~ 0 + cellType.split))
+    colnames(mod) <- gsub('cellType.split', '', colnames(mod))
+    
+    corfit <- duplicateCorrelation(mat, mod, block = sce.dlpfc.st.PB$donor)
+    corfit$consensus.correlation
+        # [1] 0.03835962
+    
+        # **Actually when you run this at the cellType.split level, it's [1] 0.03698695
+        #     (and the results are pretty identical when you use the former or the latter)
+    
+    #rm(mat, mod, sce.dlpfc.PB)
+
+
+## Load SCE with new info
+load("rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+
+table(sce.dlpfc.st$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
+
+# Then make the pseudo-bulked SCE
+sce.dlpfc.st.PB <- aggregateAcrossCells(sce.dlpfc.st, ids=paste0(sce.dlpfc.st$sample,":",sce.dlpfc.st$cellType.split),
+                                    use_exprs_values="counts")
+
+# Clean up colData
+colData(sce.dlpfc.st.PB) <- colData(sce.dlpfc.st.PB)[ ,c(13:17,19:21)]
+
+# Drop genes with all 0's
+sce.dlpfc.st.PB <- sce.dlpfc.st.PB[!rowSums(assay(sce.dlpfc.st.PB, "counts"))==0, ]
+    ## keeps 28111 genes
+
+# Remove stored `sizeFactors()` because this will mess you up
+#     * Also, to be safe, can always provide manually-computed SFs:
+sizeFactors(sce.dlpfc.st.PB) <- NULL
+LSFvec <- librarySizeFactors(sce.dlpfc.st.PB)
+sce.dlpfc.st.PB <- logNormCounts(sce.dlpfc.st.PB, size_factors=LSFvec)
+
+## Extract the count data
+mat <- assays(sce.dlpfc.st.PB)$logcounts
+
+## Each cellType vs the rest - only for neuronal, bc this wouldn't affect glial stats
+cellType_idx <- splitit(sce.dlpfc.st.PB$cellType.split)
+
+
+## Will have to do this by excitatory or inhib. subtypes, separately
+eb0_list_neurons <- list()
+# Excitatory
+for(k in names(cellType_idx)[ss(names(cellType_idx),"\\.",1) %in% c("Excit")]){
+  # Subtype of interest
+  subtype <- rep(0, ncol(sce.dlpfc.st.PB))
+  subtype[ cellType_idx[[k]] ] <- 1
+  # Add broad excitatory coef to model              # or don't..!
+  #broadtype <- rep(0, ncol(sce.dlpfc.st.PB))
+  #broadtype[grep("Excit", colnames(mat))] <- "Excit"
+  
+  m <- model.matrix(~ subtype)# + broadtype)
+  
+  eb0_list_neurons[[k]] <- eBayes(
+    lmFit(
+      mat,
+      design = m,
+      block = sce.dlpfc.st.PB$donor,
+      correlation = corfit$consensus.correlation
+    )
+  )
+}
+
+# Inhibitory
+for(k in names(cellType_idx)[ss(names(cellType_idx),"\\.",1) %in% c("Inhib")]){
+  # Subtype of interest
+  subtype <- rep(0, ncol(sce.dlpfc.st.PB))
+  subtype[ cellType_idx[[k]] ] <- 1
+  # Add broad excitatory coef to model              # or don't..!
+  #broadtype <- rep(0, ncol(sce.dlpfc.st.PB))
+  #broadtype[grep("Inhib", colnames(mat))] <- "Inhib"
+  
+  m <- model.matrix(~ subtype)# + broadtype)
+  
+  eb0_list_neurons[[k]] <- eBayes(
+    lmFit(
+      mat,
+      design = m,
+      block = sce.dlpfc.st.PB$donor,
+      correlation = corfit$consensus.correlation
+    )
+  )
+}
+
+    ## with broad term included -> 'eb0_list_neurons.broad'
+
+
+## Extract the p-values
+pvals0_contrasts.st <- sapply(eb0_list_neurons, function(x) {
+  x$p.value[, 2, drop = FALSE]
+})
+rownames(pvals0_contrasts.st) <- rownames(sce.dlpfc.st.PB)
+
+## Extract the tstats
+t0_contrasts.st <- sapply(eb0_list_neurons, function(x) {
+  x$t[, 2, drop = FALSE]
+})
+rownames(t0_contrasts.st) <- rownames(sce.dlpfc.st.PB)
+
+# Any signif with (+) t's?
+data.frame(
+  'FDRsig.05' = colSums(apply(pvals0_contrasts.st, 2, p.adjust, 'fdr') < 0.05 & 
+                          t0_contrasts.st > 0),
+  'FDRsig.01' = colSums(apply(pvals0_contrasts.st, 2, p.adjust, 'fdr') < 0.01 & 
+                          t0_contrasts.st > 0),
+  'Pval10-6sig' = colSums(pvals0_contrasts.st < 1e-6 & 
+                            t0_contrasts.st > 0),
+  'Pval10-8sig' = colSums(pvals0_contrasts.st < 1e-8 & 
+                            t0_contrasts.st > 0)
+)
+    #                FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
+    # Excit.ambig          210       151          23          10
+    # Excit.L2:3            60        36          21           9
+    # Excit.L3:4            40        17           8           3
+    # Excit.L4:5            46        34          18           6
+    # Excit.L5             168        74          43          19
+    # Excit.L5:6            69        31          22          10
+    # Excit.L6.broad        28         7           7           5
+    # Inhib.1              185       111          63          29
+    # Inhib.2              483       190           6           0
+    # Inhib.3               69        17          10           5
+    # Inhib.4               59        21          11           2
+    # Inhib.5               45        36          25          12
+
+
+    ## Note that before, at the broad-cell-type-level:
+
+            ## With t > 0
+            #      FDRsig Pval10.6sig Pval10.8sig
+            #Astro    461          47          16
+            #Excit    635          89          26
+            #Inhib    121          28           5     - very poor numbers here.
+            #Micro   1909         264         101
+            #Oligo    480          42          10
+            #OPC       97          24           4
+
+
+
+    ## ** If don't include broad cell type in model:
+    #               FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
+    # Excit.ambig          218       175          24          14
+    # Excit.L2:3           134        55          32          10
+    # Excit.L3:4            71        28          15           4
+    # Excit.L4:5            60        41          25           6
+    # Excit.L5             193        83          49          26
+    # Excit.L5:6           108        49          29          11
+    # Excit.L6.broad        58        13           8           5
+    # Inhib.1              212       119          68          39
+    # Inhib.2              618       294           9           0
+    # Inhib.3              114        38          11           6
+    # Inhib.4               78        27          15           6
+    # Inhib.5               92        40          30          16
+
+
+          ## Exploration of effects of including broad neuronal type term ====
+          col.pal = brewer.pal(10,"RdBu")
+          #pdf("pdfs/exploration/zTemp_sub-clusterTs_DLPFC_Mar2020.pdf")
+          pheatmap(round(cor(t0_contrasts.st.1st), 3), main="With broad neuronal term", display_numbers=T,
+                   cluster_cols=F, cluster_rows=F, color=col.pal, breaks=seq(-1,1,by=.2))
+          pheatmap(round(cor(t0_contrasts.st), 3), main="No broad neuronal term", display_numbers=T,
+                   cluster_cols=F, cluster_rows=F, color=col.pal, breaks=seq(-1,1,by=.2))
+          #dev.off()
+          
+          
+          broadTypeEffect <- sapply(eb0_list_neurons.1st, function(x) {x$coefficients[ ,2]})
+          
+          apply(broadTypeEffect, 2, quantile)
+          
+          apply(broadTypeEffect, 2, mean)
+          # end explore ====
+
+
+## (as before)  -   let's just go with fdr < 0.05 for now
+fdrs0_contrasts.st = apply(pvals0_contrasts.st, 2, p.adjust, "fdr")
+rownames(fdrs0_contrasts.st) <- rownames(sce.dlpfc.st.PB)
+
+
+markerList.PB.manual <- lapply(colnames(fdrs0_contrasts.st), function(x){
+  rownames(fdrs0_contrasts.st)[fdrs0_contrasts.st[ ,x] < 0.05 & t0_contrasts.st[ ,x] > 0]
+})
+names(markerList.PB.manual) <- colnames(fdrs0_contrasts.st)
+
+# Get t's
+markerTs.fdr.05 <- lapply(colnames(fdrs0_contrasts.st), function(x){
+  as.matrix(t0_contrasts.st[fdrs0_contrasts.st[ ,x] < 0.05 & t0_contrasts.st[ ,x] > 0, x])
+})
+
+names(markerTs.fdr.05) <- colnames(fdrs0_contrasts.st)
+
+# Sort for largest difference
+markerList.sorted <- lapply(markerTs.fdr.05, function(x){
+  x[,1][order(x, decreasing=TRUE)]
+})
+
+genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
+
+
+
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers-SUBtypes_logExprs_Apr2020.pdf", height=7.5, width=9.5)
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers-SUBtypes_noBroadTerm_Apr2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot)){
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F, theme_size=8) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:16], length(genes2plot[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
+  )
+}
+dev.off()
+
+
+
+## What if just subset on protein-coding first?
+library(rtracklayer)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
+# gtf
+
+table(rownames(sce.dlpfc.st) %in% gtf$gene_name)
+# FALSE  TRUE
+#    48 33490    - probably because of the `uniquify`
+table(rowData(sce.dlpfc.st)$Symbol %in% gtf$gene_name)
+#  TRUE
+# 33538
+
+# Are they the same order?
+table(rowData(sce.dlpfc.st)$ID == gtf$gene_id) # all TRUE
+
+table(!rowSums(assay(sce.dlpfc.st, "counts"))==0)  # 28111     - good
+keepVec <- !rowSums(assay(sce.dlpfc.st, "counts"))==0
+
+gtf <- gtf[keepVec, ]
+# Then
+table(gtf$gene_id == rowData(sce.dlpfc.st.PB)$ID)  # all 28111 TRUE      - good
+
+## Make pt-coding list
+markerList.sorted.pt <- lapply(markerList.sorted, function(x){
+  x[names(x) %in% gtf$gene_name[gtf$gene_biotype=="protein_coding"]]
+})
+
+lengths(markerList.sorted)
+
+lengths(markerList.sorted.pt)
+    #   Excit.ambig     Excit.L2:3     Excit.L4:5       Excit.L5     Excit.L5:6
+    #            57             16             15             42             10
+    #Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4       Inhib.5
+    #             6             89            360             25             16            23
+    
+
+    ## ** If don't include broad cell type in model:
+    #    Excit.ambig     Excit.L2:3     Excit.L4:5       Excit.L5     Excit.L5:6
+    #             66             38             25             74             29
+    # Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4
+    #             19             95            468             36             24
+    #        Inhib.5
+    #             41
+
+genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
+
+# Plot these
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers-SUBtypes_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_DLPFC-n2_top20markers-SUBtypes_noBroadTerm_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot.pt)){
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F, theme_size=8) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:16], length(genes2plot.pt[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
+  )
+}
+dev.off()
+
+
+eb_list.dlpfc.neuronalSubs <- eb0_list_neurons.broad
+save(eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB,
+     file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda")
+
+# And results from same without modeling broad neuronal type
+eb_list.dlpfc.neuronalSubs.simple <- eb0_list_neurons
+
+save(eb_list.dlpfc.neuronalSubs.simple, sce.dlpfc.st.PB,
+     file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_noBroadTerm_MNTApr2020.rda")
+
+
+## Let's re-plot reducedDims with new [broad & split] cell type annotations
+ #        (and rename old file with prefix 'zold_')
+pdf("pdfs/regionSpecific_DLPFC-n2_reducedDims-with-collapsedClusters_Apr2020.pdf")
+plotReducedDim(sce.dlpfc.st, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="sample", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="sum", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+dev.off()
+
+
+
+
 ### MNT aside, 05Mar2020 ===========
   # Noticed there are 17 genes which are 0 expression AFTER first dropping "Ambig.lowNtrxts" cluster
 

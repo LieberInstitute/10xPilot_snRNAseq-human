@@ -11,8 +11,7 @@ library(scran)
 library(batchelor)
 library(DropletUtils)
 library(jaffelab)
-library(dendextend)
-library(dynamicTreeCut)
+library(limma)
 
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
@@ -41,10 +40,11 @@ sce.amy$cellType <- droplevels(sce.amy$cellType)
 # Then make the pseudo-bulked SCE
 sce.amy.PB <- aggregateAcrossCells(sce.amy, ids=paste0(sce.amy$sample,":",sce.amy$cellType),
                                    use_exprs_values="counts")
-
+	
 # Drop genes with all 0's
 sce.amy.PB <- sce.amy.PB[!rowSums(assay(sce.amy.PB, "counts"))==0, ]
     ## keeps 28470 genes; 28464 if drop "Ambig.lowNtrxts" nuclei first
+		
 
 # Remove stored `sizeFactors()` because this will mess you up
 #     * Also, to be safe, can always provide manually-computed SFs:
@@ -52,6 +52,8 @@ sizeFactors(sce.amy.PB) <- NULL
 LSFvec <- librarySizeFactors(sce.amy.PB)
 sce.amy.PB <- logNormCounts(sce.amy.PB, size_factors=LSFvec)
 
+			
+	
 ## Find markers using stringent [max-p-value-of-all-pw-comparisons] test ('pval.type="all"')
 ## SKIP THIS - MNT 05Mar2020 ================================
  #    - first try no 'design=' argument
@@ -153,6 +155,7 @@ sapply(markers.amy.t.noAmbig, function(x){table(x$FDR<0.05)})
 
 # With 'design='? (and go ahead and use normalized counts--"countsNormd")
 design.PB.noAmbig <- model.matrix(~sce.amy.PB$processDate)
+    ## same result if you used $sample or $donor (for Amyg, where it's confounded)
 design.PB.noAmbig <- design.PB.noAmbig[ , -1, drop=F] # 'drop=F' to keep as matrix - otherwise turns into numeric vec
 
 # "logcounts"
@@ -378,11 +381,12 @@ rownames(fdrs0_contrasts) <- rownames(sce.amy.PB)
 rownames(t0_contrasts) <- rownames(sce.amy.PB)
 
 markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
-  #rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts[ ,x] > 0]
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts[ ,x] > 0]
   # what if more stringent?
-  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts[ ,x] > 0]
+  #rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts[ ,x] > 0]
 })
 names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
+lengths(markerList.PB.manual)
 
 
 ## findMarkers() results - test was already just for up-regulated genes
@@ -419,7 +423,159 @@ sapply(names(markerList.PB.manual), function(x){
     #   164   107    18  1430   233    29
 
 
-### MNT aside, 05Mar2020 ===============
+
+### Top markers to print / potentially test with RNA-scope === === === ===
+load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_manualContrasts_MNTMar2020.rda',
+     verbose=T)
+    # eb_contrasts.amy.broad, eb_list.amy.broad, sce.amy.PB
+
+    # follow chunk 'How does this compare to results of `findMarkers()`?' for fdr & t mats
+
+
+markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0]
+})
+names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
+lengths(markerList.PB.manual)
+    # Astro Excit Inhib Micro Oligo   OPC
+    #   113    92    28   894   149    26
+
+markerTs.fdr.001 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0, x])
+})
+
+names(markerTs.fdr.001) <- colnames(fdrs0_contrasts)
+
+markerList.sorted <- lapply(markerTs.fdr.001, function(x){
+  x[,1][order(x, decreasing=TRUE)]
+})
+
+genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
+
+
+## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo)
+
+# As before, first drop "Ambig.lowNtrxts" (50 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
+sce.amy$cellType <- droplevels(sce.amy$cellType)
+
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot)){
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(genes2plot[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
+  )
+}
+dev.off()
+
+                  
+## What if just subset on protein-coding first?
+library(rtracklayer)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
+    # gtf
+
+table(gtf$gene_biotype)
+    #        antisense       IG_C_gene IG_C_pseudogene       IG_D_gene       IG_J_gene
+    #             5497              14               9              37              18
+    #  IG_J_pseudogene       IG_V_gene IG_V_pseudogene         lincRNA  protein_coding
+    #                3             144             188            7484           19912
+    #        TR_C_gene       TR_D_gene       TR_J_gene TR_J_pseudogene       TR_V_gene
+    #                6               4              79               4             106
+    #  TR_V_pseudogene
+    #               33
+
+table(rownames(sce.amy) %in% gtf$gene_name)
+    # FALSE  TRUE
+    #    48 33490    - probably because of the `uniquify`
+table(rowData(sce.amy)$Symbol %in% gtf$gene_name)
+    #  TRUE
+    # 33538
+
+# Are they the same order?
+table(rowData(sce.amy)$ID == gtf$gene_id) # all TRUE
+
+table(!rowSums(assay(sce.amy, "counts"))==0)  # 28464     - good
+keepVec <- !rowSums(assay(sce.amy, "counts"))==0
+
+gtf <- gtf[keepVec, ]
+# Then
+table(gtf$gene_id == rowData(sce.amy.PB)$ID)  # all 28464 TRUE      - good
+
+## Make pt-coding list
+markerList.sorted.pt <- lapply(markerList.sorted, function(x){
+  x[names(x) %in% gtf$gene_name[gtf$gene_biotype=="protein_coding"]]
+})
+
+lengths(markerList.sorted)
+    # Astro Excit Inhib Micro Oligo   OPC
+    #   113    92    28   894   149    26
+
+lengths(markerList.sorted.pt)
+    # Astro Excit Inhib Micro Oligo   OPC
+    #    67    25    16   710   102    12
+
+
+
+genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
+
+# Plot these
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot.pt)){
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:6], length(genes2plot.pt[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
+  )
+}
+dev.off()
+
+
+## How much they intersect with the top protein-coding-agnostic set?
+sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
+    # $Astro
+    # [1] "IGFN1"   "SLC14A1" "BBOX1"   "TMPRSS3" "MRVI1"   "NEUROG2" "LAMA1"
+    # [8] "SIX5"    "YAP1"
+    # 
+    # $Excit
+    # [1] "EMX1"   "OR14I1"
+    # 
+    # $Inhib
+    # [1] "NKX2-1" "CYP1A1" "NMUR1"  "TRPM5"  "IBSP"   "LYPD6B" "NXPH2"  "ANO1"
+    # [9] "CHRNA2" "VIP"    "PLSCR5" "DRD5"   "SP8"
+    # 
+    # $Micro
+    # [1] "MYO1F"    "BIN2"     "CCL20"    "MSLN"     "CD300C"   "PTGS1"
+    # [7] "PIK3AP1"  "SIGLEC10" "HLA-DOA"  "NCF2"     "PRDM11"   "TFEC"
+    # [13] "FCGR3A"   "CASP1"
+    # 
+    # $Oligo
+    # [1] "IFNA2"      "CLDND1"     "CTNNA3"     "QDPR"       "OPALIN"
+    # [6] "GREM1"      "CD22"       "HHIP"       "CCP110"     "MAG"
+    # [11] "LDB3"       "FXYD4"      "POU2AF1"    "AC026316.5"
+    # 
+    # $OPC
+    # [1] "CPXM1"  "KCNG4"  "GDF6"   "GCOM1"  "CCKAR"  "CSPG4"  "ATP2C2" "NEU4"
+
+
+
+
+
+### Aside - difference b/tw dropping 'Ambig.lowNtrxts' before or after PB'ing ===========
+  # MNT 05Mar2020
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
 

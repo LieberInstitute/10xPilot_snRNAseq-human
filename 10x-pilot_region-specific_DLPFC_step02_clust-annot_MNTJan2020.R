@@ -183,13 +183,29 @@ clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)
 clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2)
 
 
-labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
+#labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
+
 
 # Print for future reference
 pdf("pdfs/regionSpecific_DLPFC-n2_HC-prelimCluster-relationships_Feb2020.pdf")
 par(cex=1.1, font=2)
 plot(dend, main="2x DLPFC prelim-kNN-cluster relationships")
 dev.off()
+
+
+    ## With spatially-registered information (30Mar2020):
+    clusterRefTab.dlpfc$manual <- factor(clusterRefTab.dlpfc$manual,
+                                         levels=c(levels(as.factor(clusterRefTab.dlpfc$manual))[c(2:16,1)]))
+
+    clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.dlpfc$manual
+
+    pdf("pdfs/regionSpecific_DLPFC-n2_HC-prelimCluster-relationships_ST-registered_Mar2020.pdf")
+    par(cex=1.2, font=2)
+    myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
+              main="DLPFC (n=2) prelim-kNN-cluster relationships \n (with spatially-registered information)",
+              cex.main=1.1)
+    dev.off()
+
 
 
 # Make reference for new cluster assignment
@@ -282,6 +298,128 @@ for(i in 1:length(markers.mathys.custom)){
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
                                                 colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
+
+### New annotations Apr2020 =====================================
+  # For more layer-specific, less-collapsed clusters based on comparison to DLPFC-ST dataset
+  #       (and looking at HC relationships of prelim clusters)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
+
+table(sce.dlpfc$prelimCluster, sce.dlpfc$sample)
+
+    ## chunk collapse ====
+clusterRefTab.dlpfc$cellType <- sce.dlpfc$cellType[match(clusterRefTab.dlpfc$merged, sce.dlpfc$collapsedCluster)]
+clusterRefTab.dlpfc$manual <- clusterRefTab.dlpfc$cellType
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(2, 12),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L4:5"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(4),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L3:4"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(6, 19),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L2:3"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(8),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".ambig"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(13),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L6.broad"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(31),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L5"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(10, 27),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".L5:6"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+## Then some manual merging of the inhibitories based on HC relationships, alone
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(28),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".1"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(20),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".2"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(29),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".3"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(14, 18),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".4"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(11, 15),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".5"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(30, 16, 25),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".1"),
+                                     as.character(clusterRefTab.dlpfc$manual))
+
+    ## end chunk =====
+
+
+
+## Add new annotations
+sce.dlpfc$cellType.split <- clusterRefTab.dlpfc$manual[match(sce.dlpfc$prelimCluster,
+                                                             clusterRefTab.dlpfc$origClust)]
+sce.dlpfc$cellType.split <- factor(sce.dlpfc$cellType.split)
+
+table(sce.dlpfc$cellType.split, sce.dlpfc$cellType)
+    #                 Ambig.lowNtrxts Astro Excit Inhib Micro Oligo  OPC
+    # Ambig.lowNtrxts             168     0     0     0     0     0    0
+    # Astro                         0   501     0     0     0     0    0
+    # Excit.ambig                   0     0    78     0     0     0    0
+    # Excit.L2:3                    0     0   102     0     0     0    0
+    # Excit.L3:4                    0     0    34     0     0     0    0
+    # Excit.L4:5                    0     0   161     0     0     0    0
+    # Excit.L5                      0     0    33     0     0     0    0
+    # Excit.L5:6                    0     0    84     0     0     0    0
+    # Excit.L6.broad                0     0    83     0     0     0    0
+    # Inhib.1                       0     0     0   119     0     0    0
+    # Inhib.2                       0     0     0     7     0     0    0
+    # Inhib.3                       0     0     0    17     0     0    0
+    # Inhib.4                       0     0     0   116     0     0    0
+    # Inhib.5                       0     0     0   127     0     0    0
+    # Micro                         0     0     0     0   256     0    0
+    # Oligo                         0     0     0     0     0  3247    0
+    # OPC                           0     0     0     0     0     0  266      - good.
+
+table(sce.dlpfc$cellType.split, sce.dlpfc$sample)
+    ## Seems as if nuclei at this level isn't too biased by donor... but hard to tell
+    #      bc there are 4x > nuclei for Br5161 than Br5212...
+
+
+# For reference/future use, save this SCE and the updated 'clusterRefTab.dlpfc'
+sce.dlpfc.st <- sce.dlpfc
+save(sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo,
+     file="rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda")
+
+## Also print expression at this level of partitioning
+pdf("pdfs/regionSpecific_DLPFC-n2_marker-logExprs_cellTypesSplit_Apr2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )

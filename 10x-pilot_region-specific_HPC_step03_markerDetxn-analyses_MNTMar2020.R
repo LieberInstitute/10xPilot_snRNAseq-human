@@ -67,6 +67,7 @@ sapply(markers.hpc.t, function(x){table(x$FDR<0.05)})
 
 # With 'design='? (and go ahead and use normalized counts--"countsNormd")
 design.PB <- model.matrix(~sce.hpc.PB$processDate)
+    ## same result if you used $sample or $donor (for HPC, where it's confounded)
 design.PB <- design.PB[ , -1, drop=F] # 'drop=F' to keep as matrix - otherwise turns into numeric vec
 
 # "logcounts"
@@ -396,6 +397,166 @@ sapply(names(markerList.PB.manual), function(x){
   length(intersect(markerList.PB.manual[[x]],
                    markerList.PB.hpc.tDesign.log[[x]]))}
 )
+
+
+
+
+### Top markers to print / potentially test with RNA-scope === === === ===
+load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_HPC-n3_manualContrasts_MNTMar2020.rda',
+     verbose=T)
+    # eb_contrasts.hpc.broad, eb_list.hpc.broad, sce.hpc.PB
+
+# follow chunk 'How does this compare to results of `findMarkers()`?' for fdr & t mats
+colnames(pvals0_contrasts)[1] <- "Tcell"
+colnames(fdrs0_contrasts)[1] <- "Tcell"
+colnames(t0_contrasts)[1] <- "Tcell"
+
+markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0]
+})
+names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
+lengths(markerList.PB.manual)
+    # Tcell Astro Excit Inhib Micro Oligo   OPC
+    #   660   306   114   116   526   109    83
+
+markerTs.fdr.001 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0, x])
+})
+
+names(markerTs.fdr.001) <- colnames(fdrs0_contrasts)
+
+markerList.sorted <- lapply(markerTs.fdr.001, function(x){
+  x[,1][order(x, decreasing=TRUE)]
+})
+
+genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
+
+
+
+
+## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+    rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo)
+
+# As before, first drop "Ambig.lowNtrxts" (101 nuclei)
+sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
+sce.hpc$cellType <- droplevels(sce.hpc$cellType)
+# Then rename "Ambig.glial" to "Tcell" (26 nuclei)
+#     (A posteriori - from downstream marker exploration)
+sce.hpc$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc$cellType))
+
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_HPC-n3_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot)){
+  print(
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:7], length(genes2plot[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
+  )
+}
+dev.off()
+
+
+## What if just subset on protein-coding first?
+library(rtracklayer)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
+    # gtf
+
+table(gtf$gene_biotype)
+    #        antisense       IG_C_gene IG_C_pseudogene       IG_D_gene       IG_J_gene
+    #             5497              14               9              37              18
+    #  IG_J_pseudogene       IG_V_gene IG_V_pseudogene         lincRNA  protein_coding
+    #                3             144             188            7484           19912
+    #        TR_C_gene       TR_D_gene       TR_J_gene TR_J_pseudogene       TR_V_gene
+    #                6               4              79               4             106
+    #  TR_V_pseudogene
+    #               33
+
+table(rownames(sce.hpc) %in% gtf$gene_name)
+# FALSE  TRUE
+#    48 33490    - probably because of the `uniquify`
+table(rowData(sce.hpc)$Symbol %in% gtf$gene_name)
+#  TRUE
+# 33538
+
+# Are they the same order?
+table(rowData(sce.hpc)$ID == gtf$gene_id) # all TRUE
+
+table(!rowSums(assay(sce.hpc, "counts"))==0)  # 28757     - good
+keepVec <- !rowSums(assay(sce.hpc, "counts"))==0
+
+gtf <- gtf[keepVec, ]
+# Then
+table(gtf$gene_id == rowData(sce.hpc.PB)$ID)  # all 28757 TRUE      - good
+
+## Make pt-coding list
+markerList.sorted.pt <- lapply(markerList.sorted, function(x){
+  x[names(x) %in% gtf$gene_name[gtf$gene_biotype=="protein_coding"]]
+})
+
+lengths(markerList.sorted)
+# Tcell Astro Excit Inhib Micro Oligo   OPC
+#   660   306   114   116   526   109    83
+
+lengths(markerList.sorted.pt)
+# Tcell Astro Excit Inhib Micro Oligo   OPC
+#   621   187    49    70   341    44    41
+
+
+
+genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
+
+# Plot these
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_HPC-n3_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+for(i in 1:length(genes2plot.pt)){
+  print(
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau10medium[1:7], length(genes2plot.pt[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
+  )
+}
+dev.off()
+
+
+## How much they intersect with the top protein-coding-agnostic set?
+sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
+    # $Tcell
+    # [1] "CD2"     "FCRL6"   "GZMK"    "UBASH3A" "TBX21"   "CD3D"    "IL7R"
+    # [8] "SLAMF7"  "SLAMF6"  "CD3E"    "GZMA"    "SLAMF1"  "IL2RB"   "CCL4"
+    # [15] "SLFN12L" "CD3G"    "ACAP1"
+    # 
+    # $Astro
+    # [1] "SLC2A4"   "SIX5"     "OTX1"     "NFATC4"   "CYP4F11"  "OTOS"
+    # [7] "TFAP2C"   "TMEM200B" "GDPD2"    "RASL12"
+    # 
+    # $Excit
+    # [1] "EMX1"    "KCNV1"   "MS4A8"   "OR14I1"  "DNAJC5G" "GHSR"    "GRM2"
+    # [8] "KNCN"    "LRRC10B" "SPANXN4" "P2RX2"
+    # 
+    # $Inhib
+    # [1] "NKX2-1" "PLSCR5" "CRH"    "SP8"    "DLX2"   "LHX6"   "CHRNA2" "DLX5"
+    # [9] "NKX6-3" "HTR3A"  "PRLHR"  "EREG"   "TRH"    "DLX1"   "OR4D1"  "OPN5"
+    # 
+    # $Micro
+    # [1] "TREML1"  "IL1A"    "LILRB2"  "ASCL4"   "FCGR1A"  "TLR7"    "IL1B"
+    # [8] "VSIG4"   "ANKRD22" "TLR8"    "CD300C"
+    # 
+    # $Oligo
+    # [1] "FXYD4"     "PIP"       "LYRM9"     "NGFR"      "TRPV6"     "SECISBP2L"
+    # 
+    # $OPC
+    # [1] "DCAF4L2" "GDF6"    "KCNG4"   "NR0B1"   "CSPG4"   "TIMP4"   "COL20A1"
+    # [8] "GPR17"
 
 
 
