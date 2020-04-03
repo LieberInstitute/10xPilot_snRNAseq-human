@@ -453,13 +453,28 @@ annotationTab.nac.all <- data.frame(cluster=c(1, 2, 3, 4, 5,
                                               6, 7, 8, 9, 10,
                                               11, 12, 13, 14, 15,
                                               16),
-                                    cellType=c("MSN.D1.1", "MSN.broad", "Oligo", "Astro", "OPC",
+                                    cellType.split=c("MSN.D1.1", "MSN.broad", "Oligo", "Astro", "OPC",
                                                "ambig.lowNtrxts", "Micro", "MSN.D1.2", "MSN.D2.1","MSN.D1.3",
                                                "Inhib.1","Inhib.2","Inhib.3","Inhib.4","MSN.D1.4",
-                                               "MSN.D2.2")
+                                               "MSN.D2.2"),
+                                    cellType.broad=c("MSN.D1", "MSN.broad", "Oligo", "Astro", "OPC",
+                                                     "ambig.lowNtrxts", "Micro", "MSN.D1", "MSN.D2", "MSN.D1",
+                                                     rep("Inhib", 4), "MSN.D1",
+                                                     "MSN.D2")
 )
 
-sce.nac.all$cellType <- annotationTab.nac.all$cellType[match(sce.nac.all$lessCollapsed,
+# Add info to clusterRefTab.nac.all
+clusterRefTab.nac.all$cellType.broad <- annotationTab.nac.all$cellType.broad[match(clusterRefTab.nac.all$merged.man.b,
+                                                                                   annotationTab.nac.all$cluster)]
+clusterRefTab.nac.all$cellType.split <- annotationTab.nac.all$cellType.split[match(clusterRefTab.nac.all$merged.man.b,
+                                                                                   annotationTab.nac.all$cluster)]
+
+
+## Then add to SCE - like for DLPFC, give 'cellType' & 'cellType.split'
+sce.nac.all$cellType <- annotationTab.nac.all$cellType.broad[match(sce.nac.all$lessCollapsed,
+                                                                annotationTab.nac.all$cluster)]
+
+sce.nac.all$cellType.split <- annotationTab.nac.all$cellType.split[match(sce.nac.all$lessCollapsed,
                                                                  annotationTab.nac.all$cluster)]
 
 
@@ -469,17 +484,17 @@ save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,
 
 
 # Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
-table(sce.dlpfc$cellType)
+table(sce.dlpfc$cellType.split)
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType != "ambig.lowNtrxts"]
-sce.nac.all$cellType <- droplevels(sce.nac.all$cellType)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.split != "ambig.lowNtrxts"]
+sce.nac.all$cellType.split <- droplevels(sce.nac.all$cellType.split)
 
 pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                    add_legend=F) +
       stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
                    width = 0.3, colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
@@ -489,6 +504,18 @@ for(i in 1:length(markers.mathys.custom)){
 }
 dev.off()
 
+
+## Re-print some reducedDims with this information
+pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Apr2020.pdf")
+plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.nac.all, colour_by="processDate", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac.all, colour_by="sample", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac.all, colour_by="cellType", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac.all, colour_by="sum", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+# UMAP
+plotUMAP(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+dev.off()
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 

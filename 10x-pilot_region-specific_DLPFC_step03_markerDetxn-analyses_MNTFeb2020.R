@@ -636,27 +636,9 @@ sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(ge
 ### Modeling of spatially-registered neuronal subtypes ================================
   # Added MNT late-Mar/Apr2020
 
-## First load previous sce.dlpfc.PB & Re-run duplicate correlation
-#            - want to use at the level of just broad cellType**:
-    load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_manualContrasts_MNTMar2020.rda',
-         verbose=T)
-    # eb_contrasts.dlpfc.broad, eb_list.dlpfc.broad, sce.dlpfc.PB
-    
-    ## Extract the count data
-    mat <- assays(sce.dlpfc.PB)$logcounts
-    
-    ## Build a group model
-    mod <- with(colData(sce.dlpfc.st.PB), model.matrix(~ 0 + cellType.split))
-    colnames(mod) <- gsub('cellType.split', '', colnames(mod))
-    
-    corfit <- duplicateCorrelation(mat, mod, block = sce.dlpfc.st.PB$donor)
-    corfit$consensus.correlation
-        # [1] 0.03835962
-    
-        # **Actually when you run this at the cellType.split level, it's [1] 0.03698695
-        #     (and the results are pretty identical when you use the former or the latter)
-    
-    #rm(mat, mod, sce.dlpfc.PB)
+  ## Extract the count data
+  mat <- assays(sce.dlpfc.PB)$logcounts
+  
 
 
 ## Load SCE with new info
@@ -689,9 +671,18 @@ sce.dlpfc.st.PB <- logNormCounts(sce.dlpfc.st.PB, size_factors=LSFvec)
 ## Extract the count data
 mat <- assays(sce.dlpfc.st.PB)$logcounts
 
-## Each cellType vs the rest - only for neuronal, bc this wouldn't affect glial stats
-cellType_idx <- splitit(sce.dlpfc.st.PB$cellType.split)
+## Build a group model
+mod <- with(colData(sce.dlpfc.st.PB), model.matrix(~ 0 + cellType.split))
+colnames(mod) <- gsub('cellType.split', '', colnames(mod))
 
+corfit <- duplicateCorrelation(mat, mod, block = sce.dlpfc.st.PB$donor)
+corfit$consensus.correlation
+    # [1] 0.03655833
+    # (0.03835962 at the broad cell type level, so not much difference..!)
+
+
+## Test each cellType vs the rest - only for neuronal, bc this wouldn't affect glial stats
+cellType_idx <- splitit(sce.dlpfc.st.PB$cellType.split)
 
 ## Will have to do this by excitatory or inhib. subtypes, separately
 eb0_list_neurons <- list()
@@ -764,18 +755,19 @@ data.frame(
                             t0_contrasts.st > 0)
 )
     #                FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
-    # Excit.ambig          210       151          23          10
-    # Excit.L2:3            60        36          21           9
-    # Excit.L3:4            40        17           8           3
-    # Excit.L4:5            46        34          18           6
-    # Excit.L5             168        74          43          19
-    # Excit.L5:6            69        31          22          10
-    # Excit.L6.broad        28         7           7           5
-    # Inhib.1              185       111          63          29
-    # Inhib.2              483       190           6           0
-    # Inhib.3               69        17          10           5
-    # Inhib.4               59        21          11           2
-    # Inhib.5               45        36          25          12
+    # Excit.ambig          240       176          24          14
+    # Excit.L2:3           140        60          33          13
+    # Excit.L3:4           117        28          18           5
+    # Excit.L4:5            96        44          29           6
+    # Excit.L5             210        97          48          26
+    # Excit.L5:6           117        49          29          13
+    # Excit.L6.broad        71        17           8           5
+    # Inhib.1              217       136          72          36
+    # Inhib.2              602       289           9           0
+    # Inhib.3              113        36          11           7
+    # Inhib.4               91        41          19           6
+    # Inhib.5              101        43          30          16
+    # Inhib.6              182        94          58          30
 
 
     ## Note that before, at the broad-cell-type-level:
@@ -791,37 +783,57 @@ data.frame(
 
 
 
-    ## ** If don't include broad cell type in model:
-    #               FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
-    # Excit.ambig          218       175          24          14
-    # Excit.L2:3           134        55          32          10
-    # Excit.L3:4            71        28          15           4
-    # Excit.L4:5            60        41          25           6
-    # Excit.L5             193        83          49          26
-    # Excit.L5:6           108        49          29          11
-    # Excit.L6.broad        58        13           8           5
-    # Inhib.1              212       119          68          39
-    # Inhib.2              618       294           9           0
-    # Inhib.3              114        38          11           6
-    # Inhib.4               78        27          15           6
-    # Inhib.5               92        40          30          16
+    ## ** If DO include broad cell type in model:
+    #                FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
+    # Excit.ambig          212       158          24          13
+    # Excit.L2:3            64        38          23           9
+    # Excit.L3:4            39        20           9           3
+    # Excit.L4:5            47        34          19           6
+    # Excit.L5             172        77          43          21
+    # Excit.L5:6            67        34          23          11
+    # Excit.L6.broad        30         7           7           5
+    # Inhib.1              221       127          66          35
+    # Inhib.2              498       194           4           0
+    # Inhib.3               72        21          10           5
+    # Inhib.4               92        23          14           4
+    # Inhib.5               80        39          28          14
+    # Inhib.6              163        87          56          26
 
 
           ## Exploration of effects of including broad neuronal type term ====
+          t0_contrasts.st.broad <- sapply(eb0_list_neurons.broad, function(x) {
+              x$t[, 2, drop = FALSE]
+            })
+          rownames(t0_contrasts.st.broad) <- rownames(sce.dlpfc.st.PB)
+          
           col.pal = brewer.pal(10,"RdBu")
-          #pdf("pdfs/exploration/zTemp_sub-clusterTs_DLPFC_Mar2020.pdf")
-          pheatmap(round(cor(t0_contrasts.st.1st), 3), main="With broad neuronal term", display_numbers=T,
+          
+          ## Within-approach t's
+          pdf("pdfs/exploration/zTemp_sub-clusterTs_DLPFC_Mar2020.pdf")
+          pheatmap(round(cor(t0_contrasts.st.broad), 3), main="With broad neuronal term", display_numbers=T,
                    cluster_cols=F, cluster_rows=F, color=col.pal, breaks=seq(-1,1,by=.2))
           pheatmap(round(cor(t0_contrasts.st), 3), main="No broad neuronal term", display_numbers=T,
                    cluster_cols=F, cluster_rows=F, color=col.pal, breaks=seq(-1,1,by=.2))
-          #dev.off()
+          dev.off()
           
           
-          broadTypeEffect <- sapply(eb0_list_neurons.1st, function(x) {x$coefficients[ ,2]})
+          broadTypeEffect <- sapply(eb0_list_neurons.broad, function(x) {x$coefficients[ ,2]})
           
           apply(broadTypeEffect, 2, quantile)
           
           apply(broadTypeEffect, 2, mean)
+          
+          
+          # What about between the two approaches??
+          subtypes <-colnames(t0_contrasts.st)
+          sapply(subtypes, function(x){cor(t0_contrasts.st[ ,x], t0_contrasts.st.broad[ ,x])})
+              # Excit.ambig     Excit.L2:3     Excit.L3:4     Excit.L4:5       Excit.L5
+              # 0.9292742      0.8743395      0.8710827      0.8393692      0.8927272
+              # Excit.L5:6 Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3
+              # 0.8643328      0.8698543      0.9664003      0.9620088      0.9203056
+              # Inhib.4        Inhib.5        Inhib.6
+              # 0.8663071      0.8517854      0.8657143
+          
           # end explore ====
 
 
@@ -859,7 +871,7 @@ for(i in 1:length(genes2plot)){
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F, theme_size=8) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:16], length(genes2plot[[i]]))) +
+                                                colour=rep(tableau20[1:17], length(genes2plot[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
   )
@@ -898,19 +910,17 @@ markerList.sorted.pt <- lapply(markerList.sorted, function(x){
 lengths(markerList.sorted)
 
 lengths(markerList.sorted.pt)
-    #   Excit.ambig     Excit.L2:3     Excit.L4:5       Excit.L5     Excit.L5:6
-    #            57             16             15             42             10
-    #Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4       Inhib.5
-    #             6             89            360             25             16            23
+    #   Excit.ambig     Excit.L2:3     Excit.L3:4     Excit.L4:5       Excit.L5
+    #            72             39             45             34             85
+    #    Excit.L5:6 Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3
+    #            39             24             93            488             45
+    #       Inhib.4        Inhib.5        Inhib.6
+    #            27             48             81
     
 
-    ## ** If don't include broad cell type in model:
-    #    Excit.ambig     Excit.L2:3     Excit.L4:5       Excit.L5     Excit.L5:6
-    #             66             38             25             74             29
-    # Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4
-    #             19             95            468             36             24
-    #        Inhib.5
-    #             41
+    ## ** If DO include broad cell type in model:
+    #
+
 
 genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
 
@@ -923,7 +933,7 @@ for(i in 1:length(genes2plot.pt)){
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F, theme_size=8) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:16], length(genes2plot.pt[[i]]))) +
+                                                colour=rep(tableau20[1:17], length(genes2plot.pt[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
   )
@@ -931,29 +941,17 @@ for(i in 1:length(genes2plot.pt)){
 dev.off()
 
 
-eb_list.dlpfc.neuronalSubs <- eb0_list_neurons.broad
-save(eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB,
-     file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda")
 
-# And results from same without modeling broad neuronal type
+# Save stats
 eb_list.dlpfc.neuronalSubs.simple <- eb0_list_neurons
-
 save(eb_list.dlpfc.neuronalSubs.simple, sce.dlpfc.st.PB,
      file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_noBroadTerm_MNTApr2020.rda")
 
 
-## Let's re-plot reducedDims with new [broad & split] cell type annotations
- #        (and rename old file with prefix 'zold_')
-pdf("pdfs/regionSpecific_DLPFC-n2_reducedDims-with-collapsedClusters_Apr2020.pdf")
-plotReducedDim(sce.dlpfc.st, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.dlpfc.st, colour_by="sample", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.dlpfc.st, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.dlpfc.st, colour_by="sum", point_size=3.5, point_alpha=0.5)
-plotUMAP(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
-plotUMAP(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
-dev.off()
+# And results from same WITH modeling broad neuronal type
+eb_list.dlpfc.neuronalSubs <- eb0_list_neurons.broad
+save(eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB,
+     file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda")
 
 
 

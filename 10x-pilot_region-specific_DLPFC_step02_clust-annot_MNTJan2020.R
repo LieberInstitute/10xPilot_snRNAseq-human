@@ -195,11 +195,11 @@ dev.off()
 
     ## With spatially-registered information (30Mar2020):
     clusterRefTab.dlpfc$manual <- factor(clusterRefTab.dlpfc$manual,
-                                         levels=c(levels(as.factor(clusterRefTab.dlpfc$manual))[c(2:16,1)]))
+                                         levels=c(levels(as.factor(clusterRefTab.dlpfc$manual))[c(2:18,1)]))
 
     clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.dlpfc$manual
 
-    pdf("pdfs/regionSpecific_DLPFC-n2_HC-prelimCluster-relationships_ST-registered_Mar2020.pdf")
+    pdf("pdfs/regionSpecific_DLPFC-n2_HC-prelimCluster-relationships_ST-registered_Apr2020.pdf")
     par(cex=1.2, font=2)
     myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
               main="DLPFC (n=2) prelim-kNN-cluster relationships \n (with spatially-registered information)",
@@ -369,7 +369,7 @@ clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(11, 15
                                      as.character(clusterRefTab.dlpfc$manual))
 
 clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(30, 16, 25),
-                                     paste0(clusterRefTab.dlpfc$cellType, ".1"),
+                                     paste0(clusterRefTab.dlpfc$cellType, ".6"),
                                      as.character(clusterRefTab.dlpfc$manual))
 
     ## end chunk =====
@@ -382,28 +382,29 @@ sce.dlpfc$cellType.split <- clusterRefTab.dlpfc$manual[match(sce.dlpfc$prelimClu
 sce.dlpfc$cellType.split <- factor(sce.dlpfc$cellType.split)
 
 table(sce.dlpfc$cellType.split, sce.dlpfc$cellType)
-    #                 Ambig.lowNtrxts Astro Excit Inhib Micro Oligo  OPC
-    # Ambig.lowNtrxts             168     0     0     0     0     0    0
-    # Astro                         0   501     0     0     0     0    0
-    # Excit.ambig                   0     0    78     0     0     0    0
-    # Excit.L2:3                    0     0   102     0     0     0    0
-    # Excit.L3:4                    0     0    34     0     0     0    0
-    # Excit.L4:5                    0     0   161     0     0     0    0
-    # Excit.L5                      0     0    33     0     0     0    0
-    # Excit.L5:6                    0     0    84     0     0     0    0
-    # Excit.L6.broad                0     0    83     0     0     0    0
-    # Inhib.1                       0     0     0   119     0     0    0
-    # Inhib.2                       0     0     0     7     0     0    0
-    # Inhib.3                       0     0     0    17     0     0    0
-    # Inhib.4                       0     0     0   116     0     0    0
-    # Inhib.5                       0     0     0   127     0     0    0
-    # Micro                         0     0     0     0   256     0    0
-    # Oligo                         0     0     0     0     0  3247    0
-    # OPC                           0     0     0     0     0     0  266      - good.
+#                 Ambig.lowNtrxts Astro Excit Inhib Micro Oligo  OPC
+# Astro                         0   501     0     0     0     0    0
+# Excit.ambig                   0     0    78     0     0     0    0
+# Excit.L2:3                    0     0   102     0     0     0    0
+# Excit.L3:4                    0     0    34     0     0     0    0
+# Excit.L4:5                    0     0   161     0     0     0    0
+# Excit.L5                      0     0    33     0     0     0    0
+# Excit.L5:6                    0     0    84     0     0     0    0
+# Excit.L6.broad                0     0    83     0     0     0    0
+# Inhib.1                       0     0     0     5     0     0    0
+# Inhib.2                       0     0     0     7     0     0    0
+# Inhib.3                       0     0     0    17     0     0    0
+# Inhib.4                       0     0     0   116     0     0    0
+# Inhib.5                       0     0     0   127     0     0    0
+# Inhib.6                       0     0     0   114     0     0    0
+# Micro                         0     0     0     0   256     0    0
+# Oligo                         0     0     0     0     0  3247    0
+# OPC                           0     0     0     0     0     0  266
+# Ambig.lowNtrxts             168     0     0     0     0     0    0      - good.
 
 table(sce.dlpfc$cellType.split, sce.dlpfc$sample)
     ## Seems as if nuclei at this level isn't too biased by donor... but hard to tell
-    #      bc there are 4x > nuclei for Br5161 than Br5212...
+    #      bc there are 4x > nuclei for Br5161 than Br5212...   (Inhib.1/.2 maybe but these are so small)
 
 
 # For reference/future use, save this SCE and the updated 'clusterRefTab.dlpfc'
@@ -411,7 +412,12 @@ sce.dlpfc.st <- sce.dlpfc
 save(sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo,
      file="rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda")
 
+
 ## Also print expression at this level of partitioning
+# First remove "Ambig.lowNtrxts":
+sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
+
 pdf("pdfs/regionSpecific_DLPFC-n2_marker-logExprs_cellTypesSplit_Apr2020.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -419,11 +425,27 @@ for(i in 1:length(markers.mathys.custom)){
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]]))) +
+                                                colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
+dev.off()
+
+
+## Let's also reprint reducedDims:
+
+## Let's re-plot reducedDims with new [broad & split] cell type annotations
+#        (and rename old file with prefix 'zold_')
+pdf("pdfs/regionSpecific_DLPFC-n2_reducedDims-with-collapsedClusters_Apr2020.pdf")
+plotReducedDim(sce.dlpfc.st, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="sample", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.dlpfc.st, colour_by="sum", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.dlpfc.st, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
 dev.off()
 
 

@@ -277,19 +277,20 @@ enrichTab[c("DE_PE_SCZ.Down","DE_BS2_SCZ.Down"),]
 ### Look at some new stats with 'cellType.split'-level clusters =================================
   # MNT 30Mar2020
 
-#load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTMar2020.rda", verbose=T)
-#    # eb_list.dlpfc.neuronalSubs, sce.dlpfc.PB.st
-load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_noBroadTerm_MNTMar2020.rda", verbose=T)
-    # eb_list.dlpfc.neuronalSubs.simple, sce.dlpfc.PB.st
+#load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda", verbose=T)
+#    # eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB
+load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_noBroadTerm_MNTApr2020.rda", verbose=T)
+    # eb_list.dlpfc.neuronalSubs.simple, sce.dlpfc.st.PB
     
 # Previously
 names(eb_list.dlpfc.broad)
     #[1] "Astro" "Excit" "Inhib" "Micro" "Oligo" "OPC"
 
 names(eb_list.dlpfc.neuronalSubs.simple)
-    # [1] "Excit.ambig"    "Excit.L2:3"     "Excit.L4:5"     "Excit.L5"
-    # [5] "Excit.L5:6"     "Excit.L6.broad" "Inhib.1"        "Inhib.2"
-    # [9] "Inhib.3"        "Inhib.4"        "Inhib.5"
+    # [1] "Excit.ambig"    "Excit.L2:3"     "Excit.L3:4"     "Excit.L4:5"
+    # [5] "Excit.L5"       "Excit.L5:6"     "Excit.L6.broad" "Inhib.1"
+    # [9] "Inhib.2"        "Inhib.3"        "Inhib.4"        "Inhib.5"
+    # [13] "Inhib.6"
 
 # Combine them
 eb_list.dlpfc <- list(eb_list.dlpfc.broad[["Astro"]],
@@ -315,14 +316,16 @@ t0_full <- sapply(eb_list.dlpfc, function(x) {
 
 # How does this look?
 data.frame(
-  'FDRsig' = colSums(apply(pvals0_full, 2, p.adjust, 'fdr') < 0.05 &
+  'FDRsig.05' = colSums(apply(pvals0_full, 2, p.adjust, 'fdr') < 0.05 &
                        t0_full > 0),
+  'FDRsig.01' = colSums(apply(pvals0_full, 2, p.adjust, 'fdr') < 0.01 & 
+                          t0_full > 0),
   'Pval10-6sig' = colSums(pvals0_full < 1e-6 &
                             t0_full > 0),
   'Pval10-8sig' = colSums(pvals0_full < 1e-8 &
                             t0_full > 0)
 )
-    #               FDRsig Pval10.6sig Pval10.8sig
+    #                FDRsig Pval10.6sig Pval10.8sig
     # Astro             461          47          16
     # Micro            1909         264         101
     # Oligo             480          42          10
@@ -348,8 +351,8 @@ load("rdas/geneLists-fromSTpaper_forEnrichTests_MNT.rda", verbose=T)
     ## 37 lists
 
 # add and change rownames to Ensembl ID
-rownames(t0_full) <- rownames(sce.dlpfc.PB.st)
-rownames(t0_full) <- rowData(sce.dlpfc.PB.st)$ID[match(rownames(t0_full), rownames(sce.dlpfc.PB.st))]
+rownames(t0_full) <- rownames(sce.dlpfc.st.PB)
+rownames(t0_full) <- rowData(sce.dlpfc.st.PB)$ID[match(rownames(t0_full), rownames(sce.dlpfc.st.PB))]
 
 ## filter for those present in stats (this won't change b/tw broad & subtype-level stats)
 geneList_present = lapply(geneLists.fromST, function(x) {
@@ -393,9 +396,9 @@ enrichTab.full$ID = rownames(enrichTab.full)
 enrichTab.full$SetSize = sapply(geneList_present, length)
 
 ### save a copy as a supp table
-enrichTab.fullOut.fdr.05 = enrichTab.full[ ,c(49, 46:48, 50, 1:45)]
+enrichTab.fullOut.fdr.05 = enrichTab.full[ ,c(55, 52:54, 56, 1:51)]
 #write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit-fdr05.csv", row.names=FALSE)
-#write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit_noBroadTerm-fdr05.csv", row.names=FALSE)
+write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit_noBroadTerm-fdr05.csv", row.names=FALSE)
 
 ## look at enrichment
 pMat = enrichTab.fullOut.fdr.05[ , grep("Pval", colnames(enrichTab.fullOut.fdr.05))]
@@ -409,55 +412,60 @@ round(-log10(pMat),1)
 
 ## SCZD gene sets
 enrichTab.fullOut.fdr.05[c("DE_PE_SCZ.Up","DE_BS2_SCZ.Up", "TWAS_PE_SCZ.Up","TWAS_BS2_SCZ.Up"),
-                         grep("Pval", colnames(enrichTab.fullOut.fdr.05))]
-        #                  Astro.Pval  Micro.Pval   Oligo.Pval   OPC.Pval
-        # DE_PE_SCZ.Up    3.408401e-52 0.007603556 4.522922e-11 0.02364615
-        # DE_BS2_SCZ.Up   1.000000e+00 0.094115327 4.134514e-01 1.00000000
-        # TWAS_PE_SCZ.Up  8.511075e-01 0.132974645 4.110474e-02 0.67241126
-        # TWAS_BS2_SCZ.Up 4.030077e-01 0.834424913 1.812590e-03 0.36324032
-        #                 Excit.ambig.Pval Excit.L2:3.Pval Excit.L4:5.Pval Excit.L5.Pval
-        # DE_PE_SCZ.Up        9.043892e-06      0.39758312      0.00271308    0.03155802
-        # DE_BS2_SCZ.Up       1.000000e+00      0.06013475      1.00000000    1.00000000
-        # TWAS_PE_SCZ.Up      1.927685e-01      1.00000000      0.64177934    0.53220508
-        # TWAS_BS2_SCZ.Up     8.032825e-02      0.41319295      0.62948595    0.17909447
-        #                 Excit.L5:6.Pval Excit.L6.broad.Pval Inhib.1.Pval Inhib.2.Pval
-        # DE_PE_SCZ.Up          0.3257749          0.01360989    0.1184232   0.63979379
-        # DE_BS2_SCZ.Up         1.0000000          1.00000000    0.4909116   0.71398713
-        # TWAS_PE_SCZ.Up        1.0000000          1.00000000    0.2700157   0.23660057
-        # TWAS_BS2_SCZ.Up       0.6348668          1.00000000    0.7508902   0.09358526
-        #                 Inhib.3.Pval Inhib.4.Pval Inhib.5.Pval
-        # DE_PE_SCZ.Up       0.5568478   0.06346642   0.04655823
-        # DE_BS2_SCZ.Up      1.0000000   1.00000000   1.00000000
-        # TWAS_PE_SCZ.Up     1.0000000   0.62980030   1.00000000
-        # TWAS_BS2_SCZ.Up    0.3299939   1.00000000   0.63279904
+                         c(2:5,grep("Pval", colnames(enrichTab.fullOut.fdr.05)))]
+        #                 Type Group    Set SetSize   Astro.Pval  Micro.Pval   Oligo.Pval
+        # DE_PE_SCZ.Up      DE    PE SCZ.Up    2247 3.408401e-52 0.007603556 4.522922e-11
+        # DE_BS2_SCZ.Up     DE   BS2 SCZ.Up      93 1.000000e+00 0.094115327 4.134514e-01
+        # TWAS_PE_SCZ.Up  TWAS    PE SCZ.Up     456 8.511075e-01 0.132974645 4.110474e-02
+        # TWAS_BS2_SCZ.Up TWAS   BS2 SCZ.Up     368 4.030077e-01 0.834424913 1.812590e-03
+        #                   OPC.Pval Excit.ambig.Pval Excit.L2:3.Pval Excit.L3:4.Pval
+        # DE_PE_SCZ.Up    0.02364615     6.356758e-06      0.87555871       0.1700458
+        # DE_BS2_SCZ.Up   1.00000000     1.000000e+00      0.07859219       1.0000000
+        # TWAS_PE_SCZ.Up  0.67241126     1.941352e-01      0.17900791       0.7152518
+        # TWAS_BS2_SCZ.Up 0.36324032     8.113622e-02      0.26959825       0.4114099
+        #                 Excit.L4:5.Pval Excit.L5.Pval Excit.L5:6.Pval
+        # DE_PE_SCZ.Up       0.0005191715   0.009940076      0.02517485
+        # DE_BS2_SCZ.Up      1.0000000000   1.000000000      1.00000000
+        # TWAS_PE_SCZ.Up     1.0000000000   0.270739668      1.00000000
+        # TWAS_BS2_SCZ.Up    0.6401488571   0.120999676      0.41140985
+        #                 Excit.L6.broad.Pval Inhib.1.Pval Inhib.2.Pval Inhib.3.Pval
+        # DE_PE_SCZ.Up             0.04402799    0.3156281   0.76112359    0.3835457
+        # DE_BS2_SCZ.Up            1.00000000    0.5141599   1.00000000    1.0000000
+        # TWAS_PE_SCZ.Up           1.00000000    0.5910278   0.25557934    1.0000000
+        # TWAS_BS2_SCZ.Up          0.60810846    0.5377963   0.06893443    0.6615109
+        #                 Inhib.4.Pval Inhib.5.Pval Inhib.6.Pval
+        # DE_PE_SCZ.Up      0.01003077   0.02475195  0.001454071
+        # DE_BS2_SCZ.Up     1.00000000   1.00000000  0.453960813
+        # TWAS_PE_SCZ.Up    0.40911692   1.00000000  1.000000000
+        # TWAS_BS2_SCZ.Up   0.63564520   0.64556513  1.000000000
 
 enrichTab.fullOut.fdr.05[c("DE_PE_SCZ.Down","DE_BS2_SCZ.Down", "TWAS_PE_SCZ.Down","TWAS_BS2_SCZ.Down"),
-                         grep("Pval", colnames(enrichTab.fullOut.fdr.05))]
-        #                    Astro.Pval   Micro.Pval   Oligo.Pval  OPC.Pval
-        # DE_PE_SCZ.Down    0.000214712 1.464783e-27 1.176215e-34 0.6963981
-        # DE_BS2_SCZ.Down   0.728452517 1.787082e-15 2.604828e-02 1.0000000
-        # TWAS_PE_SCZ.Down  0.263615712 1.000000e+00 1.000000e+00 0.6753821
-        # TWAS_BS2_SCZ.Down 0.229405139 1.930231e-01 5.620994e-01 0.6516143
-        #                   Excit.ambig.Pval Excit.L2:3.Pval Excit.L4:5.Pval
-        # DE_PE_SCZ.Down         0.007760521     0.002312959       1.0000000
-        # DE_BS2_SCZ.Down        0.631641812     1.000000000       1.0000000
-        # TWAS_PE_SCZ.Down       0.193427147     0.272447904       1.0000000
-        # TWAS_BS2_SCZ.Down      0.085913156     1.000000000       0.6322229
-        #                   Excit.L5.Pval Excit.L5:6.Pval Excit.L6.broad.Pval
-        # DE_PE_SCZ.Down       0.02551765       0.1604312           0.4439768
-        # DE_BS2_SCZ.Down      1.00000000       1.0000000           1.0000000
-        # TWAS_PE_SCZ.Down     0.53426847       0.4092179           1.0000000
-        # TWAS_BS2_SCZ.Down    0.18294873       0.6424346           1.0000000
-        #                   Inhib.1.Pval Inhib.2.Pval Inhib.3.Pval Inhib.4.Pval
-        # DE_PE_SCZ.Down       0.1362213   0.12385357    0.4160147   0.09229956
-        # DE_BS2_SCZ.Down      1.0000000   1.00000000    1.0000000   1.00000000
-        # TWAS_PE_SCZ.Down     0.7777465   0.06730904    1.0000000   1.00000000
-        # TWAS_BS2_SCZ.Down    1.0000000   0.20718779    0.6424346   1.00000000
-        #                   Inhib.5.Pval
-        # DE_PE_SCZ.Down       0.4131760
-        # DE_BS2_SCZ.Down      1.0000000
-        # TWAS_PE_SCZ.Down     0.4083796
-        # TWAS_BS2_SCZ.Down    0.6390802
+                         c(2:5,grep("Pval", colnames(enrichTab.fullOut.fdr.05)))]
+        #                  Type Group      Set SetSize  Astro.Pval   Micro.Pval
+        # DE_PE_SCZ.Down      DE    PE SCZ.Down    2077 0.000214712 1.464783e-27
+        # DE_BS2_SCZ.Down     DE   BS2 SCZ.Down     132 0.728452517 1.787082e-15
+        # TWAS_PE_SCZ.Down  TWAS    PE SCZ.Down     463 0.263615712 1.000000e+00
+        # TWAS_BS2_SCZ.Down TWAS   BS2 SCZ.Down     402 0.229405139 1.930231e-01
+        #                     Oligo.Pval  OPC.Pval Excit.ambig.Pval Excit.L2:3.Pval
+        # DE_PE_SCZ.Down    1.176215e-34 0.6963981      0.001742817     0.003043082
+        # DE_BS2_SCZ.Down   2.604828e-02 1.0000000      0.632725573     1.000000000
+        # TWAS_PE_SCZ.Down  1.000000e+00 0.6753821      0.195486991     0.732647496
+        # TWAS_BS2_SCZ.Down 5.620994e-01 0.6516143      0.053818994     0.726697323
+        #                   Excit.L3:4.Pval Excit.L4:5.Pval Excit.L5.Pval Excit.L5:6.Pval
+        # DE_PE_SCZ.Down         0.04875122       0.3248871    0.00770607      0.04875122
+        # DE_BS2_SCZ.Down        0.42410473       1.0000000    1.00000000      0.42410473
+        # TWAS_PE_SCZ.Down       1.00000000       1.0000000    0.27166251      0.27068716
+        # TWAS_BS2_SCZ.Down      0.68507946       0.6501990    0.08004020      0.41964416
+        #                   Excit.L6.broad.Pval Inhib.1.Pval Inhib.2.Pval Inhib.3.Pval
+        # DE_PE_SCZ.Down              0.4908060  0.005779045   0.13444415    0.5860449
+        # DE_BS2_SCZ.Down             1.0000000  0.629934109   1.00000000    1.0000000
+        # TWAS_PE_SCZ.Down            0.6339505  0.275086819   0.07137112    1.0000000
+        # TWAS_BS2_SCZ.Down           0.6290907  0.381643105   0.07856522    0.4155913
+        #                   Inhib.4.Pval Inhib.5.Pval Inhib.6.Pval
+        # DE_PE_SCZ.Down      0.06705622    0.4467516    0.1529106
+        # DE_BS2_SCZ.Down     1.00000000    1.0000000    1.0000000
+        # TWAS_PE_SCZ.Down    1.00000000    0.4185697    0.7733553
+        # TWAS_BS2_SCZ.Down   0.64363553    0.4089148    1.0000000
 
 
 
@@ -517,7 +525,7 @@ midpoint = function(x) x[-length(x)] + diff(x)/2
 customLayerEnrichment = function(enrichTab , groups, xlabs, 
                                  Pthresh = 12, ORcut = -log10(0.05), enrichOnly = FALSE,
                                  #layerHeights = c(0,40,55,75,85,110,120,135),
-                                 layerHeights = seq(0,150, by=10),
+                                 layerHeights = seq(0,170, by=10),
                                  mypal = c("white", colorRampPalette(brewer.pal(9,"YlOrRd"))(50)), ...) {
   
   wide_p = -log10( enrichTab[groups,grep("Pval", colnames(enrichTab))])
@@ -564,7 +572,7 @@ customLayerEnrichment = function(enrichTab , groups, xlabs,
 # dev.off()
 
 
-pdf("pdfs/exploration/enrichPlots_SCZD-geneSet_DLPFC-cellTypeSplit_heatmap_Mar2020.pdf",w=8)
+pdf("pdfs/exploration/enrichPlots_SCZD-geneSet_DLPFC-cellTypeSplit_heatmap_Apr2020.pdf",w=8)
 par(mar=c(8,8,2.5,1), cex.axis=1.2, cex.lab=1.5)
 groups =c("DE_PE_SCZ.Up", "DE_PE_SCZ.Down", 
           "DE_BS2_SCZ.Up", "DE_BS2_SCZ.Down", 
@@ -573,11 +581,11 @@ groups =c("DE_PE_SCZ.Up", "DE_PE_SCZ.Down",
 xlabs = ss(gsub("_SCZ", "", groups), "_", 2)
 customLayerEnrichment(enrichTab.full, groups, xlabs, enrichOnly=TRUE)
 abline(v=4,lwd=3)
-text(x = c(2,6), y = 156, c("SCZD-DE", "SCZD-TWAS"), xpd=TRUE,cex=2,font=2)
+text(x = c(2,6), y = 175, c("SCZD-DE", "SCZD-TWAS"), xpd=TRUE,cex=2,font=2)
 dev.off()
 
 
-pdf("pdfs/exploration/enrichPlots_birnbaum-geneSet_DLPFC-cellTypeSplit_heatmap_Mar2020.pdf",w=8)
+pdf("pdfs/exploration/enrichPlots_birnbaum-geneSet_DLPFC-cellTypeSplit_heatmap_Apr2020.pdf",w=8)
 par(mar=c(12,8,2.5,1), cex.axis=1, cex.lab=1.5)
 groups =grep(enrichTab.full$ID, pattern = "Birnbaum", value=TRUE)
 xlabs = ss(groups, "_", 3)
