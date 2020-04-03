@@ -277,7 +277,7 @@ enrichTab[c("DE_PE_SCZ.Down","DE_BS2_SCZ.Down"),]
 ### Look at some new stats with 'cellType.split'-level clusters =================================
   # MNT 30Mar2020
 
-#load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda", verbose=T)
+load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda", verbose=T)
 #    # eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB
 load("rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_noBroadTerm_MNTApr2020.rda", verbose=T)
     # eb_list.dlpfc.neuronalSubs.simple, sce.dlpfc.st.PB
@@ -299,6 +299,9 @@ eb_list.dlpfc <- list(eb_list.dlpfc.broad[["Astro"]],
                       eb_list.dlpfc.broad[["OPC"]])
 names(eb_list.dlpfc) <- c("Astro","Micro","Oligo","OPC")
 eb_list.dlpfc <- c(eb_list.dlpfc, eb_list.dlpfc.neuronalSubs.simple)
+    # or, for stats including 'broad' [excit/inhib] term
+eb_list.dlpfc <- c(eb_list.dlpfc, eb_list.dlpfc.neuronalSubs)
+
 
 
 
@@ -325,22 +328,24 @@ data.frame(
   'Pval10-8sig' = colSums(pvals0_full < 1e-8 &
                             t0_full > 0)
 )
-    #                FDRsig Pval10.6sig Pval10.8sig
-    # Astro             461          47          16
-    # Micro            1909         264         101
-    # Oligo             480          42          10
-    # OPC                97          24           4
-    # Excit.ambig       234          26          12
-    # Excit.L2:3        120          27          11
-    # Excit.L4:5         79          27           9
-    # Excit.L5          169          46          21
-    # Excit.L5:6         90          28          12
-    # Excit.L6.broad     58           8           7
-    # Inhib.1           203          70          30
-    # Inhib.2           571           7           0
-    # Inhib.3            90           9           6
-    # Inhib.4            66          13           3
-    # Inhib.5            87          29          15
+    #                FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
+    # Astro                461       226          47          16
+    # Micro               1909      1078         264         101
+    # Oligo                480       210          42          10
+    # OPC                   97        53          24           4
+    # Excit.ambig          240       176          24          14
+    # Excit.L2:3           140        60          33          13
+    # Excit.L3:4           117        28          18           5
+    # Excit.L4:5            96        44          29           6
+    # Excit.L5             210        97          48          26
+    # Excit.L5:6           117        49          29          13
+    # Excit.L6.broad        71        17           8           5
+    # Inhib.1              217       136          72          36
+    # Inhib.2              602       289           9           0
+    # Inhib.3              113        36          11           7
+    # Inhib.4               91        41          19           6
+    # Inhib.5              101        43          30          16
+    # Inhib.6              182        94          58          30
 
 
 
@@ -397,7 +402,8 @@ enrichTab.full$SetSize = sapply(geneList_present, length)
 
 ### save a copy as a supp table
 enrichTab.fullOut.fdr.05 = enrichTab.full[ ,c(55, 52:54, 56, 1:51)]
-#write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit-fdr05.csv", row.names=FALSE)
+write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit-fdr05.csv", row.names=FALSE)
+# or
 write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit_noBroadTerm-fdr05.csv", row.names=FALSE)
 
 ## look at enrichment
