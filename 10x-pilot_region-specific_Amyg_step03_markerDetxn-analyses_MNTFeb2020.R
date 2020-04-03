@@ -431,22 +431,28 @@ load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers
 
     # follow chunk 'How does this compare to results of `findMarkers()`?' for fdr & t mats
 
-
+# Take FDR < 0.005 (instead of < 0.001 as in some other regions)
 markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
-  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0]
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.005 & t0_contrasts[ ,x] > 0]
 })
 names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
 lengths(markerList.PB.manual)
-    # Astro Excit Inhib Micro Oligo   OPC
-    #   113    92    28   894   149    26
 
-markerTs.fdr.001 <- lapply(colnames(fdrs0_contrasts), function(x){
-  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0, x])
+    # FDR < 0.005
+        # Astro Excit Inhib Micro Oligo   OPC
+        #   258   170    49  1406   266    53
+    
+    # (FDR < 0.001)
+        # Astro Excit Inhib Micro Oligo   OPC
+        #   113    92    28   894   149    26
+
+markerTs.fdr.005 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.005 & t0_contrasts[ ,x] > 0, x])
 })
 
-names(markerTs.fdr.001) <- colnames(fdrs0_contrasts)
+names(markerTs.fdr.005) <- colnames(fdrs0_contrasts)
 
-markerList.sorted <- lapply(markerTs.fdr.001, function(x){
+markerList.sorted <- lapply(markerTs.fdr.005, function(x){
   x[,1][order(x, decreasing=TRUE)]
 })
 
@@ -464,7 +470,9 @@ sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
 sce.amy$cellType <- droplevels(sce.amy$cellType)
 
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+    ## 'Mar' iteration renamed with 'zold_' prefix - limited with too strict FDR cutoff such that top 20 pt-coding markers was < 20...
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot)){
   print(
     plotExpression(sce.amy, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
@@ -517,19 +525,20 @@ markerList.sorted.pt <- lapply(markerList.sorted, function(x){
 })
 
 lengths(markerList.sorted)
-    # Astro Excit Inhib Micro Oligo   OPC
-    #   113    92    28   894   149    26
+    # (above)
 
 lengths(markerList.sorted.pt)
     # Astro Excit Inhib Micro Oligo   OPC
-    #    67    25    16   710   102    12
+    #   154    63    31  1132   191    26
 
 
 
 genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
 
 # Plot these
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+    ## 'Mar' iteration renamed with 'zold_' prefix - limited with too strict FDR cutoff such that top 20 pt-coding markers was < 20...
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_Amyg-n2_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot.pt)){
   print(
     plotExpression(sce.amy, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
@@ -571,6 +580,19 @@ sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(ge
     # [1] "CPXM1"  "KCNG4"  "GDF6"   "GCOM1"  "CCKAR"  "CSPG4"  "ATP2C2" "NEU4"
 
 
+# Write 'genes2plot's to a csv
+names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
+        # * Only relevant where < 20 genes at a given FDR (but was being too strict in the first place):
+        # genes2plot.pt.names <- sapply(genes2plot.pt, function(x){
+        #                           sapply(1:20, function(i){ifelse(!is.na(x[i]), names(x)[i], NA)})
+        #                         })
+        # 
+        # top20genes <- cbind(sapply(genes2plot, names), genes2plot.pt.names)
+        # rownames(top20genes) <- NULL
+top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
+top20genes <- top20genes[ ,sort(colnames(top20genes))]
+
+write.csv(top20genes, file="tables/top20genesLists_Amyg-n2_cellTypes.csv")
 
 
 

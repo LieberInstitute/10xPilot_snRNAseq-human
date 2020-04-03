@@ -954,7 +954,12 @@ save(eb_list.dlpfc.neuronalSubs, sce.dlpfc.st.PB,
      file="rdas/markers-stats_DLPFC_n2_manualContrasts_neuronalSubs_MNTApr2020.rda")
 
 
+# Write 'genes2plot's to a csv
+names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
+top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
+top20genes <- top20genes[ ,sort(colnames(top20genes))]
 
+write.csv(top20genes, file="tables/top20genesLists_DLPFC-n2_cellTypesSplit.csv")
 
 ### MNT aside, 05Mar2020 ===========
   # Noticed there are 17 genes which are 0 expression AFTER first dropping "Ambig.lowNtrxts" cluster

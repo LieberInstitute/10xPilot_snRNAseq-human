@@ -559,6 +559,11 @@ sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(ge
     # [8] "GPR17"
 
 
+# Write 'genes2plot's to a csv
+names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
+top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
+top20genes <- top20genes[ ,sort(colnames(top20genes))]
 
+write.csv(top20genes, file="tables/top20genesLists_HPC-n3_cellTypesSplit.csv")
 
 

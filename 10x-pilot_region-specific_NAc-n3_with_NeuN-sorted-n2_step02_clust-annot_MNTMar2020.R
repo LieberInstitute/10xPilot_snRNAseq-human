@@ -522,4 +522,36 @@ dev.off()
 
 
 
+## For Day Lab - MNT 03Apr2020
+plotExpression(sce.nac.all, exprs_values = "logcounts", features="RELN",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:15], 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+## CHAT? - for cholinergic interneurons
+grep("CHAT", rownames(sce.nac.all))
+plotExpression(sce.nac.all, exprs_values = "logcounts", features="CHAT",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:15], 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+plotExpression(sce.nac.all, exprs_values = "logcounts", features="PVALB",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:15], 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+### Further dive into 'MSN.broad' cluster, which is entirely Br5212
+  # -> see if 
+
+
 

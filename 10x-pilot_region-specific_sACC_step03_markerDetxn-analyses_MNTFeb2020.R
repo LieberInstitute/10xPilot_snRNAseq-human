@@ -358,22 +358,27 @@ load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers
 
 # follow chunk 'How does this compare to results of `findMarkers()`?' for fdr & t mats
 
-
+# Take FDR < 0.005 (instead of < 0.001 as in some other regions)
 markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
-  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0]
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.005 & t0_contrasts[ ,x] > 0]
 })
 names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
 lengths(markerList.PB.manual)
-# Astro Excit Inhib Micro Oligo   OPC
-#   100   139    19   750   100    28
+    # FDR < 0.005
+        # Astro Excit Inhib Micro Oligo   OPC
+        #   179   283    47  1232   225    53
 
-markerTs.fdr.001 <- lapply(colnames(fdrs0_contrasts), function(x){
-  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.001 & t0_contrasts[ ,x] > 0, x])
+    # (FDR < 0.001)
+        # Astro Excit Inhib Micro Oligo   OPC
+        #   100   139    19   750   100    28
+
+markerTs.fdr.005 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts[fdrs0_contrasts[ ,x] < 0.005 & t0_contrasts[ ,x] > 0, x])
 })
 
-names(markerTs.fdr.001) <- colnames(fdrs0_contrasts)
+names(markerTs.fdr.005) <- colnames(fdrs0_contrasts)
 
-markerList.sorted <- lapply(markerTs.fdr.001, function(x){
+markerList.sorted <- lapply(markerTs.fdr.005, function(x){
   x[,1][order(x, decreasing=TRUE)]
 })
 
@@ -395,7 +400,9 @@ sce.sacc$cellType <- droplevels(sce.sacc$cellType)
 sce.sacc$cellType.broad <- as.factor(ss(as.character(sce.sacc$cellType), "\\.", 1))
 
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_Mar2020.pdf", height=7.5, width=9.5)
+    ## 'Mar' iteration renamed with 'zold_' prefix - limited with too strict FDR cutoff such that top 20 pt-coding markers was < 20...
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot)){
   print(
     plotExpression(sce.sacc, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
@@ -448,19 +455,20 @@ markerList.sorted.pt <- lapply(markerList.sorted, function(x){
 })
 
 lengths(markerList.sorted)
-# Astro Excit Inhib Micro Oligo   OPC
-#   100   139    19   750   100    28
+    # (above)
 
 lengths(markerList.sorted.pt)
-# Astro Excit Inhib Micro Oligo   OPC
-#    58    37    12   615    68    11
+    # Astro Excit Inhib Micro Oligo   OPC
+    #   112    88    25  1014   154    20   - dope, now none < 20 just bc limited with too-strict FDR
 
 
 
 genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
 
 # Plot these
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_pt-coding_Mar2020.pdf", height=7.5, width=9.5)
+    ## 'Mar' iteration renamed with 'zold_' prefix - limited with too strict FDR cutoff such that top 20 pt-coding markers was < 20...
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_sACC-n2_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot.pt)){
   print(
     plotExpression(sce.sacc, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
@@ -477,28 +485,36 @@ dev.off()
 
 ## How much they intersect with the top protein-coding-agnostic set?
 sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
-# $Astro
-#  [1] "FCN2"   "SLC2A4" "FHL5"   "CERS1"  "POU4F1"
-# 
-# $Excit
-#  [1] "IZUMO3" "PRTN3"
-# 
-# $Inhib
-#  [1] "DLX2"   "NKX2-1" "PLSCR5" "CHRNA2" "GAD2"   "NKX6-3" "PRLHR"  "EXOC1L"
-#  [9] "SLC6A2" "FCRL4"  "SP9"    "ANO1"
-# 
-# $Micro
-#  [1] "CD7"     "TOR4A"   "CCR5"    "CCL3L1"  "LILRA1"  "GAPT"    "SRGN"
-#  [8] "LILRA4"  "NCKAP1L" "MYO1F"   "TNFSF10" "MS4A14"
-# 
-# $Oligo
-#  [1] "HSD17B3"    "AC034102.2" "CCP110"     "LPGAT1"     "AC026316.5"
-#  [6] "CTNNA3"     "AC079594.2" "HHIP"       "CLDND1"     "LRP2"
-#  [11] "IFNA6"
-# 
-# $OPC
-#  [1] "KCNG4"  "FOXD2"  "TM4SF1" "SGCA"   "HTRA3"  "HAS2"   "ACTL10" "TSSK2"
-#  [9] "NR0B1"
+    # $Astro
+    #  [1] "FCN2"   "SLC2A4" "FHL5"   "CERS1"  "POU4F1"
+    # 
+    # $Excit
+    #  [1] "IZUMO3" "PRTN3"
+    # 
+    # $Inhib
+    #  [1] "DLX2"   "NKX2-1" "PLSCR5" "CHRNA2" "GAD2"   "NKX6-3" "PRLHR"  "EXOC1L"
+    #  [9] "SLC6A2" "FCRL4"  "SP9"    "ANO1"
+    # 
+    # $Micro
+    #  [1] "CD7"     "TOR4A"   "CCR5"    "CCL3L1"  "LILRA1"  "GAPT"    "SRGN"
+    #  [8] "LILRA4"  "NCKAP1L" "MYO1F"   "TNFSF10" "MS4A14"
+    # 
+    # $Oligo
+    #  [1] "HSD17B3"    "AC034102.2" "CCP110"     "LPGAT1"     "AC026316.5"
+    #  [6] "CTNNA3"     "AC079594.2" "HHIP"       "CLDND1"     "LRP2"
+    #  [11] "IFNA6"
+    # 
+    # $OPC
+    #  [1] "KCNG4"  "FOXD2"  "TM4SF1" "SGCA"   "HTRA3"  "HAS2"   "ACTL10" "TSSK2"
+    #  [9] "NR0B1"
+
+
+# Write 'genes2plot's to a csv
+names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
+top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
+top20genes <- top20genes[ ,sort(colnames(top20genes))]
+
+write.csv(top20genes, file="tables/top20genesLists_sACC-n2_cellTypes.csv")
 
 
 
