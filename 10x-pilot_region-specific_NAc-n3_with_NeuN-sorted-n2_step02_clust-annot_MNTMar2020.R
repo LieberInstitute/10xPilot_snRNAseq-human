@@ -418,7 +418,7 @@ markers.mathys.custom = list(
 )
 
 ## Print broad cell type markers
-#pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+#pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
@@ -506,15 +506,18 @@ dev.off()
 
 
 ## Re-print some reducedDims with this information
-pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Apr2020.pdf")
+#pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Apr2020.pdf")
+pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-cellType.final_Apr2020.pdf")
 plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
 plotTSNE(sce.nac.all, colour_by="processDate", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
 plotTSNE(sce.nac.all, colour_by="sample", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
 plotTSNE(sce.nac.all, colour_by="cellType", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+#plotTSNE(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac.all, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
 plotTSNE(sce.nac.all, colour_by="sum", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
 # UMAP
-plotUMAP(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+#plotUMAP(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+plotUMAP(sce.nac.all, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
 dev.off()
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
@@ -541,17 +544,265 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features="CHAT",
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-plotExpression(sce.nac.all, exprs_values = "logcounts", features="PVALB",
-               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+## AFTER re-assigning MSN.broad
+pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf")
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN"),
+               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:15], 1)) +
+               width = 0.3, colour=rep(tableau20[1:14], 4)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+
+
+
+### MNT 06Apr2020: Further dive into 'MSN.broad' cluster, which is entirely Br5212 =============
+  # -> revisit SNN clsutering - see if `cut_at()` can tease these differences out
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+
+table(sce.nac.all$cellType.split, sce.nac.all$sample)
+    #                 nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
+    # ambig.lowNtrxts       19       42       22             7             3
+    # Astro                149      384       12             0             0
+    # Inhib.1                1        3        0            16             5
+    # Inhib.2                1        1        1            42            11
+    # Inhib.3                7        7        9            86           167
+    # Inhib.4                9        8        4           104            58
+    # Micro                 72       72       37             0             0
+    # MSN.broad              0      266        0             0             0
+    # MSN.D1.1               2        0        0           117            13
+    # MSN.D1.2              10        3        0           285             3
+    # MSN.D1.3              17        8        6           369           319
+    # MSN.D1.4             178        2       72          1505          1829
+    # MSN.D2.1               9        6        3           134           148
+    # MSN.D2.2              41       14        5          1602          1870
+    # Oligo               1454      854      499             0             0
+    # OPC                   98      104       37             0             0
+
+
+
+
+## Trying `igraph::cut_at` ===============
+library(igraph)
+snn.gr <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
+#clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
+clusters.k20.comms <- cluster_walktrap(snn.gr)
+# Store the initial assignment
+og.membership.nac <- clusters.k20.comms$membership
+table(og.membership.nac)
+    #    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
+    # 1847  276  266  300 1925 1739  719  161  301 1619 1913  181  132   56  882  183
+    #   17   18   19   20   21   22
+    #  384   31  139   62  100   25
+
+is_hierarchical(clusters.k20.comms) # TRUE
+    
+    # Btw: it's 'prelimCluster' 3 (== "MSN.broad"; 266 nuclei) that we want to break up
+    table(sce.nac.all$prelimCluster, sce.nac.all$cellType)
+
+# "`cut_at()` returns a numeric vector, the membership vector of the vertices."
+test.membership <- cut_at(clusters.k20.comms, no=23)
+
+table(test.membership, og.membership.nac)
+table(test.membership[which(og.membership.nac==3)])
+
+for(i in c(23:30)){
+  print(paste0("no. of output clusters: ", i))
+  test.membership <- cut_at(clusters.k20.comms, no=i)
+  print(table(test.membership[which(og.membership.nac==3)]))
+}
+    ## [...] [1] "no. of output clusters: 25"
+            #  16  23
+            # 167  99
+    ## so no = 25 is where this 'MSN.broad' cluster is split
+    rm(i, test.membership)
+    new.membership.5212msn <- cut_at(clusters.k20.comms, no=25)
+    
+    # Check
+    table(new.membership.5212msn, og.membership.nac)  # good
+    
+    # Check order
+    table(sce.nac.all$prelimCluster == og.membership.nac) # all TRUE
+
+# Add this new level, first pushing to 'high' factor so isn't accidentally added to another
+sce.nac.all$prelimCluster.split <- ifelse(sce.nac.all$prelimCluster==3,
+                                          new.membership.5212msn[og.membership.nac==3]+22,
+                                          sce.nac.all$prelimCluster)
+#    # 38, then 45
+#
+#    # Actually when tabulate it's unexpected...
+#    table(sce.nac.all$prelimCluster.split)  # 165 + 101, instead of 167 + 99 ......
+#                                            # also when took this approach (proceeded with
+#                                            # 'Reassign to 23, 24' chunk), it doesn't look
+#                                            # properly separated by D1-vs-D2...
+    
+        # Just add new info as is and check 'new clusters' 16 + 23
+        sce.nac.all$prelimCluster.temp <- factor(new.membership.5212msn)
+            # Then plotted.  This showed this `cut_at()` approach works actually.
+        sce.nac.all$prelimCluster.temp <- NULL
+        
+        
+# Try this way:
+new.membership.5212msn[og.membership.nac==3] <- new.membership.5212msn[og.membership.nac==3] + 22
+# Now apply as'prelimCluster.split'
+sce.nac.all$prelimCluster.split <- ifelse(sce.nac.all$prelimCluster==3,
+                                          new.membership.5212msn,
+                                          sce.nac.all$prelimCluster)
+    
+    
+# Reassign to 23, 24
+sce.nac.all$prelimCluster.split[sce.nac.all$prelimCluster.split==38] <- 23
+sce.nac.all$prelimCluster.split[sce.nac.all$prelimCluster.split==45] <- 24
+table(sce.nac.all$prelimCluster.split)
+
+sce.nac.all$cellType.moreSplit <- ifelse(sce.nac.all$prelimCluster.split %in% c(23,24),
+                                       paste0(sce.nac.all$cellType.split,".",sce.nac.all$prelimCluster.split),
+                                       as.character(sce.nac.all$cellType.split))
+
+sce.nac.all$cellType.moreSplit <- factor(sce.nac.all$cellType.moreSplit)
+
+table(sce.nac.all$cellType.moreSplit, sce.nac.all$cellType.split)
+    # good.
+
+
+## Check
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[["MSNs.D1"]]),
+               x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:17], length(markers.mathys.custom[["MSNs.D1"]]))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    ## good.
+
+
+      # Driven by low n transcripts?
+      cc_idx <- splitit(sce.nac.all$cellType.moreSplit)
+      sapply(cc_idx, function(x){quantile(sce.nac.all[ ,x]$sum)})
+          ## doesn't seem to be
+      
+      
+      sce.nac.5212msns <- sce.nac.all[ ,sce.nac.all$cellType.split=="MSN.broad"]
+      
+      pheatmap::pheatmap(assay(sce.nac.5212msns,"logcounts")[c(markers.mathys.custom[["MSNs.D1"]],
+                                                               markers.mathys.custom[["MSNs.D2"]],
+                                                               markers.mathys.custom[["MSNs.pan"]]), ],
+                         show_colnames=FALSE)
+          ## Alright dichotomy is definitely there...
+           # - revisiting OSCA Ch. 10, there is a subclustering approach
+
+
+## OSCA Ch. 10.7 Subclustering approach =============
+# Repeating modelling and PCA on the subset.
+  # use 'sce.nac.5212msns' from above
+dec.5212 <- modelGeneVar(sce.nac.5212msns)
+sce.nac.5212msns <- denoisePCA(sce.nac.5212msns, technical=dec.5212,
+                         subset.row=getTopHVGs(dec.5212, prop=0.1))
+    # reduced "PCA" entry to 30 PCs
+g.5212 <- buildSNNGraph(sce.nac.5212msns, use.dimred="PCA")
+clust.5212 <- igraph::cluster_walktrap(g.5212)$membership
+table(clust.5212)
+#  1   2
+# 98 168
+
+plotExpression(sce.nac.5212msns, features=c("DRD1", "DRD2", "BCL11B"),
+               x=I(factor(clust.5212)))
+    # Dope this works too.
+
+  ## end test for this approach - go with `cut_at()` results ====
+
+
+# First save
+save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo,
+     file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+
+# First drop "Ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.moreSplit != "ambig.lowNtrxts"]
+sce.nac.all$cellType.moreSplit <- droplevels(sce.nac.all$cellType.moreSplit)
+
+## Print broad cell type markers
+#pdf("pdfs/ztemp_regionSpecific_NAc-ALL-n5_marker-logExprs_cellType.moreSplit_MNTApr2020.pdf", height=6, width=12)
+pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_cellType.final_MNTApr2020.pdf", height=6, width=12)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+#                   x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+                   add_legend=F) +
+      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+                   width = 0.3, colour=rep(tableau20[1:14], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
+## Notes from this insight:
+ #    - MSN.broad.23 D1-expressing for sure; most like D1.3 or D1.4
+ #    - MSN.broad.24 like MSN.D2.2 in that expresses DRD2 & PENK
+
+# Pseudo-bulk across JUST this cellType.moreSplit and run some correlation to re-assign
+
+sce.nac.PB <- aggregateAcrossCells(sce.nac.all, ids=sce.nac.all$cellType.moreSplit,
+                                   use_exprs_values="counts")
+# Drop genes with all 0's
+sce.nac.PB <- sce.nac.PB[!rowSums(assay(sce.nac.PB, "counts"))==0, ]
+    ## keeps 29236 genes
+
+# Remove stored `sizeFactors()` because this will mess you up
+#     * Also, to be safe, can always provide manually-computed SFs:
+sizeFactors(sce.nac.PB) <- NULL
+LSFvec <- librarySizeFactors(sce.nac.PB)
+# Re-compute logcounts
+sce.nac.PB <- logNormCounts(sce.nac.PB, size_factors=LSFvec)
+
+pdf("pdfs/ztemp_regionSpecific_NAc-ALL-n5_corExprs_PB-cellType.moreSplit_MNTApr2020.pdf")
+pheatmap::pheatmap(cor(assay(sce.nac.PB, "logcounts")),display_numbers=T, fontsize_number=7)
+dev.off()
+    # so MSN.broad.23 most ~ MSN.D1.4
+    # and MSN.broad.24 most ~ MSN.D2.2  (yep, see below)
+cor(assay(sce.nac.PB, "logcounts"))[grep("broad", colnames(sce.nac.PB)),grep("MSN",colnames(sce.nac.PB))]
+    #              MSN.broad.23 MSN.broad.24  MSN.D1.1  MSN.D1.2  MSN.D1.3  MSN.D1.4
+    # MSN.broad.23    1.0000000    0.9552372 0.9056483 0.9276173 0.9334208 0.9559685*
+    # MSN.broad.24    0.9552372    1.0000000 0.8983732 0.9162969 0.9253921 0.9479631
+    #               MSN.D2.1  MSN.D2.2
+    # MSN.broad.23 0.9212994 0.9539614
+    # MSN.broad.24 0.9171996 0.9504078*
+
+# Re-load actually, bc had dropped "ambig.lowNtrxts" actually
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+
+## We'll reassign as such then, calling a new 'cellType.final':
+sce.nac.all$cellType.final <- sce.nac.all$cellType.moreSplit
+
+sce.nac.all$cellType.final[sce.nac.all$cellType.moreSplit=="MSN.broad.23"] <- "MSN.D1.4"
+sce.nac.all$cellType.final[sce.nac.all$cellType.moreSplit=="MSN.broad.24"] <- "MSN.D2.2"
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+table(sce.nac.all$cellType.moreSplit, sce.nac.all$cellType.final) # dope.
+
+# Save
+save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo,
+     file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+
+
+
+### Some checks
+plotTSNE(sce.nac.all, colour_by="cellType.split", point_alpha=0.5, point_size=3.5, text_by="cellType.split")
+
+## MSN.D1.3-specific top [pt-coding] genes: 
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("DRD1", "CASZ1", "CRHR2", "RXFP1"),
+               x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:17], 4)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-
-### Further dive into 'MSN.broad' cluster, which is entirely Br5212
-  # -> see if 
+    ##  -> then went ahead and re-printed broad markers with 'cellType.final'
 
 
 

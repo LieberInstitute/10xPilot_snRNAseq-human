@@ -2,6 +2,7 @@
 ###   **Region-specific analyses**
 ###     - (3x) NAc samples from: Br5161 & Br5212 & Br5287
 ###     - (2x) NeuN-sorted samples from: Br5207 & Br5182
+###   ** This final iteration includes the 5212-specific 'MSN.broad' resolved
 #####################################################################
 
 library(SingleCellExperiment)
@@ -44,9 +45,9 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
 
 ###### Direct limma approach ####
 #################################
-table(sce.nac.all$cellType.split)
-table(sce.nac.all$cellType.split, sce.nac.all$sample) 
-    # nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
+table(sce.nac.all$cellType.final)
+table(sce.nac.all$cellType.final, sce.nac.all$sample) 
+    #                 nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
     # ambig.lowNtrxts       19       42       22             7             3
     # Astro                149      384       12             0             0
     # Inhib.1                1        3        0            16             5
@@ -54,29 +55,26 @@ table(sce.nac.all$cellType.split, sce.nac.all$sample)
     # Inhib.3                7        7        9            86           167
     # Inhib.4                9        8        4           104            58
     # Micro                 72       72       37             0             0
-    # MSN.broad              0      266        0             0             0
     # MSN.D1.1               2        0        0           117            13
     # MSN.D1.2              10        3        0           285             3
     # MSN.D1.3              17        8        6           369           319
-    # MSN.D1.4             178        2       72          1505          1829
+    # MSN.D1.4             178      169       72          1505          1829
     # MSN.D2.1               9        6        3           134           148
-    # MSN.D2.2              41       14        5          1602          1870
+    # MSN.D2.2              41      113        5          1602          1870
     # Oligo               1454      854      499             0             0
     # OPC                   98      104       37             0             0
 
-    #           - modeling might end up being a little weird....
-
 # First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.split != "ambig.lowNtrxts"]
-sce.nac.all$cellType.split <- droplevels(sce.nac.all$cellType.split)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
 
 # Then make the pseudo-bulked SCE
-sce.nac.all.PB <- aggregateAcrossCells(sce.nac.all, ids=paste0(sce.nac.all$sample,":",sce.nac.all$cellType.split),
+sce.nac.all.PB <- aggregateAcrossCells(sce.nac.all, ids=paste0(sce.nac.all$sample,":",sce.nac.all$cellType.final),
                                         use_exprs_values="counts")
-    ## of 33538 x 59 dims
+    ## of 33538 x 58 dims
 
 # Clean up colData
-colData(sce.nac.all.PB) <- colData(sce.nac.all.PB)[ ,c(13:17,19:22)]
+colData(sce.nac.all.PB) <- colData(sce.nac.all.PB)[ ,c(13:17,19:25)]
 
 # Drop genes with all 0's
 sce.nac.all.PB <- sce.nac.all.PB[!rowSums(assay(sce.nac.all.PB, "counts"))==0, ]
@@ -92,18 +90,18 @@ sce.nac.all.PB <- logNormCounts(sce.nac.all.PB, size_factors=LSFvec)
 mat <- assays(sce.nac.all.PB)$logcounts
 
 ## Build a group model * FOR THIS REGION ADDING 'processDate'
-mod <- with(colData(sce.nac.all.PB), model.matrix(~ 0 + cellType.split + processDate))
-colnames(mod) <- gsub('cellType.split', '', colnames(mod))
+mod <- with(colData(sce.nac.all.PB), model.matrix(~ 0 + cellType.final + processDate))
+colnames(mod) <- gsub('cellType.final', '', colnames(mod))
 
 corfit <- duplicateCorrelation(mat, mod, block = sce.nac.all.PB$donor)
 corfit$consensus.correlation
-    ## [1] 0.02344084
+    ## [1] 0.01500338
 
 ## (other scripts have pairwise tests -- too many levels to test that here)
 
 
 ## Then each cellType vs the rest
-cellType_idx <- splitit(sce.nac.all.PB$cellType.split)
+cellType_idx <- splitit(sce.nac.all.PB$cellType.final)
 
 eb0_list <- lapply(cellType_idx, function(x) {
   res <- rep(0, ncol(sce.nac.all.PB))
@@ -151,41 +149,39 @@ data.frame(
 )
 
 ## Without t > 0 subset:
-    #           FDRsig Pval10.6sig Pval10.8sig
-    # Astro       1713         390         235
-    # Inhib.1      351          28           9
-    # Inhib.2     4827         596         237
-    # Inhib.3      391          85          42
-    # Inhib.4      443         104          49
-    # Micro       3351         972         688
-    # MSN.broad    152          81          13
-    # MSN.D1.1     101          13           2
-    # MSN.D1.2     190          17           2
-    # MSN.D1.3      88          20          11
-    # MSN.D1.4     493          53          12
-    # MSN.D2.1     178          27          10
-    # MSN.D2.2     198          19           5
-    # Oligo       1732         420         251
-    # OPC          860         181         113
+    #         FDRsig Pval10.6sig Pval10.8sig
+    # Astro      1670         380         224
+    # Inhib.1     387          27           9
+    # Inhib.2    4983         604         243
+    # Inhib.3     351          78          41
+    # Inhib.4     430          95          48
+    # Micro      3356         966         675
+    # MSN.D1.1     93          13           2
+    # MSN.D1.2    188          16           0
+    # MSN.D1.3     79          18          11
+    # MSN.D1.4   1029         128          47
+    # MSN.D2.1    173          28          10
+    # MSN.D2.2    307          32           9
+    # Oligo      1707         412         246
+    # OPC         822         172         112
 
 
 ## With t > 0
-    #           FDRsig Pval10.6sig Pval10.8sig
-    # Astro       1496         371         228
-    # Inhib.1       97          13           6
-    # Inhib.2      220           5           0
-    # Inhib.3      351          78          39
-    # Inhib.4      400         101          49
-    # Micro       2201         692         514
-    # MSN.broad    152          81          13
-    # MSN.D1.1      88          12           2
-    # MSN.D1.2      65          12           1
-    # MSN.D1.3      88          20          11
-    # MSN.D1.4     485          53          12
-    # MSN.D2.1     132          24          10
-    # MSN.D2.2     194          19           5
-    # Oligo       1402         370         227
-    # OPC          804         179         112
+    #          FDRsig Pval10.6sig Pval10.8sig
+    # Astro      1462         361         218
+    # Inhib.1      99          13           6
+    # Inhib.2     215           3           0
+    # Inhib.3     314          71          38
+    # Inhib.4     386          91          48
+    # Micro      2171         684         506
+    # MSN.D1.1     80          12           2
+    # MSN.D1.2     58          10           0
+    # MSN.D1.3     79          18          11
+    # MSN.D1.4   1027         128          47
+    # MSN.D2.1    122          23           9
+    # MSN.D2.2    300          32           9
+    # Oligo      1384         360         221
+    # OPC         771         170         111
 
 
 
@@ -208,24 +204,24 @@ load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers
 
 # (set up p0/fdrs0 & t0 lists, above)
 
-# Let's take those with fdr < 0.01
+# Let's take those with fdr < 0.05
 markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
-  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts_cell[ ,x] > 0]
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts_cell[ ,x] > 0]
 })
 names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
 lengths(markerList.PB.manual)
-    #    Astro   Inhib.1   Inhib.2   Inhib.3   Inhib.4     Micro MSN.broad  MSN.D1.1
-    #     1010        25        66       191       230      1583       128        30
-    # MSN.D1.2  MSN.D1.3  MSN.D1.4  MSN.D2.1  MSN.D2.2     Oligo       OPC
-    #       23        40       200        53        57       876       492
+    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+    #     1462       99      215      314      386     2171       80       58
+    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+    #       79     1027      122      300     1384      771
 
-markerTs.fdr.01 <- lapply(colnames(fdrs0_contrasts), function(x){
-  as.matrix(t0_contrasts_cell[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts_cell[ ,x] > 0, x])
+markerTs.fdr.05 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts_cell[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts_cell[ ,x] > 0, x])
 })
 
-names(markerTs.fdr.01) <- colnames(fdrs0_contrasts)
+names(markerTs.fdr.05) <- colnames(fdrs0_contrasts)
 
-markerList.sorted <- lapply(markerTs.fdr.01, function(x){
+markerList.sorted <- lapply(markerTs.fdr.05, function(x){
   x[,1][order(x, decreasing=TRUE)]
 })
 
@@ -239,18 +235,18 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
     rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo)
 
 # As before, first drop "Ambig.lowNtrxts" (168 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType != "Ambig.lowNtrxts"]
-sce.nac.all$cellType <- droplevels(sce.nac.all$cellType)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
 
 
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
-                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes2plot[[i]]))) +
+                                                colour=rep(tableau20[1:14], length(genes2plot[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
   )
@@ -298,10 +294,10 @@ markerList.sorted.pt <- lapply(markerList.sorted, function(x){
 lengths(markerList.sorted)
 
 lengths(markerList.sorted.pt)
-    #    Astro   Inhib.1   Inhib.2   Inhib.3   Inhib.4     Micro MSN.broad  MSN.D1.1
-    #      555        18        56       107       142      1138        48        16
-    # MSN.D1.2  MSN.D1.3  MSN.D1.4  MSN.D2.1  MSN.D2.2     Oligo       OPC
-    #       15        15        55        19        13       463       264
+    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+    #      822       59      156      178      243     1583       28       32
+    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+    #       36      324       52      103      740      409
 
 
 
@@ -312,10 +308,10 @@ pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/explorat
 for(i in 1:length(genes2plot.pt)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
-                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes2plot.pt[[i]]))) +
+                                                colour=rep(tableau20[1:14], length(genes2plot.pt[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
   )
@@ -325,7 +321,68 @@ dev.off()
 
 ## How much they intersect with the top protein-coding-agnostic set?
 sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
-    #
+    #$Astro
+      # [1] "FEZF1"   "KCNJ8"   "RASL12"  "TFAP2C"  "GLI1"    "PRODH"   "S1PR1"
+      # [8] "TMPRSS3" "SLC2A4"  "IGFN1"   "IL33"
+      # 
+    # $Inhib.1
+      # [1] "NPY"        "PNOC"       "ST6GALNAC2" "SST"        "HDAC4"
+      # [6] "FBN2"       "KRTAP5-10"  "DDC"        "NOS1"       "DRD5"
+      # [11] "SLC27A6"    "GPR156"     "TLL2"       "PCDH18"     "GDPD2"
+      # 
+    # $Inhib.2
+      # [1] "NDUFB6" "PPP3CB" "SLC5A7" "SP8"    "BMP3"   "ACBD6"  "ACAT1"  "FCRL4"
+      # [9] "VIP"    "SPTLC1" "FRMD7"  "CDC5L"  "ECEL1"  "TTC37"  "CDK14"  "TNS4"
+      # [17] "KCNH5"  "ZRANB2"
+      # 
+    # $Inhib.3
+      # [1] "EXOC1L" "LMO7DN" "SP5"    "OR2I1P" "PTHLH"  "PLSCR5" "KMO"    "DOK7"
+      # 
+    # $Inhib.4
+      # [1] "CER1"    "TRH"     "RORC"    "CHRNA3"  "NPR3"    "COL2A1"  "GLP1R"
+      # [8] "CBLN1"   "TAC3"    "COL13A1" "RERGL"
+      # 
+    # $Micro
+      # [1] "SUCNR1"   "FCGR2B"   "HHEX"     "MPEG1"    "LILRA4"   "SERPINA1"
+      # [7] "TAL1"     "VSIG4"    "GAPT"     "GIMAP7"   "NCF4"     "CEBPE"
+      # [13] "CD300C"   "CCR1"     "LILRB2"   "RGS18"
+      # 
+    # $MSN.D1.1
+      # [1] "CAPSL"    "C15orf62" "HBD"      "CCIN"     "SHISA8"   "SCGB1D4"  "FOXD4L4"
+      # [8] "NPFFR2"   "GABRQ"
+      # 
+    # $MSN.D1.2
+      # [1] "TMEM131" "EBF1"    "UMODL1"  "PCDHB1"  "DIO3"    "DWORF"   "TAF1L"
+      # [8] "PDCD1"   "MAT1A"   "NCOA1"   "ASPG"    "TTC34"   "GIMAP5"
+      # 
+    # $MSN.D1.3
+      # [1] "XDH"     "GPR26"   "LRRC55"  "RXFP1"   "LECT2"   "CCDC172"
+      # 
+    # $MSN.D1.4
+      # [1] "OR51E2"  "IL17C"   "DLX4"    "CAVIN3"  "MINDY4B" "MCIDAS"  "MSLNL"
+      # 
+    # $MSN.D2.1
+      # [1] "TH"      "ATP10A"  "C3orf52" "TTN"     "MROH2A"
+      # 
+    # $MSN.D2.2
+      # [1] "SDR16C5"  "TMPRSS13"
+      # 
+    # $Oligo
+      # [1] "FFAR1"      "FCRLA"      "NGFR"       "TMEM88B"    "IFNA2"
+      # [6] "GPIHBP1"    "AC034102.2" "HOXD1"
+      # 
+    # $OPC
+      # [1] "CPXM1"   "DCAF4L2" "KCNG4"   "TM4SF1"  "KLF17"   "NR0B1"   "FMO3"
+      # [8] "TIMP4"   "GPR17"   "CYP2A13" "EMILIN3" "CSPG4"   "BGN"     "GDF6"
+      # [15] "HMX1"
+
+
+# Write 'genes2plot's to a csv
+names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
+top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
+top20genes <- top20genes[ ,sort(colnames(top20genes))]
+
+write.csv(top20genes, file="tables/top20genesLists_NAc-n5_cellType.final.csv")
 
 
 
