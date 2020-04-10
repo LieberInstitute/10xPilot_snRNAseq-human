@@ -510,6 +510,117 @@ table(sce.all.n12$cellType, sce.all.n12$region)
     #OPC           634   269  885  239  534
 
 
+# With new added region-specific annotations
+table(sce.all.n12$cellType, sce.all.n12$cellType.RS)
+    #              Ambig.lowNtrxts Astro Excit Excit.1 Excit.2 Excit.3 Excit.4 Inhib Inhib.1 Inhib.2
+    # Ambig.hiVCAN               0     0     1       0       2       0       1     1       0       0
+    # Astro.1                    0  3681     0       0       0       0       0     0       0       0
+    # Astro.2                    2   128     0       0       0       0       0     0       0       0
+    # Excit.1                    0     0   273     569      79       0       0     0       0       0
+    # Excit.2                    0     0   194       1     328       0       0     0       0       0
+    # Excit.3                    0     0   726       0       0       0       0     0       0       1
+    # Excit.4                    0     0     2      16       0       3       1     0       1       0
+    # Excit.5                    0     0    86       0       0     182       0     0       0       0
+    # Excit.6                    0     0   184       0       0       0       0     0       0       0
+    # Excit.7                    0     0    36       0       0       0      83     0       0       0
+    # Excit.8                    0     0     0       0       0       0       0    72       0       0
+    # Inhib.1                  368     4     0       0       0       0       0   356       0     197
+    # Inhib.2                    1     0     0       0       0       0       0   258     266       0
+    # Inhib.3                    0     0     0       0       0       0       0   268       0     115
+    # Inhib.4                    0     0     1       0       0       0       0   177     246       0
+    # Inhib.5                    0     0   157       0       0       0       0     5       2       2
+    # Micro                     35     2     0       0       0       0       0     0       0       0
+    # Oligo                      2     1     1       0       1       0       0     1       0       0
+    # OPC                        6    47     0       0       0       0       0     0       0       0
+    # 
+    #              Inhib.NRGNneg Inhib.NRGNpos Micro Oligo   OPC Tcell
+    # Ambig.hiVCAN             0             0     3     2    22     0
+    # Astro.1                  0             0     0    17     0     0
+    # Astro.2                  0             0     0     0     0     0
+    # Excit.1                  0             0     0     0     0     0
+    # Excit.2                  0             0     0     0     0     0
+    # Excit.3                  0             1     0     0     0     0
+    # Excit.4                  0            10     0     0     0     0
+    # Excit.5                  0             0     0     0     0     0
+    # Excit.6                  0             0     0     0     0     0
+    # Excit.7                  0             0     0     0     0     0
+    # Excit.8                  0             0     0     0     0     0
+    # Inhib.1                 21             0     2     0     2     0
+    # Inhib.2                 24             0     0     0     0     0
+    # Inhib.3                  0             0     0     0     0     0
+    # Inhib.4                  0             0     0     0     0     0
+    # Inhib.5                  0           638     0     0     0     0
+    # Micro                    0             0  2979    35     0    26
+    # Oligo                    0             0     3 18605     0     0
+    # OPC                      0             0     0     5  2503     0
+
+
+
+### Re-print some visualizations - MNT 10Apr2020 ====================
+# With original coordinates and annotation
+pdf("pdfs/panBrain-n12_reducedDims-with-collapsedClusters_Apr2020.pdf")
+plotReducedDim(sce.all.n12, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.all.n12, colour_by="region", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
+plotTSNE(sce.all.n12, colour_by="processDate", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
+plotTSNE(sce.all.n12, colour_by="sample", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
+plotTSNE(sce.all.n12, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
+# Region-specific annotation
+plotTSNE(sce.all.n12, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204): region-specific annot")
+plotTSNE(sce.all.n12, colour_by="sum", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
+plotUMAP(sce.all.n12, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("UMAP on opt PCs (d=204)")
+dev.off()
+
+# How many PCs?
+head(attr(reducedDim(sce.all.n12, "PCA"), "percentVar"), n=75)
+    # [1] 19.93610257  8.56551975  5.48499030  2.69104457  2.29910336  0.86823624  0.71376460
+    # [8]  0.48377800  0.32700635  0.31751426  0.29901816  0.25911566  0.22686401  0.21400937
+    # [15]  0.20303113  0.18768708  0.18136268  0.17008113  0.15380352  0.14366776  0.13666573
+    # [22]  0.12527399  0.11727016  0.11141297  0.10514416  0.10317094  0.09743560  0.09296292
+    # [29]  0.08796466  0.08415014  0.08363044  0.08132186  0.08054339  0.07687419  0.07353210
+    # [36]  0.07313253  0.07035361  0.06841083  0.06810964  0.06737097  0.06464408  0.06338695
+    # [43]  0.06261076  0.06170788  0.06062411  0.05978423  0.05923917  0.05845309  0.05738356
+    # [50]  0.05623525  0.05588523  0.05546358  0.05420676  0.05329303  0.05254012  0.05199590
+    # [57]  0.05148879  0.05073573  0.05023337  0.04904533  0.04896795  0.04883193  0.04804923
+    # [64]  0.04767100  0.04691248  0.04680456  0.04633970  0.04582236  0.04560561  0.04480624
+    # [71]  0.04469499  0.04421348  0.04352501  0.04339655  0.04307707
+
+# 0.05% var or greater
+reducedDim(sce.all.n12, "PCA_59") <- reducedDim(sce.all.n12, "PCA")[ ,c(1:59)]
+# 0.1% var or greater
+reducedDim(sce.all.n12, "PCA_26") <- reducedDim(sce.all.n12, "PCA")[ ,c(1:26)]
+
+# First remove this reducedDim bc this has caused trouble previously
+reducedDim(sce.all.n12, "TSNE") <- NULL
+
+## 59 PCs tsNE ===
+set.seed(109)
+sce.all.tsne.59pcs <- runTSNE(sce.all.n12, dimred="PCA_59")
+
+pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon59PCs_MNT.pdf")
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 59 PCs (pan-brain annot)")
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 59 PCs (region-specific annot)")
+dev.off()
+
+save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT")
+rm(sce.all.tsne.59pcs)
+
+
+## 26 PCs tSNE ===
+set.seed(109)
+sce.all.tsne.26pcs <- runTSNE(sce.all.n12, dimred="PCA_26")
+
+# Print these tests
+pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon26PCs_MNT.pdf")
+plotTSNE(sce.all.tsne.26pcs, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 26 PCs (pan-brain annot)")
+plotTSNE(sce.all.tsne.26pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 26 PCs (region-specific annot)")
+dev.off()
+
+save(sce.all.tsne.26pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon26PCs_MNT")
+rm(sce.all.tsne.26pcs)
+
+
+
+
 
 
 
