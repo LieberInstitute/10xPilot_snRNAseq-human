@@ -545,14 +545,14 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features="CHAT",
 
 
 ## AFTER re-assigning MSN.broad
-pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf")
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN"),
+#pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf")
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH"),
                x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:14], 4)) +
+               width = 0.3, colour=rep(tableau20[1:14], 5)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-dev.off()
+#dev.off()
 
 
 

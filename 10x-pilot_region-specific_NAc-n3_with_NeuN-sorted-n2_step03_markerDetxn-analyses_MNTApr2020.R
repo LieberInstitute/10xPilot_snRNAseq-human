@@ -202,8 +202,22 @@ load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers
      verbose=T)
     # eb_list.nac.all, sce.nac.all.PB, corfit.nac.all
 
-# (set up p0/fdrs0 & t0 lists, above)
+# As above:
+    ## Extract the p-values
+    pvals0_contrasts <- sapply(eb_list.nac.all, function(x) {
+      x$p.value[, 2, drop = FALSE]
+    })
+    rownames(pvals0_contrasts) <- rownames(sce.nac.all.PB)
+    
+    fdrs0_contrasts = apply(pvals0_contrasts, 2, p.adjust, "fdr")
+    
+    ## Extract the tstats
+    t0_contrasts_cell <- sapply(eb_list.nac.all, function(x) {
+      x$t[, 2, drop = FALSE]
+    })
+    rownames(t0_contrasts_cell) <- rownames(sce.nac.all.PB)
 
+    
 # Let's take those with fdr < 0.05
 markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
   rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts_cell[ ,x] > 0]
@@ -227,6 +241,11 @@ markerList.sorted <- lapply(markerTs.fdr.05, function(x){
 
 genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
 
+    ## MNT addition: print more for c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
+    genes2plot.more <- lapply(markerList.sorted, function(x){head(x, n=40)})
+    genes2plot.more <- list(genes2plot.more[["Inhib.2"]], genes2plot.more[["MSN.D1.3"]],
+                            genes2plot.more[["MSN.D1.4"]], genes2plot.more[["MSN.D2.2"]])
+    names(genes2plot.more) <- c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
 
 ## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
@@ -234,7 +253,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
     # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
     rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo)
 
-# As before, first drop "Ambig.lowNtrxts" (168 nuclei)
+# As before, first drop "ambig.lowNtrxts" (93 nuclei)
 sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
 sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
 
@@ -254,6 +273,22 @@ for(i in 1:length(genes2plot)){
 dev.off()
 
 
+    ## 'genes2plot.more' (added 10Apr2020):
+    library(grDevices)
+    for(i in names(genes2plot.more)){
+    png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+      print(
+        plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.more[[i]])),
+                       x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                       add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                    geom = "crossbar", width = 0.3,
+                                                    colour=rep(tableau20[1:14], length(genes2plot.more[[i]]))) +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+          ggtitle(label=paste0(i, " top 40 markers"))
+      )
+    dev.off()
+    }
+    
 ## What if just subset on protein-coding first?
 library(rtracklayer)
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
@@ -303,6 +338,12 @@ lengths(markerList.sorted.pt)
 
 genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
 
+    ## MNT addition: print more for c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
+    genes2plot.pt.more <- lapply(markerList.sorted.pt, function(x){head(x, n=40)})
+    genes2plot.pt.more <- list(genes2plot.pt.more[["Inhib.2"]], genes2plot.pt.more[["MSN.D1.3"]],
+                            genes2plot.pt.more[["MSN.D1.4"]], genes2plot.pt.more[["MSN.D2.2"]])
+    names(genes2plot.pt.more) <- c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
+
 # Plot these
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot.pt)){
@@ -317,6 +358,22 @@ for(i in 1:length(genes2plot.pt)){
   )
 }
 dev.off()
+
+    ## 'genes2plot.pt.more' (added 10Apr2020):
+    for(i in names(genes2plot.pt.more)){
+      png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_pt-coding_Apr2020.png"), height=1900, width=1200)
+      print(
+        plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt.more[[i]])),
+                       x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                       add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                    geom = "crossbar", width = 0.3,
+                                                    colour=rep(tableau20[1:14], length(genes2plot.pt.more[[i]]))) +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+          ggtitle(label=paste0(i, " top 40 protein-coding markers"))
+      )
+      dev.off()
+    }
+
 
 
 ## How much they intersect with the top protein-coding-agnostic set?
@@ -385,4 +442,12 @@ top20genes <- top20genes[ ,sort(colnames(top20genes))]
 write.csv(top20genes, file="tables/top20genesLists_NAc-n5_cellType.final.csv")
 
 
+png("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-selectSubtypes_logExprs_Apr2020.png", height=360, width=480)
+plotExpression(sce.nac.all, exprs_values = "logcounts", features="SEC63",
+              x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+              add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                           geom = "crossbar", width = 0.3,
+                                           colour=tableau20[1:14]) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
 
