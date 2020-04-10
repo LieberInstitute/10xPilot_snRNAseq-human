@@ -451,3 +451,114 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features="SEC63",
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 
+
+
+
+## Markers pulled from Gokce, et al (doi: 10.1016/j.celrep.2016.06.059) =========
+markers.gokce <- list(
+  "D1.MSN" = c("Tac1","Drd1","Asic4","Slc35d3","Pdyn","Sfxn1","Nrxn1"),
+                      # ^ edited from 'Drd1a', Accn4
+  "D2.MSN" = c("Penk","Adora2a","Drd2","Gpr6","Grik3","Gpr52","Gnas"),
+                      # ^ edited from 'A2a'
+  "D1.Pcdh8" = c("Pcdh8","Adarb2","Tacr1","Tac1" ,"Nrxn2","Sema3e","Sema4a","Sema5a","Sema5b",
+                 "Sema6d","Pcdh7","Ptprg","Ptprm","Ptpro","Ptpru","TAC3","Elavl4",
+                                                                  # ^ edited from 'Tac2'
+                 "Khdrbs3","Rbm20","Aff2","Lrpprc","Celf4",
+                 # Depleted set:
+                 "Nlgn1", "Calb1"),
+  "D1.Foxp1" = c("Foxp1","Camk4"),
+  "D2.Htr7" = c("Htr7","AGTR1","Penk","Tac1","Ptprt","Ngfr","Grik3","Cacng5",
+                        # ^ edited from 'Agtr1a'
+                "Tmeff2","Sox9","Sp8","Runx1","Mafb","Litaf",
+                # Depleted set:
+                "Cacna2d3","Synpr"),
+  "D2.Synpr" = c("Synpr"),
+  "gradient" = c("Dner","Cxcl14","Tnnt1","Meis2","Cartpt","Kcnip1","Calb1",
+                 "Crym","Cnr1","Nnat","Gfra1","Wfs1","Th")
+)
+
+markers.gokce <- lapply(markers.gokce, toupper)
+
+# Load SCE
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+# Which are there?
+sapply(markers.gokce, function(x){x %in% rownames(sce.nac.all)})  # most of them
+
+lapply(sapply(markers.gokce, function(x){x %in% rownames(sce.nac.all)}),  # most of them
+       function(n){which(n==FALSE)})
+    # So 'Drd1a', 'Accn4', 'A2a',       'Tac2',       'Agtr1a'
+
+
+    # Exploring/identifying homologous gene names ====
+    load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
+    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+    
+        # 'sce.hsap.PBsub' has 'HomoloGene.ID'
+
+    hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
+                     as.is=TRUE)
+    
+    hom_mm <- hom[hom$Common.Organism.Name == "mouse, laboratory", ]
+    
+    c('Drd1a', 'Accn4', 'A2a','Tac2','Agtr1a') %in% hom_mm$Symbol
+    # FALSE     FALSE   FALSE   TRUE    TRUE
+    # Drd1      Asic4  Adora2a
+    
+    # Then for 'Tac2'
+    hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Tac2")]  # 7560
+    rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==7560] # none...
+    
+    hom_hs <- hom[hom$Common.Organism.Name == "human", ]
+    hom_hs[hom_hs$HomoloGene.ID==7560, ]  # symbol is TAC3
+    'TAC3' %in% rowData(sce.nac.all)$Symbol # TRUE
+        # ahhh so this one just didn't have a shared homolog with rat, I guess
+    
+    
+    hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Agtr1a")]
+    rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==3556]
+        # AGTR1
+    # end find synonyms =======
+
+
+
+
+## Let's make a new dir and files for these graphics, since these are of various length
+#dir.create("pdfs/exploration/gokce-etal_markers/")
+
+for(i in names(markers.gokce)){
+  pdf(paste0("./pdfs/exploration/gokce-etal_markers/",i,"-mouseStriatum-markers_human-NAcExpression_Apr2020.pdf"), height=2.6, width=3)
+  # Print each gene's expression in its own page of the pdf
+  for(g in 1:length(markers.gokce[[i]])){
+    print(
+      plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.gokce[[i]][g]),
+                     x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+                     add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                  geom = "crossbar", width = 0.3,
+                                                  colour=tableau20[1:14]) +
+        theme(axis.text.x = element_text(angle=90, hjust=1, size=5.5), axis.text.y = element_text(size=7.5),
+              plot.title = element_text(size=7)) +  
+        ggtitle(label=paste0(i, " markers in human NAc subclusters: ", markers.gokce[[i]][g]))
+    )
+  }
+  dev.off()
+}
+
+
+
+
+
+
+
+
+
+
+
+

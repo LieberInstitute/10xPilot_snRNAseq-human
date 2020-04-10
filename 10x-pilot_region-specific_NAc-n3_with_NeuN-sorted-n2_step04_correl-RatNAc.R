@@ -329,7 +329,7 @@ load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-
     # sce.nac.rat, chosen.hvgs.nac.rat
 
 # Already subsetted on shared homologous genes (14,121):
-load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq//SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
     # sce.rat.PBsub, sce.hsap.PBsub, Readme
 
 
