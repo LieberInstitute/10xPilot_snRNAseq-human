@@ -220,7 +220,7 @@ table(rownames(ts_rat) == rownames(ts_hsap))
 cor_t = cor(ts_rat, ts_hsap)
 signif(cor_t, 2)
 
-## On just hsap cluster-specific genes from ones left ===
+## On just hsap cluster-specific homologous genes ===
 hsap_specific_indices = mapply(function(t, p) {
     oo = order(t, decreasing = TRUE)[1:100]
   },
@@ -233,7 +233,7 @@ cor_t_hsap = cor(ts_rat[hsap_ind, ],
                   ts_hsap[hsap_ind, ])
 signif(cor_t_hsap, 3)
 
-## On just rat cluster-specific genes from ones left ===
+## On just rat cluster-specific homologous genes ===
 rat_specific_indices = mapply(function(t, p) {
     oo = order(t, decreasing = TRUE)[1:100]
   },
@@ -248,9 +248,9 @@ signif(cor_t_rat, 3)
 
 
 
-### heatmap
-theSeq = seq(-.7, .7, by = 0.01)
-my.col <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq))
+### Heatmap
+theSeq.all = seq(-.4, .4, by = 0.01)
+my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq))
 
 ct = colData(sce.hsap.PBsub)
 ct = ct[!duplicated(sce.hsap.PBsub$cellType.final), ]
@@ -268,14 +268,47 @@ rownames(cor_t_all_toPlot) = paste0(rownames(cor_t_all_toPlot),"_","R.nor")
 colnames(cor_t_all_toPlot) = paste0(colnames(cor_t_all_toPlot),"_","H.sap")
 
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_Apr2020.pdf")
+    ## MNT added 14Apr2020: Reorder to diagonal & threshold at 0.4 for all-gene correlation === === ===
+        # Start from descending - easier to manually order
+        #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(1:ncol(cor_t_all_toPlot))]
+    # This is useful:
+    apply(cor_t_all_toPlot, 2, which.max)
+        # If want to re-order human labels (but prefer re-ordering rat labels)
+        #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
+    cor_t_all_toPlot <- cor_t_all_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
+    # Threshold at 0.4
+    range(cor_t_all_toPlot)
+    cor_t_all_toPlot <- ifelse(cor_t_all_toPlot >= 0.4, 0.4, cor_t_all_toPlot)
+    
+    
+    ## Do for other gene subsets ===
+    # Human
+        #cor_t_hsap_toPlot <- cor_t_hsap_toPlot[ ,rev(1:ncol(cor_t_hsap_toPlot))]
+        #cor_t_hsap_toPlot <- cor_t_hsap_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
+    cor_t_hsap_toPlot <- cor_t_hsap_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
+    # Threshold at 0.4
+    range(cor_t_hsap_toPlot)
+    cor_t_hsap_toPlot <- ifelse(cor_t_hsap_toPlot >= 0.4, 0.4, cor_t_hsap_toPlot)
+
+    # Rat
+        #cor_t_rat_toPlot <- cor_t_rat_toPlot[ ,rev(1:ncol(cor_t_rat_toPlot))]
+        #cor_t_rat_toPlot <- cor_t_rat_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
+    cor_t_rat_toPlot <- cor_t_rat_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
+    # Threshold at 0.4
+    range(cor_t_rat_toPlot)
+    cor_t_rat_toPlot <- ifelse(cor_t_rat_toPlot >= 0.4, 0.4, cor_t_rat_toPlot)
+    
+    
+
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_Apr2020.pdf")
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_v2_Apr2020.pdf")
 # Most human-specific
 print(
   levelplot(
     cor_t_hsap_toPlot,
     aspect = "fill",
-    at = theSeq,
-    col.regions = my.col,
+    at = theSeq.all,
+    col.regions = my.col.all,
     ylab = "",
     xlab = "",
     scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
@@ -287,8 +320,8 @@ print(
   levelplot(
     cor_t_rat_toPlot,
     aspect = "fill",
-    at = theSeq,
-    col.regions = my.col,
+    at = theSeq.all,
+    col.regions = my.col.all,
     ylab = "",
     xlab = "",
     scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
@@ -300,8 +333,8 @@ print(
   levelplot(
     cor_t_all_toPlot,
     aspect = "fill",
-    at = theSeq,
-    col.regions = my.col,
+    at = theSeq.all,
+    col.regions = my.col.all,
     ylab = "",
     xlab = "",
     scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
