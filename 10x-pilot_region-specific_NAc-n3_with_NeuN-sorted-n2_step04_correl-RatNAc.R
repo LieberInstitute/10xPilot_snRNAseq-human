@@ -300,8 +300,8 @@ colnames(cor_t_all_toPlot) = paste0(colnames(cor_t_all_toPlot),"_","H.sap")
     
     
 
-#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_Apr2020.pdf")
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_v2_Apr2020.pdf")
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_Apr2020.pdf")
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top100-or-all_v2_Apr2020.pdf")
 # Most human-specific
 print(
   levelplot(
@@ -418,7 +418,7 @@ colnames(ratExprs) <- sce.nac.rat$Celltype
 
 cor_ratExprs.hsapTs <- cor(ratExprs, ts_hsap)
 
-pdf("pdfs/exploration/overlap-DayLab-ratNAc-nucleiExprs_with_LIBD-HsapNAc-ts_Apr2020.pdf", height=12)
+pdf("pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc-nucleiExprs_with_LIBD-HsapNAc-ts_Apr2020.pdf", height=12)
 # Break up into Rat 'Celltype''s
 for(i in levels(sce.nac.rat$Celltype)){
   cor_temp <- cor_ratExprs.hsapTs[rownames(cor_ratExprs.hsapTs)==i, ]
@@ -519,7 +519,7 @@ ts_hsap.100sub <- ts_hsap[hsap_ind, ]
 cor_ratExprs.hsapTs.top100 <- cor(ratExprs.100sub, ts_hsap.100sub)
 
 
-pdf("pdfs/exploration/overlap-DayLab-ratNAc-nucleiExprs_with_LIBD-HsapNAc-ts_top100perClust_Apr2020.pdf", height=12)
+pdf("pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc-nucleiExprs_with_LIBD-HsapNAc-ts_top100perClust_Apr2020.pdf", height=12)
 # Break up into Rat 'Celltype''s
 for(i in levels(sce.nac.rat$Celltype)){
   cor_temp <- cor_ratExprs.hsapTs.top100[rownames(cor_ratExprs.hsapTs.top100)==i, ]
@@ -538,7 +538,7 @@ sce.nac.rat$propZeros.top100hsap <- apply(ratExprs.100sub, 2, function(n){mean(n
 sce.nac.rat$propZeros <- apply(assay(sce.nac.rat, "logcounts"), 2, function(n){mean(n==0)})
 
 
-pdf("pdfs/exploration/dayLab-RatNAc-n4_propZeros_top100hsapClustGenes-or-all_MNTApr2020.pdf")
+pdf("pdfs/exploration/DayLab-ratNAc/dayLab-RatNAc-n4_propZeros_top100hsapClustGenes-or-all_MNTApr2020.pdf")
 par(mar=c(7,4,4,2))
 boxplot(sce.nac.rat$propZeros.top100hsap ~ sce.nac.rat$Celltype, las=2, xlab=NULL, cex.axis=0.8,
         main="Proportion of zeros across top 1,331 genes defining human NAc clusters", cex.main=0.9)
@@ -576,5 +576,79 @@ table(sce.nac.rat$Celltype, sce.nac.rat$asgnmtByPropNon0)
     # Polydendrocyte        0      39     780     0        0        0        0        0     0   16
     # Pvalb-Interneuron     0       2     295     0        0        0        0        0     0    0
     # Sst-Interneuron       0     103      73     0        0        0        0        0     0    0
+
+
+
+## Write out .mtx & colData for Day Lab ========================================
+library(Matrix)
+
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+     # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+# Mtx
+mat2write <- assay(sce.nac.all, "counts")
+Matrix::writeMM(mat2write, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_countMat.mtx")
+    ## NULL     - uh what?  Lol
+
+# Features
+write.table(rowData(sce.nac.all), file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_features.tsv",
+            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# Barcodes
+write.table(sce.nac.all$Barcode, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_barcodes.tsv",
+            row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+## Now try reading back in and comparing === === ===
+path.test <- file.path("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/10xCounts")
+sce.test <- read10xCounts(path.test, col.names=TRUE)
+    ## issues such as "/genes.tsv': No such file or directory" (& mtx file & barcodes.tsv)...
+     #      -> just re-named those in the test dir and re-did
+     #      (Seurat will operate differently... going to keep those names (i.e. re-write) bc the Day
+     #       Lab shared files with more specific prefixes..)
+
+sce.test
+    # class: SingleCellExperiment
+    # dim: 33538 13241
+    # metadata(1): Samples
+    # assays(1): counts
+    # rownames(33538): ENSG00000243485 ENSG00000237613 ... ENSG00000277475
+    #   ENSG00000268674
+    # rowData names(3): ID Symbol NA
+    # colnames(13241): AAACCCACATCGAACT-1 AAACCCATCCAACCAA-1 ...
+    #   TTTGTTGGTACTGCGC-1 TTTGTTGGTTCCAGGC-1
+    # colData names(2): Sample Barcode
+    # reducedDimNames(0):
+    # spikeNames(0):
+    # altExpNames(0):
+
+head(rownames(assay(sce.test, "counts"))) # ensemblID
+
+table(rownames(sce.test) == rowData(sce.nac.all)$ID)  # all TRUE - so make rownames(sce.test)
+
+rownames(sce.test) <- rownames(sce.nac.all)
+
+all.equal(assay(sce.test, "counts"), assay(sce.nac.all, "counts"))
+    ## [1] TRUE - dope
+
+
+## Write out colData
+colnames(colData(sce.nac.all))
+    # [1] "Sample"                "Barcode"               "sum"
+    # [4] "detected"              "percent_top_50"        "percent_top_100"
+    # [7] "percent_top_200"       "percent_top_500"       "subsets_Mito_sum"
+    # [10] "subsets_Mito_detected" "subsets_Mito_percent"  "high.mito"
+    # [13] "sample"                "region"                "donor"
+    # [16] "processDate"           "protocol"              "prelimCluster"
+    # [19] "collapsedCluster"      "lessCollapsed"         "cellType"
+    # [22] "cellType.split"        "prelimCluster.split"   "cellType.moreSplit"
+    # [25] "cellType.final"
+
+# Keep $Barcode so can rid of the rownames
+    # (because `table(rownames(colData(sce.nac.all)) == sce.nac.all$Barcode)` == all TRUE)
+pheno2write <- colData(sce.nac.all)[ ,c(2, 13, 3,4, 11,12, 14:18, 25)]
+
+write.csv(pheno2write, row.names=FALSE, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_metadata.csv")
+
 
 
