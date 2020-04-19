@@ -35,11 +35,20 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FAC
      verbose=T)
     ## sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
 
-    ## ** First drop ambiguous clusters if needed
+    # **MNT 16Apr: Deciding to remove the clusters won't focus on:
+    #              'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
+sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
+
 
 # For reference
 table(sce.all.n12$sample, sce.all.n12$cellType)
-    ## 12 x 19 table; but only 164 of 228 cells with at least 1 cell
+    ## 12 x 17
 
 # Make the pseudo-bulked SCE
 sce.all.n12.PB <- aggregateAcrossCells(sce.all.n12, ids=paste0(sce.all.n12$sample,":",sce.all.n12$cellType),
@@ -47,7 +56,7 @@ sce.all.n12.PB <- aggregateAcrossCells(sce.all.n12, ids=paste0(sce.all.n12$sampl
 
 # Drop genes with all 0's
 sce.all.n12.PB <- sce.all.n12.PB[!rowSums(assay(sce.all.n12.PB, "counts"))==0, ]
-    ## keeps 30038 genes (28312 `>=5`)
+    ## keeps 30,031 genes (x 149 sample:cellType cols)
 
 # Clean up colData
 colData(sce.all.n12.PB) <- colData(sce.all.n12.PB)[ ,c(13:17,19:20)]
@@ -59,6 +68,7 @@ LSFvec <- librarySizeFactors(sce.all.n12.PB)
 sce.all.n12.PB <- logNormCounts(sce.all.n12.PB, size_factors=LSFvec)
 
 
+### `findMarkers()` BioC approach (skip as of Apr2020) ====================================
 ## Find markers using stringent [max-p-value-of-all-pw-comparisons] test ('pval.type="all"')
  #    - first try no 'design=' argument
 markers.all.n12.t <- findMarkers(sce.all.n12.PB, groups=sce.all.n12.PB$cellType,
@@ -142,7 +152,7 @@ sapply(markers.all.n12.t.design.countsN, function(x){table(x$FDR<0.05)[2]})
 #     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_panBrain_findMarkers_MNTMar2020.rda")
 
 
-### ANOVA to find the most variable covars =========
+### ANOVA to find the most variable covars ================================================
   # Following `/dcl01/ajaffe/data/lab/singleCell/10x_pilot/check_varExpl.R`
 library(edgeR)
 library(doMC)
@@ -153,12 +163,15 @@ lc = assays(sce.all.n12.PB)$logcounts
 
 ## do regression
 varCompAnalysis = foreach(i = 1:nrow(lc)) %dopar% {
+# or
+#varCompAnalysis.don1st = foreach(i = 1:nrow(lc)) %dopar% {
   if(i %% 1000 == 0) cat(".")
+  fit = lm(as.numeric(lc[i,]) ~ cellType + region + processDate + donor,
+  # or
+  #fit = lm(as.numeric(lc[i,]) ~ cellType + region + donor + processDate,
 #  fit = lm(as.numeric(lc[i,]) ~ region + processDate + donor + cellType,
-#  fit = lm(as.numeric(lc[i,]) ~ cellType + region + processDate + donor,
 #  fit = lm(as.numeric(lc[i,]) ~ cellType + processDate + region + donor,
-#  fit = lm(as.numeric(lc[i,]) ~ region + processDate + donor + protocol + cellType,
-  fit = lm(as.numeric(lc[i,]) ~ cellType + region + processDate + donor + protocol,
+#  fit = lm(as.numeric(lc[i,]) ~ cellType + region + processDate + donor + protocol,
            data=colData(sce.all.n12.PB))
   
   full = anova(fit)
@@ -167,83 +180,60 @@ varCompAnalysis = foreach(i = 1:nrow(lc)) %dopar% {
 }
 
 names(varCompAnalysis) = rownames(lc)
+names(varCompAnalysis.don1st) = rownames(lc)
 
-save(sce.all.n12.PB, varCompAnalysis,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/varCompAnalysis_MNTMar2020.rda")
+save(sce.all.n12.PB, varCompAnalysis, varCompAnalysis.don1st,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/varCompAnalysis_MNTApr2020.rda")
 
 
 ## make boxplots
-varExpl = t(sapply(varCompAnalysis, function(x) x[,"PctExp"]))
-colnames(varExpl) = rownames(varCompAnalysis[[1]])
-#boxplot(varExpl)
+varExpl = t(sapply(varCompAnalysis.don1st, function(x) x[,"PctExp"]))
+colnames(varExpl) = rownames(varCompAnalysis.don1st[[1]])
+boxplot(varExpl)
 
 
 apply(varExpl, 2, function(x){quantile(x)})
-    ##      region processDate    donor cellType Residuals
-    #0%    0.00786    1.09e-34 4.91e-35     1.92     0.141
-    #25%   1.12000    6.25e-01 2.84e-01    19.70    49.200
-    #50%   1.94000    1.32e+00 7.15e-01    33.20    61.300
-    #75%   3.06000    2.42e+00 1.50e+00    46.00    73.800
-    #100% 39.60000    3.76e+01 2.11e+01    98.10    92.000
+    ##     cellType   region processDate    donor Residuals
+    # 0%       3.65  0.00132    2.98e-04 4.68e-06     0.151
+    # 25%     18.40  1.12000    6.61e-01 2.51e-01    49.200
+    # 50%     31.40  1.99000    1.39e+00 6.70e-01    62.800
+    # 75%     46.10  3.20000    2.56e+00 1.50e+00    74.800
+    # 100%    99.80 39.50000    3.98e+01 2.51e+01    93.000
 
+    # or if listed donor before processDate
+    ##     cellType   region    donor processDate Residuals
+    # 0%       3.65  0.00132 1.53e-04    5.05e-04     0.151
+    # 25%     18.40  1.12000 3.22e-01    6.19e-01    49.200
+    # 50%     31.40  1.99000 7.93e-01    1.29e+00    62.800
+    # 75%     46.10  3.20000 1.62e+00    2.42e+00    74.800
+    # 100%    99.80 39.50000 6.22e+01    3.75e+01    93.000
 
-## What if listed in different order?
- #    ~ cellType + region + processDate + donor:
-    ##    cellType   region processDate    donor Residuals
-    #0%       4.34  0.00107    6.06e-04 2.81e-06     0.141
-    #25%     19.80  1.07000    5.84e-01 2.57e-01    49.200
-    #50%     33.50  1.84000    1.23e+00 6.55e-01    61.300
-    #75%     46.40  2.92000    2.28e+00 1.41e+00    73.800
-    #100%    99.90 38.50000    3.63e+01 2.14e+01    92.000
-
- #    ~ cellType + processDate + region + donor:
-    ##    cellType processDate   region    donor Residuals
-    #0%       4.34     0.00172  0.00102 2.81e-06     0.141
-    #25%     19.80     0.70300  0.97100 2.57e-01    49.200
-    #50%     33.50     1.35000  1.73000 6.55e-01    61.300
-    #75%     46.40     2.34000  2.83000 1.41e+00    73.800
-    #100%    99.90    28.30000 62.90000 2.14e+01    92.000
-
-## Add protocol?
- # ~ region + processDate + donor + protocol + cellType
-    # Looks like didn't get estimated...
-
-
-
+        ## (Looks like the 'protocol' effect couldn't get estimated when added to the model)
 
 
 
 #varCompAnalysis$SNAP25
 
+
+
+
 ###### Direct limma approach ####
 #################################
-
-
-## Load in sce.dlpfc and cluster:sample bulk
-# Clean up colData
-colData(sce.all.n12.PB) <- colData(sce.all.n12.PB)[ ,c(13:17,19:20)]
-    # (already done up top)
-
-
 
 ## Extract the count data
 mat <- assays(sce.all.n12.PB)$logcounts
 
 ## Build a group model
-mod <- with(colData(sce.all.n12.PB), model.matrix(~ 0 + cellType + region + processDate + protocol))
+mod <- with(colData(sce.all.n12.PB), model.matrix(~ 0 + cellType + region + processDate))
 colnames(mod) <- gsub('cellType', '', colnames(mod))
 
 corfit <- duplicateCorrelation(mat, mod, block = sce.all.n12.PB$donor)
     # "Coefficients not estimable: protocolpseudoSort"
+    #       MNT comment: this is ok because it doesn't appear this technical flaw did much in the end
 corfit$consensus.correlation
-    # [1] -0.0031468
+    # [1] -0.004489989
 
-    ## What about mod without processDate?
-    #mod.noProcessDate <- with(colData(sce.all.n12.PB), model.matrix(~ 0 + cellType + region))# + protocol))
-    #corfit.noProcessDate <- duplicateCorrelation(mat, mod.noProcessDate, block = sce.all.n12.PB$donor)
-    #corfit.noProcessDate$consensus.correlation  # -0.000193579
-        # (And without protocol: -0.0002819187)
-    
+
 fit <-
   lmFit(
     mat,
@@ -255,9 +245,9 @@ fit <-
 eb <- eBayes(fit)
 
 
-## Skip this chunk for now - too many 'cellType's ====
 ## Contrasts for pairwise comparison
-cellType_combs <- combn(colnames(mod), 2) # will be `choose(ncol(x), 2)` columns long, of course
+cellType_combs <- combn(colnames(mod), 2)
+    # will be `choose(ncol(x), 2)` columns long, of course
 cellType_contrasts <- apply(cellType_combs, 2, function(x) {
   z <- paste(x, collapse = '-')
   makeContrasts(contrasts = z, levels = mod)
@@ -267,15 +257,15 @@ colnames(cellType_contrasts) <- apply(cellType_combs, 2, paste, collapse = '-')
 
 eb_contrasts <- eBayes(contrasts.fit(fit, cellType_contrasts))
 
-## Tabulating significant hits
-pvals_contrasts <- eb_contrasts$p.value
+# ## Tabulating significant hits    - too big
+# pvals_contrasts <- eb_contrasts$p.value
+# 
+# data.frame(
+#   'FDRsig' = colSums(apply(pvals_contrasts, 2, p.adjust, 'fdr') < 0.05),
+#   'Pval10-6sig' = colSums(pvals_contrasts < 1e-6),
+#   'Pval10-8sig' = colSums(pvals_contrasts < 1e-8)
+# )
 
-data.frame(
-  'FDRsig' = colSums(apply(pvals_contrasts, 2, p.adjust, 'fdr') < 0.05),
-  'Pval10-6sig' = colSums(pvals_contrasts < 1e-6),
-  'Pval10-8sig' = colSums(pvals_contrasts < 1e-8)
-)
-# end skip ====
 
 
 
@@ -301,6 +291,7 @@ pvals0_contrasts <- sapply(eb0_list, function(x) {
   x$p.value[, 2, drop = FALSE]
 })
 
+
 ## Extract the tstats
 t0_contrasts_cell <- sapply(eb0_list, function(x) {
   x$t[, 2, drop = FALSE]
@@ -308,15 +299,18 @@ t0_contrasts_cell <- sapply(eb0_list, function(x) {
 
 
 data.frame(
-  'FDRsig' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.05),
+  'FDRsig.05' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.05),
+  'FDRsig.01' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.01),
   'Pval10-6sig' = colSums(pvals0_contrasts < 1e-6),
   'Pval10-8sig' = colSums(pvals0_contrasts < 1e-8)
 )
 
 # For only (+) t-stats
 data.frame(
-  'FDRsig' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.01 &
+  'FDRsig.05' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.05 &
                        t0_contrasts_cell > 0),
+  'FDRsig.01' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.01 &
+                          t0_contrasts_cell > 0),
   'Pval10-6sig' = colSums(pvals0_contrasts < 1e-6 &
                             t0_contrasts_cell > 0),
   'Pval10-8sig' = colSums(pvals0_contrasts < 1e-8 &
@@ -324,36 +318,34 @@ data.frame(
 )
 
     ## With t > 0
-    #             FDRsig Pval10.6sig Pval10.8sig
-    #Ambig.hiVCAN    104           5           2
-    #Astro.1        4900        1471         990
-    #Astro.2         537          83          39
-    #Excit.1         509         114          53
-    #Excit.2         454         116          60
-    #Excit.3         216          65          28
-    #Excit.4         122           6           3
-    #Excit.5         383         117          56
-    #Excit.6         243          26           5
-    #Excit.7         532         172          92
-    #Excit.8         508         211         144
-    #Inhib.1        1675         272         152
-    #Inhib.2        1153         177          80
-    #Inhib.3         889         198         108
-    #Inhib.4         339          69          41
-    #Inhib.5         358          77          21
-    #Micro          5630        2031        1587
-    #Oligo          3827        1087         743
-    #OPC            2752         784         519
+    #        FDRsig.05 FDRsig.01 Pval10.6sig Pval10.8sig
+    # Astro.1      4531      3209        1385         915
+    # Astro.2       510       350          81          37
+    # Excit.1       478       269         101          38
+    # Excit.2       398       243          96          52
+    # Excit.3       198       127          52          24
+    # Excit.5       326       220         100          48
+    # Excit.6       300       154          12           5
+    # Excit.7       461       318         149          76
+    # Excit.8       452       324         190         124
+    # Inhib.1      1364       732         241         137
+    # Inhib.2       984       479         143          67
+    # Inhib.3       740       405         173         101
+    # Inhib.4       253       120          62          30
+    # Inhib.5       358       196          83          27
+    # Micro        5368      3838        1967        1526
+    # Oligo        3590      2449        1064         726
+    # OPC          2478      1662         753         483
 
 
 
 
 ## Save for later
-#eb_contrasts.all.n12.broad <- eb_contrasts
+eb_contrasts.all.n12.broad <- eb_contrasts
 eb_list.all.n12.broad <- eb0_list
 
-save(sce.all.n12.PB, eb_list.all.n12.broad, #eb_contrasts.all.n12.broad, 
-     file = 'rdas/zmarkers-stats_panBrain_manualContrasts_MNTMar2020.rda')
+save(sce.all.n12.PB, eb_list.all.n12.broad, eb_contrasts.all.n12.broad, 
+     file = 'rdas/markers-stats_panBrain_manualContrasts-w-pairwise_MNTApr2020.rda')
 
 
 

@@ -3,6 +3,7 @@
 ###     - (n=12) all regions from: Br5161 & Br5212 & Br5287
 ###     - Amyg, DLPFC, HPC, NAc, and sACC
 ### Initiated MNT 07Feb2020
+### test.edit
 #####################################################################
 
 library(SingleCellExperiment)
@@ -228,8 +229,8 @@ clusterRefTab.all.n12 <- data.frame(origClust=order.dendrogram(dend),
 sce.all.n12$collapsedCluster <- factor(clusterRefTab.all.n12$merged[match(sce.all.n12$prelimCluster,
                                                                           clusterRefTab.all.n12$origClust)])
 
-# Print some visualizations:
-pdf("pdfs/panBrain-n12_reducedDims-with-collapsedClusters_Feb2020.pdf")
+# Print some visualizations:      (updated, below)
+#pdf("pdfs/panBrain-n12_reducedDims-with-collapsedClusters_Feb2020.pdf")
 plotReducedDim(sce.all.n12, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.all.n12, colour_by="region", point_alpha=0.5)
 plotTSNE(sce.all.n12, colour_by="processDate", point_alpha=0.5)
@@ -237,7 +238,7 @@ plotTSNE(sce.all.n12, colour_by="sample", point_alpha=0.5)
 plotTSNE(sce.all.n12, colour_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.all.n12, colour_by="sum", point_alpha=0.5)
 plotUMAP(sce.all.n12, colour_by="collapsedCluster", point_alpha=0.5)
-dev.off()
+#dev.off()
 
 
 
@@ -250,17 +251,24 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  # Kristen's MSN markers - not printed for the broader collapsed clusters
+  'MSNs.D1' = c("DRD1", "PDYN", "TAC1"),
+  'MSNs.D2' = c("DRD2", "PENK"),
+  'MSNs.pan' = c("PPP1R1B","BCL11B")
 )
 
-pdf("pdfs/panBrain-n12_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=12)
+#pdf("pdfs/zold_panBrain-n12_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=12)
+pdf("pdfs/panBrain-n12_marker-logExprs_collapsedClusters_Apr2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.all.n12, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:19], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau20[1:19], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
@@ -331,17 +339,41 @@ load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T
 sce.hpc$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc$cellType))
 
 ## NAc
-load("rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
-    rm(chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac)
+#load("rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+#    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
+#    rm(chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac)
 
+    ## Actually use the annotations for these respective nuclei from the all-NAc analysis
+    load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+        # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+        rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all)
+    
+    # TEMPorarily set $cellType.final to $cellType and change casing of 'ambig.lowNtrxts'
+    sce.nac.all$cellType <- sce.nac.all$cellType.final
+    sce.nac.all$cellType <- ifelse(sce.nac.all$cellType=="ambig.lowNtrxts",
+                                   "Ambig.lowNtrxts",
+                                   as.character(sce.nac.all$cellType))
+    # Then collapse D1 and D2 subclusters & otherwise-inhibitory
+    sce.nac.all$cellType[grep("MSN.D1", sce.nac.all$cellType)] <- "MSN.D1"
+    sce.nac.all$cellType[grep("MSN.D2", sce.nac.all$cellType)] <- "MSN.D2"
+    sce.nac.all$cellType[grep("Inhib", sce.nac.all$cellType)] <- "Inhib"
+    
+    sce.nac.all$cellType <- factor(sce.nac.all$cellType)
+    
 ## sACC
 load("rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
     # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
     rm(chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc)
 
+    # Collapse as above
+    sce.sacc$cellType <- as.character(sce.sacc$cellType)
+    sce.sacc$cellType[grep("Inhib", sce.sacc$cellType)] <- "Inhib"
+    sce.sacc$cellType[grep("Excit", sce.sacc$cellType)] <- "Excit"
+    sce.sacc$cellType <- factor(sce.sacc$cellType)
+    
 
-regions <- list(sce.amy, sce.dlpfc, sce.hpc, sce.nac, sce.sacc)
+## Assign to new colData column
+regions <- list(sce.amy, sce.dlpfc, sce.hpc, sce.nac.all, sce.sacc)
 
 BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
 
@@ -358,16 +390,18 @@ sce.all.n12$cellType.RS <- factor(sce.all.n12$cellType.RS)
 table(sce.all.n12$cellType.RS)
 
 
+
+
 # Getting rid of sub-cell types in sACC sample and the pan-brain assignments to compare
-table(ss(as.character(sce.all.n12$cellType.RS),"\\.",1) ==
+table(gsub("MSN","Inhib",ss(as.character(sce.all.n12$cellType.RS),"\\.",1)) ==
         ss(as.character(sce.all.n12$cellType),"\\.",1))
     # FALSE  TRUE
-    #   836 33234       - 33234/(836+ 33234) = 97.5% congruence
+    #   866 33204    - 33204/(866+ 33204) = 97.5% congruence
 
 # Region specific
 table(ss(as.character(sce.all.n12$cellType.RS),"\\.",1))
-    #Ambig Astro Excit Inhib Micro Oligo   OPC Tcell
-    #  414  3863  2927  2662  2987 18664  2527    26
+    # Ambig Astro Excit Inhib Micro   MSN Oligo   OPC Tcell
+    #   445  3864  2927  2019  2956   642 18664  2527    26
 
 table( ss(as.character(sce.all.n12$cellType),"\\.",1))
     #Ambig Astro Excit Inhib Micro Oligo   OPC
@@ -485,74 +519,53 @@ quantile(cor(as.matrix(assay(sce.all.n12, "logcounts")[ ,clustIdx.inhib2])), pro
     quantile(cor(as.matrix(assay(sce.all.n12, "logcounts")[ ,clustIdx.excit8])), probs=seq(0.05,1,by=0.05))
         ## Overall still pretty good, but less than "Excit.4"
     
-## For reference === === === === ===
+## For reference ========================================
 table(sce.all.n12$cellType, sce.all.n12$region)
     
-    #              amy dlpfc  hpc  nac sacc
-    #Ambig.hiVCAN    1     3   23    0    5
+    #              amy dlpfc  hpc  nac sacc           & MNT notes === ===
+    #Ambig.hiVCAN    1     3   23    0    5           < 50 nuclei - maybe drop, or ignore at least
     #Astro.1       842   486 1223  541  606
     #Astro.2         9    27   74    5   15
-    #Excit.1        11   258    4    0  648
-    #Excit.2         0   193    1    0  329
-    #Excit.3       343     0  383    1    1
-    #Excit.4         1     0    1   10   21
-    #Excit.5         0    83    3    0  182
-    #Excit.6         1     7  176    0    0
-    #Excit.7         0    33    3    0   83
-    #Excit.8        39     0   33    0    0
-    #Inhib.1       183   228  250   71  218
-    #Inhib.2        69   133   57   24  266
-    #Inhib.3       113    45  110    0  115
-    #Inhib.4        16   133   29    0  246
-    #Inhib.5       130     1   31  638    4
+    #Excit.1        11   258    4    0  648           cortical
+    #Excit.2         0   193    1    0  329           cortical
+    #Excit.3       343     0  383    1    1           non-cort.
+    #Excit.4         1     0    1   10   21           < 50 nuclei - maybe drop, or ignore at least
+    #Excit.5         0    83    3    0  182           cortical
+    #Excit.6         1     7  176    0    0           HPC
+    #Excit.7         0    33    3    0   83           cortical
+    #Excit.8        39     0   33    0    0           non-cort.
+    #Inhib.1       183   228  250   71  218           all
+    #Inhib.2        69   133   57   24  266           all
+    #Inhib.3       113    45  110    0  115           non-NAc
+    #Inhib.4        16   133   29    0  246           non-NAc
+    #Inhib.5       130     1   31  638    4           NAc-heavy (but a good amount amyg, hpc)
     #Micro         790   272 1271  215  529
     #Oligo        3450  3228 5887 2804 3245
     #OPC           634   269  885  239  534
 
 
-# With new added region-specific annotations
+# With new added [collapsed] region-specific annotations
 table(sce.all.n12$cellType, sce.all.n12$cellType.RS)
-    #              Ambig.lowNtrxts Astro Excit Excit.1 Excit.2 Excit.3 Excit.4 Inhib Inhib.1 Inhib.2
-    # Ambig.hiVCAN               0     0     1       0       2       0       1     1       0       0
-    # Astro.1                    0  3681     0       0       0       0       0     0       0       0
-    # Astro.2                    2   128     0       0       0       0       0     0       0       0
-    # Excit.1                    0     0   273     569      79       0       0     0       0       0
-    # Excit.2                    0     0   194       1     328       0       0     0       0       0
-    # Excit.3                    0     0   726       0       0       0       0     0       0       1
-    # Excit.4                    0     0     2      16       0       3       1     0       1       0
-    # Excit.5                    0     0    86       0       0     182       0     0       0       0
-    # Excit.6                    0     0   184       0       0       0       0     0       0       0
-    # Excit.7                    0     0    36       0       0       0      83     0       0       0
-    # Excit.8                    0     0     0       0       0       0       0    72       0       0
-    # Inhib.1                  368     4     0       0       0       0       0   356       0     197
-    # Inhib.2                    1     0     0       0       0       0       0   258     266       0
-    # Inhib.3                    0     0     0       0       0       0       0   268       0     115
-    # Inhib.4                    0     0     1       0       0       0       0   177     246       0
-    # Inhib.5                    0     0   157       0       0       0       0     5       2       2
-    # Micro                     35     2     0       0       0       0       0     0       0       0
-    # Oligo                      2     1     1       0       1       0       0     1       0       0
-    # OPC                        6    47     0       0       0       0       0     0       0       0
-    # 
-    #              Inhib.NRGNneg Inhib.NRGNpos Micro Oligo   OPC Tcell
-    # Ambig.hiVCAN             0             0     3     2    22     0
-    # Astro.1                  0             0     0    17     0     0
-    # Astro.2                  0             0     0     0     0     0
-    # Excit.1                  0             0     0     0     0     0
-    # Excit.2                  0             0     0     0     0     0
-    # Excit.3                  0             1     0     0     0     0
-    # Excit.4                  0            10     0     0     0     0
-    # Excit.5                  0             0     0     0     0     0
-    # Excit.6                  0             0     0     0     0     0
-    # Excit.7                  0             0     0     0     0     0
-    # Excit.8                  0             0     0     0     0     0
-    # Inhib.1                 21             0     2     0     2     0
-    # Inhib.2                 24             0     0     0     0     0
-    # Inhib.3                  0             0     0     0     0     0
-    # Inhib.4                  0             0     0     0     0     0
-    # Inhib.5                  0           638     0     0     0     0
-    # Micro                    0             0  2979    35     0    26
-    # Oligo                    0             0     3 18605     0     0
-    # OPC                      0             0     0     5  2503     0
+    #              Ambig.lowNtrxts Astro Excit Inhib Micro MSN.D1 MSN.D2 Oligo   OPC Tcell
+    # Ambig.hiVCAN               0     0     4     1     3      0      0     2    22     0
+    # Astro.1                    0  3682     0     0     0      0      0    16     0     0
+    # Astro.2                    2   128     0     0     0      0      0     0     0     0
+    # Excit.1                    0     0   921     0     0      0      0     0     0     0
+    # Excit.2                    0     0   523     0     0      0      0     0     0     0
+    # Excit.3                    0     0   726     2     0      0      0     0     0     0
+    # Excit.4                    0     0    22     2     0      4      5     0     0     0
+    # Excit.5                    0     0   268     0     0      0      0     0     0     0
+    # Excit.6                    0     0   184     0     0      0      0     0     0     0
+    # Excit.7                    0     0   119     0     0      0      0     0     0     0
+    # Excit.8                    0     0     0    72     0      0      0     0     0     0
+    # Inhib.1                  368     4     0   574     2      0      0     0     2     0
+    # Inhib.2                    2     0     0   547     0      0      0     0     0     0
+    # Inhib.3                    0     0     0   383     0      0      0     0     0     0
+    # Inhib.4                    0     0     1   423     0      0      0     0     0     0
+    # Inhib.5                    0     0   157    14     0    461    172     0     0     0
+    # Micro                     66     2     0     0  2948      0      0    35     0    26
+    # Oligo                      1     1     2     1     3      0      0 18606     0     0
+    # OPC                        6    47     0     0     0      0      0     5  2503     0
 
 
 
@@ -592,16 +605,29 @@ reducedDim(sce.all.n12, "PCA_26") <- reducedDim(sce.all.n12, "PCA")[ ,c(1:26)]
 # First remove this reducedDim bc this has caused trouble previously
 reducedDim(sce.all.n12, "TSNE") <- NULL
 
-## 59 PCs tsNE ===
+## 59 PCs tsNE === (this one looks better than 26 PCs actually)
 set.seed(109)
 sce.all.tsne.59pcs <- runTSNE(sce.all.n12, dimred="PCA_59")
 
-pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon59PCs_MNT.pdf")
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 59 PCs (pan-brain annot)")
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 59 PCs (region-specific annot)")
+# MNT 16Apr: Deciding to remove the clusters won't focus on:
+    #'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.tsne.59pcs$cellType.RS <- droplevels(sce.all.tsne.59pcs$cellType.RS)
+
+sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Excit.4"]  # 33 nuclei
+sce.all.tsne.59pcs$cellType <- droplevels(sce.all.tsne.59pcs$cellType)
+
+
+#pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon59PCs_MNT.pdf")
+pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_smallClustersDropped_MNTApr2020.pdf")
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=3.5) +
+  ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=15))
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=3.5) +
+  ggtitle("t-SNE on top 59 PCs (region-specific annot.)") + theme(plot.title = element_text(size=15))
 dev.off()
 
-save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT")
+save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT.rda")
 rm(sce.all.tsne.59pcs)
 
 
@@ -615,13 +641,46 @@ plotTSNE(sce.all.tsne.26pcs, colour_by="cellType", point_alpha=0.5, point_size=2
 plotTSNE(sce.all.tsne.26pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on top 26 PCs (region-specific annot)")
 dev.off()
 
-save(sce.all.tsne.26pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon26PCs_MNT")
+save(sce.all.tsne.26pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon26PCs_MNT.rda")
 rm(sce.all.tsne.26pcs)
 
 
 
+### Metrics and stuff for paper ================================================
+load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
+    # sce.all.n12, ...
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+    # sce.nac.all, ...
 
+# Get only NeuNs to add to 'sce.all.n12'
+sce.neuns <- sce.nac.all[ ,sce.nac.all$protocol == "Frank.NeuN"]
+intersectingMetrics <- intersect(colnames(colData(sce.neuns)), colnames(colData(sce.all.n12)))
+colData(sce.neuns) <- colData(sce.neuns)[ ,intersectingMetrics]
+colData(sce.all.n12) <- colData(sce.all.n12)[ ,intersectingMetrics]
 
+# Also have to remove reducedDims to do this
+reducedDims(sce.all.n12) <- NULL
+reducedDims(sce.neuns) <- NULL
 
+sce.n14 <- cbind(sce.neuns, sce.all.n12)
+    # 42,763 nuclei
 
+# Ok what's the median UMI and gene coverage across all 
+quantile(sce.n14$sum)
+    #    0%      25%      50%      75%     100%
+    # 101.0   5279.5   8747.0  19895.0 196431.0
+quantile(sce.n14$detected)
+    # 0%   25%   50%   75%  100%
+    # 95  2224  3047  5359 11838
 
+# What does this coverage look like across cell types?
+cellType.idx <- splitit(sce.n14$cellType)
+sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$detected)})
+    # it's similiar to what we see in total transcript capture ('$sum')
+    sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$sum)})
+
+    
+    
+    
+    
+    
