@@ -442,16 +442,6 @@ top20genes <- top20genes[ ,sort(colnames(top20genes))]
 write.csv(top20genes, file="tables/top20genesLists_NAc-n5_cellType.final.csv")
 
 
-png("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-selectSubtypes_logExprs_Apr2020.png", height=360, width=480)
-plotExpression(sce.nac.all, exprs_values = "logcounts", features="SEC63",
-              x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
-              add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                           geom = "crossbar", width = 0.3,
-                                           colour=tableau20[1:14]) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-dev.off()
-
-
 
 
 ## Markers pulled from Gokce, et al (doi: 10.1016/j.celrep.2016.06.059) =========

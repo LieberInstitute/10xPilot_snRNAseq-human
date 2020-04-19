@@ -544,15 +544,17 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features="CHAT",
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-## AFTER re-assigning MSN.broad
-#pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf")
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH"),
+## AFTER re-assigning MSN.broad (and added all DRD genes for kicks)
+pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf", width=7, height=9)
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH",
+                                                                   paste0("DRD", 1:5)),
                x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
-               add_legend=F) +
+               add_legend=F, ncol=3) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:14], 5)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-#dev.off()
+               width = 0.3, colour=rep(tableau20[1:14], 10)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  ggtitle(label="Miscellaneous genes of interest")
+dev.off()
 
 
 
