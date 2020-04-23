@@ -287,3 +287,53 @@ dev.off()
 
 
 
+### For reference === == === == ===
+table(sce.amy$cellType, sce.amy$sample)
+    #                 amy.5161 amy.5212
+    # Ambig.lowNtrxts       34       16
+    # Astro                489      363
+    # Excit                226      261
+    # Inhib                 84      295
+    # Micro                425      339
+    # Oligo               1697     1776
+    # OPC                  335      292
+
+
+table(sce.amy$prelimCluster, sce.amy$sample)
+    #    amy.5161 amy.5212
+    # 1       425      339
+    # 2         8      113
+    # 3         0      123
+    # 4         2     1712
+    # 5      1695       64
+    # 6         8       42
+    # 7        33       16
+    # 8       473       20
+    # 9        73        1
+    # 10       85       13
+    # 11        0      272
+    # 12        0       55
+    # 13        2       62
+    # 14        0       60
+    # 15       34       16
+    # 16       68        0
+    # 17        0      255
+    # 18       24        0
+    # 19      335       37
+    # 20        0       69
+    # 21        0       40
+    # 22       14        9
+    # 23       11       24
+table(sce.amy$cellType, sce.amy$collapsedCluster)
+#                    1    2    3    4    5    6    7
+# Ambig.lowNtrxts    0    0    0    0    0   50    0
+# Astro              0    0  852    0    0    0    0
+# Excit              0  487    0    0    0    0    0
+# Inhib            379    0    0    0    0    0    0
+# Micro              0    0    0    0    0    0  764
+# Oligo              0    0    0 3473    0    0    0
+# OPC                0    0    0    0  627    0    0
+
+
+
+
