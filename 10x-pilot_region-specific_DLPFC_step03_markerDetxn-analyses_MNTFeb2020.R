@@ -236,18 +236,16 @@ save(markers.dlpfc.t.design.log, markers.dlpfc.t.design.countsN,
     
 
 
-## Gene list enrichment analyses - Nvm ====
-    load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_MNTFeb2020.rda",
-         verbose=T)
-    rm(markers.dlpfc.t.design.countsN, markers.dlpfc.t.design.log)
-        # Since poor correlation of the ambig.lowNtrxts cluster
-        # (this cluster seems to be just driven by low captured libraries)
-    rm(markers.dlpfc.t.design.noAmbig.countsN)  # let's just stay conservative with stats
-    head(markers.dlpfc.t.design.noAmbig.log[["Excit"]])
-        ## There's no single test statistic so let's just do manual modeling
-         #    for AnJa's ST enrichment approach
-    rm(markers.dlpfc.t.design.noAmbig.log)
-    ## ====
+
+
+
+
+
+###### Direct limma approach ####
+#################################
+    
+    ### Adapted from `/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/
+      #               Layer_Guesses/layer_specificity.R`
 
 ## Load in sce.dlpfc and cluster:sample bulk
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
@@ -276,27 +274,6 @@ sce.dlpfc.PB <- logNormCounts(sce.dlpfc.PB, size_factors=LSFvec)
 colData(sce.dlpfc.PB) <- colData(sce.dlpfc.PB)[ ,c(13:17,19:20)]
 
 
-        ## Actually what is this?:
-        load("/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/rda/tstats_Human_DLPFC_snRNAseq_Nguyen.Rdata",
-             verbose=T)
-            # tstats_Human_DLPFC_snRNAseq_Nguyen_topLayer
-        
-        dim(tstats_Human_DLPFC_snRNAseq_Nguyen_topLayer)  # 692 x 31
-
-
-## Load gene lists from ST work === === === ===
-load("rdas/geneLists-fromSTpaper_forEnrichTests_MNT.rda", verbose=T)
-    # geneLists.fromST
-        ## 37 lists
-
-
-
-### Adapted from `/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/layer_specificity.R`
-  #     ** will eventually want to put into side-script; clean up; then add into this script
-
-
-###### Direct limma approach ####
-#################################
 
 ## Extract the count data
 mat <- assays(sce.dlpfc.PB)$logcounts
@@ -880,7 +857,7 @@ dev.off()
 
 
 
-## What if just subset on protein-coding first?
+## What if just subset on protein-coding first? ===
 library(rtracklayer)
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
 # gtf
@@ -961,43 +938,144 @@ top20genes <- top20genes[ ,sort(colnames(top20genes))]
 
 write.csv(top20genes, file="tables/top20genesLists_DLPFC-n2_cellTypesSplit.csv")
 
-### MNT aside, 05Mar2020 ===========
-  # Noticed there are 17 genes which are 0 expression AFTER first dropping "Ambig.lowNtrxts" cluster
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-    ## sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
+
+
+
+
+### Single-nucleus-level tests for cell-type-specific genes ================================
+  # MNT 23Apr2020 - added after seeing much better results in pan-brain analysis
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+
+table(sce.dlpfc.st$cellType.split)
 
 # First drop "Ambig.lowNtrxts" (168 nuclei)
-sce.dlpfc.noAmbig <- sce.dlpfc[ ,sce.dlpfc$cellType != "Ambig.lowNtrxts"]
-sce.dlpfc.noAmbig$cellType <- droplevels(sce.dlpfc.noAmbig$cellType)
-# Then make the pseudo-bulked SCE
-sce.dlpfc.PBafterDrop <- aggregateAcrossCells(sce.dlpfc.noAmbig, ids=paste0(sce.dlpfc.noAmbig$sample,":",sce.dlpfc.noAmbig$cellType),
-                                     use_exprs_values="counts")
-# Drop genes with all 0's
-sce.dlpfc.PBafterDrop <- sce.dlpfc.PBafterDrop[!rowSums(assay(sce.dlpfc.PBafterDrop, "counts"))==0, ]
+sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
 
-## OR
+# Remove 0 genes across all nuclei
+sce.dlpfc.st <- sce.dlpfc.st[!rowSums(assay(sce.dlpfc.st, "counts"))==0, ]  # keeps same 28111 genes
 
-# Just make the pseudo-bulked SCE, without dropping that cluster
-sce.dlpfc.PB <- aggregateAcrossCells(sce.dlpfc, ids=paste0(sce.dlpfc$sample,":",sce.dlpfc$cellType),
-                                              use_exprs_values="counts")
-# Drop genes with all 0's
-sce.dlpfc.PB <- sce.dlpfc.PB[!rowSums(assay(sce.dlpfc.PB, "counts"))==0, ]
 
-## Then
-genesOfInterest <- setdiff(rownames(sce.dlpfc.PB), rownames(sce.dlpfc.PBafterDrop))
-#  [1] "FOXD2"      "FASLG"      "FGFBP2"     "TRGV5"      "TRBC1"
-#  [6] "GPR174"     "PRF1"       "CLEC2B"     "KRT72"      "KRT73"
-#  [11] "IFNG"       "TBX3"       "GZMB"       "TMEM30B"    "AC106782.6"
-#  [16] "S1PR4"      "NKG7
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.dlpfc.st), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # 'drop=F' to keep as matrix - otherwise turns into numeric vec
+    ## Get: "Error in .ranksafe_qr(full.design) : design matrix is not of full rank"
+     #   if try to put 0 intercept
 
-rowSums(assay(sce.dlpfc.PB, "counts")[genesOfInterest, ])
-    ## mostly 1's; highest is 11 for PRF11
-table(assay(sce.dlpfc, "counts")["PRF1",sce.dlpfc$cellType=="Ambig.lowNtrxts"] ==0) # 166 zeros
+# Run pairwise t-tests
+markers.dlpfc.t.design <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellType.split,
+                                    assay.type="logcounts", design=mod, test="t",
+                                    direction="up", pval.type="all", full.stats=T)
 
-    ##    - so this is definitely just a poor, lowly-captured cluster; explains the poor
-    ##      intra-cluster correlation, compared to other clusters
+sapply(markers.dlpfc.t.design, function(x){table(x$FDR<0.05)})
+    #      Astro Excit.ambig Excit.L2:3 Excit.L3:4 Excit.L4:5 Excit.L5 Excit.L5:6
+    # FALSE 33308       33463      33536      33443      33513    33315      33490
+    # TRUE    230          75          2         95         25      223         48
+    #       Excit.L6.broad Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Inhib.6 Micro Oligo   OPC
+    # FALSE          33501   33302   33347   33405   33513   33509   33512 33006 33390 33384
+    # TRUE              37     236     191     133      25      29      26   532   148   154
+
+
+## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
+markers.dlpfc.wilcox.block <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellType.split,
+                                        assay.type="logcounts", block=sce.dlpfc.st$donor, test="wilcox",
+                                        direction="up", pval.type="all", full.stats=T)
+    
+    # no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
+sapply(markers.dlpfc.wilcox.block, function(x){table(x$FDR<0.05)})
+    
+    sapply(names(markers.dlpfc.wilcox.block), function(x){quantile(markers.dlpfc.wilcox.block[[x]]$FDR)})
+        # Astro Excit.ambig Excit.L2:3 Excit.L3:4 Excit.L4:5  Excit.L5 Excit.L5:6 Excit.L6.broad
+        # 0%   0.3332772           1          1          1          1 0.6095081          1              1
+        # 25%  1.0000000           1          1          1          1 1.0000000          1              1
+        # 50%  1.0000000           1          1          1          1 1.0000000          1              1
+        # 75%  1.0000000           1          1          1          1 1.0000000          1              1
+        # 100% 1.0000000           1          1          1          1 1.0000000          1              1
+        # Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Inhib.6     Micro     Oligo       OPC
+        # 0%         1       1       1       1       1       1 0.1850964 0.1071413 0.1395478
+        # 25%        1       1       1       1       1       1 1.0000000 1.0000000 1.0000000
+        # 50%        1       1       1       1       1       1 1.0000000 1.0000000 1.0000000
+        # 75%        1       1       1       1       1       1 1.0000000 1.0000000 1.0000000
+        # 100%       1       1       1       1       1       1 1.0000000 1.0000000 1.0000000
+
+
+## Binomial ===
+markers.dlpfc.binom.block <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellType.split,
+                                       assay.type="logcounts", block=sce.dlpfc.st$donor, test="binom",
+                                       direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.dlpfc.binom.block, function(x){table(x$FDR<0.05)})
+# none - and these are ALL 1's across the board....
+
+## Save all these for future reference
+save(markers.dlpfc.t.design, #markers.dlpfc.wilcox.block, markers.dlpfc.binom.block,
+     file="rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+# Print these to pngs
+markerList.t <- lapply(markers.dlpfc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+smallerSets <- c("Excit.L4:5", "Inhib.4", "Inhib.5", "Inhib.6")
+
+#dir.create("pdfs/exploration/DLPFC/")
+## ~40+ marker genes
+for(i in setdiff(names(genes.top40.t), c(smallerSets, "Excit.L2:3"))){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DLPFC/DLPFC_t-sn-level-top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+## < 40 ('smallerSets')
+for(i in smallerSets){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DLPFC/DLPFC_t-sn-level-top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900/2, width=1200)
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top markers with FDR < 0.05: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+## 'Excit.L2:3'
+png("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DLPFC/DLPFC_t-sn-level-top40markers-Excit.L2.3_logExprs_Apr2020.png", height=1900/8, width=1200/3)
+print(
+  plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=genes.top40.t[["Excit.L2:3"]],
+                 x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, #ncol=5,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:17], length(genes.top40.t[["Excit.L2:3"]]))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 10)) +  
+    ggtitle(label="Excit.L2:3 top markers with FDR < 0.05: single-nucleus-level p.w. t-tests")
+)
+dev.off()
+
+
+
+
+
+
+
+
 
 
 
