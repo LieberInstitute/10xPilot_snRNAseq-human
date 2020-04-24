@@ -449,6 +449,30 @@ plotUMAP(sce.dlpfc.st, colour_by="cellType.split", point_size=3.5, point_alpha=0
 dev.off()
 
 
+
+## Layer-specific markers from ST paper?
+layermarkers <- c("KRT17",
+#c("KRT17", # L6
+  "BCL11B", "TRABD2A", # L5 (BCL11B 'canonical', TRABD2A newly-ID'd)
+  "HPCAL1", # L2
+  "LAMP5", "AQP4", "FREM3",#,) %in% rownames(sce.dlpfc.st)  # all TRUE
+      # these last three from Hodges, et al (L2, astro, L2:3)
+# Additionals
+  "COL5A2", # L3 excit;
+  "ADARB2", "LHX6",#
+  "LAMP5","PAX6","VIP",   "PVALB","SST") %in% rownames(sce.dlpfc.st) # two major dev'tal branches of inhib.
+
+
+pdf("pdfs/exploration/zexplore_DLPFC-n2_ST-or-Allen-layerMarkers_Apr2020.pdf", width=7, height=9)
+plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=c(unique(layermarkers)),
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=3,
+               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                            geom = "crossbar", width = 0.3,
+                                            colour=rep(tableau20[1:17], length(unique(layermarkers)))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+
+
     ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
