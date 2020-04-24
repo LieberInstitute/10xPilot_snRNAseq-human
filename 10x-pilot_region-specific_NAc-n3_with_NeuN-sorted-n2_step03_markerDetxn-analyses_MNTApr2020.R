@@ -545,10 +545,89 @@ for(i in names(markers.gokce)){
 
 
 
+### Single-nucleus level marker detection? =========
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+    
+# Drop genes with all 0's
+sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]
+    ## keeps 29236 genes
 
 
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
+    # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
+    # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
+mod <- with(colData(sce.nac.all), model.matrix(~ processDate))
+
+mod <- mod[ ,-1]
+    # This matrix treats 'Br5161' donor as the baseline:
+
+markers.nac.t.design <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
+                                    assay.type="logcounts", design=mod, test="t",
+                                    direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.nac.t.design, function(x){table(x$FDR<0.05)})
+    #      Astro Inhib.1 Inhib.2 Inhib.3 Inhib.4 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3
+    # FALSE 28405   28896   29057   28980   28953 27819    29154    28941    29149
+    # TRUE    831     340     179     256     283  1417       82      295       87
+    #       MSN.D1.4 MSN.D2.1 MSN.D2.2 Oligo   OPC
+    # FALSE    29175    29006    29170 28743 28864
+    # TRUE        61      230       66   493   372
 
 
+## WMW: Blocking on sample (this test doesn't take 'design=' argument) ===
+markers.nac.wilcox.block <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
+                                        assay.type="logcounts", block=sce.nac.all$donor, test="wilcox",
+                                        direction="up", pval.type="all", full.stats=T)
 
+
+sapply(markers.nac.wilcox.block, function(x){table(x$FDR<0.05)})
+    ## none for about ~1/3 of these... none for Micros or Oligos...
+
+
+## Binomial ===
+markers.nac.binom.block <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
+                                       assay.type="logcounts", block=sce.nac.all$donor, test="binom",
+                                       direction="up", pval.type="all", full.stats=T)
+
+
+sapply(markers.nac.binom.block, function(x){table(x$FDR<0.05)})
+    ## even worse than WMW... basically none
+
+
+## Save all these for future reference
+save(markers.nac.t.design, #markers.nac.wilcox.block, markers.nac.binom.block,
+     file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+## Print these to PNGs
+markerList.t <- lapply(markers.nac.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+# Take top 40
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+
+#dir.create("pdfs/exploration/NAc-n5-markers/")
+for(i in names(genes.top40.t)){
+  png(paste0("pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level-top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
 
 
