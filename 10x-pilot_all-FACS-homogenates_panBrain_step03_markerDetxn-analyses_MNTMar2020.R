@@ -349,3 +349,271 @@ save(sce.all.n12.PB, eb_list.all.n12.broad, eb_contrasts.all.n12.broad,
 
 
 
+
+
+### Top markers to look more into =========
+load("rdas/markers-stats_panBrain_manualContrasts-w-pairwise_MNTApr2020.rda", verbose=T)
+    # sce.all.n12.PB, eb_list.all.n12.broad, eb_contrasts.all.n12.broad
+
+
+## Extract the p-values
+pvals0_contrasts <- sapply(eb_list.all.n12.broad, function(x) {
+  x$p.value[, 2, drop = FALSE]
+})
+rownames(pvals0_contrasts) <- rownames(sce.all.n12.PB)
+
+fdrs0_contrasts = apply(pvals0_contrasts, 2, p.adjust, "fdr")
+
+## Extract the tstats
+t0_contrasts_cell <- sapply(eb_list.all.n12.broad, function(x) {
+  x$t[, 2, drop = FALSE]
+})
+rownames(t0_contrasts_cell) <- rownames(sce.all.n12.PB)
+
+
+# Make list of top markers at FDR < 0.01
+markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
+  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts_cell[ ,x] > 0]
+})
+names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
+lengths(markerList.PB.manual)
+    # Astro.1 Astro.2 Excit.1 Excit.2 Excit.3 Excit.5 Excit.6 Excit.7 Excit.8 Inhib.1
+    #    3209     350     269     243     127     220     154     318     324     732
+    # Inhib.2 Inhib.3 Inhib.4 Inhib.5   Micro   Oligo     OPC
+    #     479     405     120     196    3838    2449    1662
+
+markerTs.fdr.01 <- lapply(colnames(fdrs0_contrasts), function(x){
+  as.matrix(t0_contrasts_cell[fdrs0_contrasts[ ,x] < 0.01 & t0_contrasts_cell[ ,x] > 0, x])
+})
+
+names(markerTs.fdr.01) <- colnames(fdrs0_contrasts)
+
+markerList.sorted <- lapply(markerTs.fdr.01, function(x){
+  x[,1][order(x, decreasing=TRUE)]
+})
+
+# Check, from broad cell type marker expression plots (SLC17A6 seemed very specific to "Excit.8")
+"SLC17A6" %in% names(markerList.sorted[["Excit.8"]])  # TRUE
+
+# Let's print top 40 and to PNGs instead of pdfs
+genes2plot <- lapply(markerList.sorted, function(x){head(x, n=40)})
+
+
+## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
+     verbose=T)
+## sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+
+# As before, remove the clusters that won't focus on:
+#     'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
+sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
+
+#dir.create("pdfs/exploration/panBrainMarkers/")
+
+library(grDevices)
+for(i in names(genes2plot)){
+  png(paste0("pdfs/exploration/panBrainMarkers/panBrain_top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.all.n12, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes2plot[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(i, " top 40 markers"))
+  )
+  dev.off()
+}
+
+
+
+
+
+### Brief test with `findMarkers()`, WMW at single-nucleus-level ======================
+  # MNT 23Apr2020
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.all.n12), model.matrix(~ region + processDate + donor))
+mod <- mod[ ,-1]
+    # This matrix treats the 'amy' region as the baseline:
+    #design.full <- with(colData(sce.all.n12), model.matrix(~region + processDate))
+markers.n12.t.design <- findMarkers(sce.all.n12, groups=sce.all.n12$cellType,
+                                        assay.type="logcounts", design=mod, test="t",
+                                        direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.n12.t.design, function(x){table(x$FDR<0.01)})
+    #       Astro.1 Astro.2 Excit.1 Excit.2 Excit.3 Excit.5 Excit.6 Excit.7 Excit.8
+    # FALSE   32852   33458   33200   33306   33392   33248   33382   32939   32930
+    # TRUE      686      80     338     232     146     290     156     599     608
+    #       Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo   OPC
+    # FALSE   33325   33302   33301   33383   33222 32241 32926 33183
+    # TRUE      213     236     237     155     316  1297   612   355
+
+
+## WMW: Blocking on sample (this test doesn't take 'design=' argument) ===
+markers.n12.wilcox.block <- findMarkers(sce.all.n12, groups=sce.all.n12$cellType,
+                                          assay.type="logcounts", block=sce.all.n12$donor, test="wilcox",
+                                          direction="up", pval.type="all", full.stats=T)
+    # Warning messages:
+    #   1: In .pairwise_blocked_template(x, group.vals, nblocks = length(block),  :
+    #                                      no within-block comparison between Excit.8 and Excit.5
+    #                                    2: In .pairwise_blocked_template(x, group.vals, nblocks = length(block),  :
+    #                                                                       no within-block comparison between Excit.8 and Excit.7
+
+
+sapply(markers.n12.wilcox.block, function(x){table(x$FDR<0.05)})
+    ## if 'block=' on $sample, very poor... all excitatory subtypes will have 0 markers
+     
+     # but blocking on $donor:
+
+    #       Astro.1 Astro.2 Excit.1 Excit.2 Excit.3 Excit.5 Excit.6 Excit.7 Excit.8
+    # FALSE   33147   33537   33359   33423   33498   33378   33529   33131   33425
+    # TRUE      391       1     179     115      40     160       9     407     113
+    #       Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo   OPC
+    # FALSE   33441   33326   33380   33455   33339 32899 33076 33301
+    # TRUE       97     212     158      83     199   639   462   237
+
+## Binomial ===
+markers.n12.binom.block <- findMarkers(sce.all.n12, groups=sce.all.n12$cellType,
+                                        assay.type="logcounts", block=sce.all.n12$donor, test="binom",
+                                        direction="up", pval.type="all", full.stats=T)
+    # [48x] Warning messages:
+    # [...]
+    # 10: In pbinom(host.nzero, size, p, log.p = TRUE) :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=1645, b=39, x=0.577685,...) underflow to -Inf
+    # 11: In pbinom(host.nzero - 1, size, p, lower.tail = FALSE,  ... :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=1586, b=35, x=0.577685,...) underflow to -Inf
+    # 12: In pbinom(host.nzero - 1, size, p, lower.tail = FALSE,  ... :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=1720, b=37, x=0.577685,...) underflow to -Inf
+    # 13: In pbinom(host.nzero, size, p, log.p = TRUE) :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=5102, b=39, x=0.858593,...) underflow to -Inf
+    # 14: In pbinom(host.nzero, size, p, log.p = TRUE) :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=3670, b=39, x=0.785647,...) underflow to -Inf
+    # 15: In pbinom(host.nzero, size, p, log.p = TRUE) :
+    #   pbeta(*, log.p=TRUE) -> bpser(a=3334, b=31, x=0.785647,...) underflow to -Inf
+    # 16: In pbinom(host.nzero - 1, size, p, lower.tail = FALSE,  ... :
+    # [...]
+
+sapply(markers.n12.binom.block, function(x){table(x$FDR<0.05)})
+    # ~ dozen to 100+ across most; none for Astro.2 or Excit.6
+
+## Save all these for future reference
+save(markers.n12.t.design, markers.n12.wilcox.block, markers.n12.binom.block,
+     file="rdas/markers-stats_panBrain_allTests-single-nuc-lvl_MNTApr2020.rda")
+
+
+
+## For funsies, print those from the WMW result: === === ===
+ # - these are already ordered from best stats to worst
+
+    ## btw, good sign that:
+    which(rownames(markers.n12.wilcox.block[["Excit.8"]])=="SLC17A6")
+    # [1] 34
+
+markerList.wmw <- lapply(markers.n12.wilcox.block, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+genes2plot.wmw <- sapply(markerList.wmw, function(x){head(x, n=40)})
+
+## Plot WMW results ======
+for(i in setdiff(names(genes2plot.wmw), c("Astro.2","Excit.6"))){
+  png(paste0("pdfs/exploration/panBrainMarkers/panBrain_wmw-top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes2plot.wmw[[i]],
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes2plot.wmw[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(i, " top 40 markers"))
+  )
+  dev.off()
+}
+
+# Then for Astro.2
+png("pdfs/exploration/panBrainMarkers/panBrain_wmw-top40markers-Astro.2_logExprs_Apr2020.png", height=1900/8, width=1200/6)
+print(
+  plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes2plot.wmw[["Astro.2"]],
+                 x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, #ncol=5,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:17], length(genes2plot.wmw[["Astro.2"]]))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+    ggtitle(label="Astro.2 top 40 markers")
+)
+dev.off()
+
+# And Excit.6
+png("pdfs/exploration/panBrainMarkers/panBrain_wmw-top40markers-Excit.6_logExprs_Apr2020.png", height=1900/2, width=1200)
+print(
+  plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes2plot.wmw[["Excit.6"]],
+                 x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:17], length(genes2plot.wmw[["Excit.6"]]))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+    ggtitle(label="Excit.6 top 40 markers")
+)
+dev.off()
+
+    ## ====
+
+
+# Compare to single-nucleus-level t-test? ===
+markerList.t <- lapply(markers.n12.t.design, function(x){
+  rownames(x)[x$FDR < 0.01]
+  }
+)
+
+# FDR < 0.05 for WMW ===
+lengths(markerList.wmw)
+
+# FDR < 0.05 for t-test ===
+lengths(markerList.t)
+
+# Intersection ===
+sapply(names(markerList.t), function(g){
+  length(intersect(markerList.t[[g]],
+                   markerList.wmw[[g]]))
+})
+
+## What about top 40 vs. top 40?
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+
+# Intersection
+sapply(names(genes.top40.t), function(g){
+  length(intersect(genes2plot.wmw[[g]],
+                   genes.top40.t[[g]]))
+})
+    # Astro.1 Astro.2 Excit.1 Excit.2 Excit.3 Excit.5 Excit.6 Excit.7 Excit.8 Inhib.1
+    #      20       1      11      23      23      18       3      17      15      22
+    # Inhib.2 Inhib.3 Inhib.4 Inhib.5   Micro   Oligo     OPC
+    #      24      22      23      22      21      36      24     - so about half
+
+
+## Let's plot the t-test results too ===
+for(i in names(genes.top40.t)){
+  png(paste0("pdfs/exploration/panBrainMarkers/panBrain_t-sn-level-top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+
+
+

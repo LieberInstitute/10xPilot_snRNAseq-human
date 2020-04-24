@@ -538,7 +538,7 @@ table(sce.all.n12$cellType, sce.all.n12$region)
     #Inhib.2        69   133   57   24  266           all
     #Inhib.3       113    45  110    0  115           non-NAc
     #Inhib.4        16   133   29    0  246           non-NAc
-    #Inhib.5       130     1   31  638    4           NAc-heavy (but a good amount amyg, hpc)
+    #Inhib.5       130     1   31  638    4           NAc-heavy (but a good amount amyg; some hpc)
     #Micro         790   272 1271  215  529
     #Oligo        3450  3228 5887 2804 3245
     #OPC           634   269  885  239  534
