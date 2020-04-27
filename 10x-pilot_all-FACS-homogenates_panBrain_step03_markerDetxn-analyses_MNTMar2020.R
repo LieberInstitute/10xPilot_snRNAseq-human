@@ -615,5 +615,16 @@ for(i in names(genes.top40.t)){
 }
 
 
+pdf("pdfs/exploration/zForBoG-poster-SOX11-in-panBrain_Excit.8-marker.pdf", height=2.5, width=4)
+plotExpression(sce.all.n12, exprs_values = "logcounts", features=c("SOX11"),
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                            geom = "crossbar", width = 0.3,
+                                            colour=rep(tableau20[1:17],1))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+
+
+
 
 

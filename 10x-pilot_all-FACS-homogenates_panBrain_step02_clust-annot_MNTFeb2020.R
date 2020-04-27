@@ -609,7 +609,11 @@ reducedDim(sce.all.n12, "TSNE") <- NULL
 set.seed(109)
 sce.all.tsne.59pcs <- runTSNE(sce.all.n12, dimred="PCA_59")
 
-# MNT 16Apr: Deciding to remove the clusters won't focus on:
+save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT.rda")
+rm(sce.all.tsne.59pcs)
+
+
+# MNT 16Apr: Deciding to remove the clusters won't focus on for plotting:
     #'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
 sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType.RS != "Ambig.lowNtrxts"] # 445
 sce.all.tsne.59pcs$cellType.RS <- droplevels(sce.all.tsne.59pcs$cellType.RS)
@@ -618,17 +622,29 @@ sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Ambig
 sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Excit.4"]  # 33 nuclei
 sce.all.tsne.59pcs$cellType <- droplevels(sce.all.tsne.59pcs$cellType)
 
+# Add broad cell type taken from pan-brain annotation
+sce.all.tsne.59pcs$cellType.broad <- ss(as.character(sce.all.tsne.59pcs$cellType), "\\.", 1)
 
 #pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon59PCs_MNT.pdf")
-pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_smallClustersDropped_MNTApr2020.pdf")
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=3.5) +
-  ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=15))
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=3.5) +
-  ggtitle("t-SNE on top 59 PCs (region-specific annot.)") + theme(plot.title = element_text(size=15))
+pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_3x3PCA_smallClustersDropped_MNTApr2020.pdf", width=9)
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=4.0,
+         text_by="cellType.broad", text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=19))
+
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.broad", point_alpha=0.5, point_size=4.0,
+         text_by="cellType.broad", text_size=7, theme_size=22) +
+  ggtitle("t-SNE on top 59 PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
+
+plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=4.0,
+         text_by="cellType.RS", text_size=5.5, theme_size=17) +
+  ggtitle("t-SNE on top 59 PCs (region-specific annot.)") + theme(plot.title = element_text(size=18))
+
+# Top 3 PCs
+plotReducedDim(sce.all.tsne.59pcs, dimred="PCA", ncomponents=3, colour_by="cellType.broad",
+               point_alpha=0.5, theme_size=15, add_legend=FALSE) + 
+  ggtitle("Top three PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
 dev.off()
 
-save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT.rda")
-rm(sce.all.tsne.59pcs)
 
 
 ## 26 PCs tSNE ===
