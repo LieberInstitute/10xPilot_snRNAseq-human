@@ -13,6 +13,7 @@ library(DropletUtils)
 library(jaffelab)
 library(limma)
 library(lattice)
+library(parallel)
 library(RColorBrewer)
 library(pheatmap)
 library(fields)
@@ -56,7 +57,7 @@ sapply(markers.dlpfc.t.design.countsN, function(x){table(x$FDR<0.05)})
 
 
 
-### The generation of these stats are dapted from:
+### The generation of these stats are adapted from:
   # `/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/layer_specificity.R`
   # (and performed in step03 script - "direct limma approach")
 
@@ -604,14 +605,227 @@ dev.off()
 
 
 
+### 24Apr2020: using single-nucleus-level stats for enrichment ==========================================
+  #   - as it's believed these are more 'real' markers
+
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda",
+     verbose=T)
+    # markers.dlpfc.t.design
+
+# What do these objects/DataFrames look like:
+head(markers.dlpfc.t.design[["Astro"]])
+head(markers.dlpfc.t.design[["Astro"]][ ,"stats.OPC"])
+
+sapply(markers.dlpfc.t.design, function(x){table(x$FDR<0.05)})
+    #       Astro Excit.ambig Excit.L2:3 Excit.L3:4 Excit.L4:5 Excit.L5 Excit.L5:6
+    # FALSE 33308       33463      33536      33443      33513    33315      33490
+    # TRUE    230          75          2         95         25      223         48
+    #       Excit.L6.broad Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Inhib.6 Micro Oligo   OPC
+    # FALSE          33501   33302   33347   33405   33513   33509   33512 33006 33390 33384
+    # TRUE              37     236     191     133      25      29      26   532   148   154
+
+## Load SCE for rowData
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+    rm(clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo)
+
+    # As for test, first drop "Ambig.lowNtrxts" (168 nuclei)
+    sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+    sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
+    
+    # Remove 0 genes across all nuclei
+    sce.dlpfc.st <- sce.dlpfc.st[!rowSums(assay(sce.dlpfc.st, "counts"))==0, ]  # keeps same 28111 genes
 
 
 
+## Load gene lists curated by AnJa
+load("rdas/geneLists-fromSTpaper_forEnrichTests_MNT.rda", verbose=T)
+    # geneLists.fromST
+    ## 37 lists
+
+## filter for those present in stats (this won't change b/tw broad & subtype-level stats)
+geneList_present = lapply(geneLists.fromST, function(x) {
+  x = x[!is.na(x)]
+  x[x %in% rowData(sce.dlpfc.st)$ID]
+})
+
+unname(data.frame(lengths(geneLists.fromST), lengths(geneList_present)))
+## not too bad
+
+
+## do enrichment ===
+enrich_stat_list.full = markers.dlpfc.t.design
+for (i in seq(along = enrich_stat_list.full)) {
+  #cellType = t0_full[, i] > 0 & fdrs0_full[, i] < 0.1
+  # or
+  cellType = markers.dlpfc.t.design[[i]][, "FDR"] < 0.05 # a logical
+      # don't need to subset for positive t's bc test alrdy does
+  # Add names, then change to ensemblID
+  names(cellType) <- rownames(markers.dlpfc.t.design[[i]])
+  names(cellType) <- rowData(sce.dlpfc.st)$ID[match(names(cellType), rownames(sce.dlpfc.st))]
+  tabList = mclapply(geneList_present, function(g) {
+    tt = table(Set = factor(names(cellType) %in% g, c(FALSE, TRUE)),
+               CellType = factor(cellType, c(FALSE, TRUE)))
+  }, mc.cores = 8)
+  enrichList = lapply(tabList,fisher.test)
+  
+  o = data.frame(
+    OR = sapply(enrichList, "[[", "estimate"),
+    Pval = sapply(enrichList, "[[", "p.value"),
+    NumSig = sapply(tabList, function(x) x[2,2])
+  )
+  rownames(o) = gsub(".odds ratio", "", rownames(o))
+  enrich_stat_list.full[[i]] = o
+}
+
+enrichTab.full = do.call("cbind", enrich_stat_list.full)
 
 
 
+#  name
+enrichTab.full$Type = ss(rownames(enrichTab.full), "_", 1)
+enrichTab.full$Group = ss(rownames(enrichTab.full), "_", 2)
+enrichTab.full$Type[enrichTab.full$Group == "Birnbaum"] = "Birnbaum"
+enrichTab.full$Type[enrichTab.full$Type == "Gene"] = "ASD"
+enrichTab.full$Set = ss(rownames(enrichTab.full), "_", 3)
+enrichTab.full$ID = rownames(enrichTab.full)
+enrichTab.full$SetSize = sapply(geneList_present, length)
+
+### save a copy as a supp table
+enrichTab.fullOut.fdr.05 = enrichTab.full[ ,c(55, 52:54, 56, 1:51)]
+write.csv(enrichTab.fullOut.fdr.05, file = "tables/enrichTab_clinicalGeneLists_DLPFC-cellTypesSplit-SN-LEVEL-fdr05_Apr2020.csv", row.names=FALSE)
+
+## look at enrichment
+pMat = enrichTab.fullOut.fdr.05[ , grep("Pval", colnames(enrichTab.fullOut.fdr.05))]
+orMat = enrichTab.fullOut.fdr.05[ , grep("OR", colnames(enrichTab.fullOut.fdr.05))]
+colnames(pMat) = ss(colnames(pMat), ".Pval")
+colnames(orMat) = ss(colnames(orMat), ".OR")
+pMat < 0.05 / nrow(pMat)  #  0.001351351
+pMat < 0.001
+round(-log10(pMat),1)
+
+
+## SCZD gene sets
+enrichTab.fullOut.fdr.05[c("DE_PE_SCZ.Up","DE_BS2_SCZ.Up", "TWAS_PE_SCZ.Up","TWAS_BS2_SCZ.Up"),
+                         c(2:5,grep("Pval", colnames(enrichTab.fullOut.fdr.05)))]
+    #                 Type Group    Set SetSize   Astro.Pval Excit.ambig.Pval Excit.L2:3.Pval
+    # DE_PE_SCZ.Up      DE    PE SCZ.Up    2247 8.222529e-59        1.0000000               1
+    # DE_BS2_SCZ.Up     DE   BS2 SCZ.Up      93 4.278843e-02        1.0000000               1
+    # TWAS_PE_SCZ.Up  TWAS    PE SCZ.Up     456 7.936539e-01        0.6392323               1
+    # TWAS_BS2_SCZ.Up TWAS   BS2 SCZ.Up     368 2.389407e-01        0.6292215               1
+    #                 Excit.L3:4.Pval Excit.L4:5.Pval Excit.L5.Pval Excit.L5:6.Pval
+    # DE_PE_SCZ.Up          1.0000000       0.2591801     0.2213807       0.5884815
+    # DE_BS2_SCZ.Up         1.0000000       1.0000000     0.1743730       1.0000000
+    # TWAS_PE_SCZ.Up        1.0000000       1.0000000     0.7894808       0.5441878
+    # TWAS_BS2_SCZ.Up       0.6401489       1.0000000     0.3786089       1.0000000
+    #                 Excit.L6.broad.Pval Inhib.1.Pval Inhib.2.Pval Inhib.3.Pval Inhib.4.Pval
+    # DE_PE_SCZ.Up                      1    0.1247846   0.03537435    0.1535045   0.47308656
+    # DE_BS2_SCZ.Up                     1    0.5575512   0.14198264    1.0000000   0.08562455
+    # TWAS_PE_SCZ.Up                    1    0.1232565   1.00000000    0.1787307   0.35710588
+    # TWAS_BS2_SCZ.Up                   1    0.5667187   0.52785683    1.0000000   1.00000000
+    #                 Inhib.5.Pval Inhib.6.Pval Micro.Pval   Oligo.Pval  OPC.Pval
+    # DE_PE_SCZ.Up       0.1690452     0.723026  1.0000000 6.547380e-06 0.1813966
+    # DE_BS2_SCZ.Up      1.0000000     1.000000  0.4292628 1.000000e+00 0.4045187
+    # TWAS_PE_SCZ.Up     1.0000000     1.000000  0.7292709 3.903101e-02 0.5255598
+    # TWAS_BS2_SCZ.Up    0.3266752     1.000000  0.8486287 1.417104e-01 0.7269583
+
+
+enrichTab.fullOut.fdr.05[c("DE_PE_SCZ.Down","DE_BS2_SCZ.Down", "TWAS_PE_SCZ.Down","TWAS_BS2_SCZ.Down"),
+                         c(2:5,grep("Pval", colnames(enrichTab.fullOut.fdr.05)))]
+    #                   Type Group      Set SetSize   Astro.Pval Excit.ambig.Pval Excit.L2:3.Pval
+    # DE_PE_SCZ.Down      DE    PE SCZ.Down    2077 0.0002128647        0.2771107               1
+    # DE_BS2_SCZ.Down     DE   BS2 SCZ.Down     132 1.0000000000        1.0000000               1
+    # TWAS_PE_SCZ.Down  TWAS    PE SCZ.Down     463 0.7963027289        0.6406838               1
+    # TWAS_BS2_SCZ.Down TWAS   BS2 SCZ.Down     402 1.0000000000        0.6310541               1
+    #                   Excit.L3:4.Pval Excit.L4:5.Pval Excit.L5.Pval Excit.L5:6.Pval
+    # DE_PE_SCZ.Down          0.1195261       0.4268897     0.5266120      0.08631337
+    # DE_BS2_SCZ.Down         1.0000000       0.1110539     1.0000000      0.20237169
+    # TWAS_PE_SCZ.Down        0.4131792       1.0000000     0.5954856      1.00000000
+    # TWAS_BS2_SCZ.Down       0.6501990       1.0000000     0.3890119      0.49940599
+    #                   Excit.L6.broad.Pval Inhib.1.Pval Inhib.2.Pval Inhib.3.Pval Inhib.4.Pval
+    # DE_PE_SCZ.Down             0.05826803   0.26788758    0.1347153            1   0.04521774
+    # DE_BS2_SCZ.Down            1.00000000   1.00000000    1.0000000            1   1.00000000
+    # TWAS_PE_SCZ.Down           1.00000000   0.44772716    0.3907894            1   0.36148717
+    # TWAS_BS2_SCZ.Down          0.42172359   0.05421873    0.0683707            1   0.05661475
+    #                   Inhib.5.Pval Inhib.6.Pval   Micro.Pval   Oligo.Pval     OPC.Pval
+    # DE_PE_SCZ.Down      0.00117537    0.1485163 2.036640e-43 6.803246e-26 8.315935e-05
+    # DE_BS2_SCZ.Down     1.00000000    1.0000000 1.094018e-28 3.560448e-02 1.666946e-01
+    # TWAS_PE_SCZ.Down    1.00000000    0.3720139 2.305730e-01 1.875323e-01 5.262360e-01
+    # TWAS_BS2_SCZ.Down   0.35100828    1.0000000 8.540537e-01 7.291697e-01 1.789745e-01
 
 
 
+    # Marginal signal is interesting for 'TWAS_BS2_SCZ.Down'
+    length(intersect(geneLists.fromST[["TWAS_PE_SCZ.Down"]], geneLists.fromST[["TWAS_BS2_SCZ.Down"]]))
+        # 175 genes shared in these ~430 gene sets
+
+# Plot into the custom heatmap
+midpoint = function(x) x[-length(x)] + diff(x)/2
+
+customLayerEnrichment = function(enrichTab , groups, xlabs, 
+                                 Pthresh = 12, ORcut = -log10(0.05), enrichOnly = FALSE,
+                                 #layerHeights = c(0,40,55,75,85,110,120,135),
+                                 layerHeights = seq(0,153,by=9),
+                                 mypal = c("white", colorRampPalette(brewer.pal(9,"YlOrRd"))(50)), ...) {
+  
+  wide_p = -log10(enrichTab[groups,grep("Pval", colnames(enrichTab))])
+  wide_p[wide_p > Pthresh] = Pthresh
+      colnames(wide_p) <- gsub(".Pval","",colnames(wide_p))
+  wide_p = t(round(wide_p[,
+                          # (From bottom to top on plot)
+                          c(rev(names(markers.dlpfc.t.design)))
+                          ],2))
+  
+  wide_or = enrichTab[groups,grep("OR", colnames(enrichTab))]
+  colnames(wide_or) <- gsub(".OR","",colnames(wide_or))
+  wide_or= round(t(wide_or[,
+                           # (From bottom to top on plot)
+                           c(rev(names(markers.dlpfc.t.design)))
+                           ]),1)
+  
+  if(enrichOnly) wide_p[wide_or < 1] = 0
+  wide_or[wide_p < ORcut] = ""
+      # or, if want to print -log10(p's)
+      wide_p_2plot <- wide_p
+      wide_p_2plot[wide_p < ORcut] = ""
+  
+  image.plot(x = seq(0,ncol(wide_p),by=1), y = layerHeights, z = as.matrix(t(wide_p)),
+             col = mypal,xaxt="n", yaxt="n",xlab = "", ylab="", ...)
+  
+  axis(2, rev(names(markers.dlpfc.t.design)), at = midpoint(layerHeights),las=1)  # MNT add
+  axis(1, rep("", ncol(wide_p)), at = seq(0.5,ncol(wide_p)-0.5))
+  
+  text(x = seq(0.5,ncol(wide_p)-0.5), y=-1*max(nchar(xlabs))/2, xlabs,
+       xpd=TRUE, srt=45,cex=1.5,adj= 1)
+  abline(h=layerHeights,v=0:ncol(wide_p))
+  text(x = rep(seq(0.5,ncol(wide_p)-0.5),each = nrow(wide_p)), 
+       y = rep(midpoint(layerHeights), ncol(wide_p)),
+       as.character(wide_or),cex=1.4,font=2)
+       # or, for -log10(p)
+       #as.character(wide_p_2plot),cex=1.5,font=2)
+}
+
+
+# Print this
+pdf("pdfs/exploration/enrichPlots_SN-LEVEL-markers_SCZD-geneSet_DLPFC-cellTypeSplit_heatmap_Apr2020.pdf",w=8)
+par(mar=c(8,8,2.5,1), cex.axis=1.2, cex.lab=1.5)
+groups =c("DE_PE_SCZ.Up", "DE_PE_SCZ.Down", 
+          "DE_BS2_SCZ.Up", "DE_BS2_SCZ.Down", 
+          "TWAS_BS2_SCZ.Up", "TWAS_BS2_SCZ.Down", "TWAS_PE_SCZ.Up",
+          "TWAS_PE_SCZ.Down")
+xlabs = ss(gsub("_SCZ", "", groups), "_", 2)
+customLayerEnrichment(enrichTab.full, groups, xlabs, enrichOnly=TRUE)
+abline(v=4,lwd=3)
+text(x = c(2,6), y = 160, c("SCZD-DE", "SCZD-TWAS"), xpd=TRUE,cex=2,font=2)
+dev.off()
+
+
+pdf("pdfs/exploration/enrichPlots_SN-LEVEL-markers_birnbaum-geneSet_DLPFC-cellTypeSplit_heatmap_Apr2020.pdf",w=8)
+par(mar=c(12,8,2.5,1), cex.axis=1, cex.lab=1.5)
+groups =grep(enrichTab.full$ID, pattern = "Birnbaum", value=TRUE)
+xlabs = ss(groups, "_", 3)
+customLayerEnrichment(enrichTab.full, groups,xlabs, enrichOnly=TRUE,
+                      breaks = seq(0,12,len = 52))
+dev.off()
 
 

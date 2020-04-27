@@ -477,5 +477,9 @@ dev.off()
 
 
 
-
+## Aside - for BoG poster
+pdf("pdfs/pubFigures/DLPFC-n2_tSNE-cellType.split_MNTApr2020.pdf", width=9)
+plotTSNE(sce.dlpfc.st, colour_by="cellType.split", point_size=5.0, point_alpha=0.5,
+         text_by="cellType", text_size=7, theme_size=18)
+dev.off()
 
