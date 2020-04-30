@@ -966,6 +966,8 @@ mod <- mod[ , -1, drop=F] # 'drop=F' to keep as matrix - otherwise turns into nu
     ## Get: "Error in .ranksafe_qr(full.design) : design matrix is not of full rank"
      #   if try to put 0 intercept
 
+    ## MNT comment: actually doesn't matter
+
 # Run pairwise t-tests
 markers.dlpfc.t.design <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellType.split,
                                     assay.type="logcounts", design=mod, test="t",
@@ -1074,9 +1076,143 @@ dev.off()
 
 
 
+### Cluster-vs-all single-nucleus-level iteration ================================
+  # MNT 30Apr2020
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+
+table(sce.dlpfc.st$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
+
+# Remove 0 genes across all nuclei
+sce.dlpfc.st <- sce.dlpfc.st[!rowSums(assay(sce.dlpfc.st, "counts"))==0, ]  # keeps same 28111 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.dlpfc.st), model.matrix(~ donor))
+
+markers.dlpfc.t.1vAll <- list()
+for(i in unique(sce.dlpfc.st$cellType.split)){
+  # Make temporary contrast
+  sce.dlpfc.st$contrast <- ifelse(sce.dlpfc.st$cellType.split==i, 1, 0)
+  # Test cluster vs. all
+  markers.dlpfc.t.1vAll[[i]] <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$contrast,
+                                assay.type="logcounts", design=mod, test="t",
+                                direction="up", pval.type="all", full.stats=T)
+}
+    # There were 17 warnings (use warnings() to see them)
+    #   [17x]:
+    #   Warning messages:
+    #   1: In .fit_lm_internal(x, subset.row, groups, design = design,  ... :
+    #     automatically removed intercept column
+
+class(markers.dlpfc.t.1vAll[["Astro"]]) # SimpleList
+dim(markers.dlpfc.t.1vAll[["Astro"]]) # NULL
+head(markers.dlpfc.t.1vAll[["Astro"]])
+    ## For some reason all the results are in the second List entry (first is always empty)
+
+    table(markers.dlpfc.t.1vAll[["Astro"]][[2]]$FDR<0.05) # 4892
+    table(markers.dlpfc.t.1vAll[["Astro"]][[2]]$stats.0$log.FDR < log10(0.05))  # 6143
+        ## Why are these different?  Though probably should take the former, because
+         # there is only one test for each of these clusters and not sure
+         # WHAT these are...
+
+    head(markers.dlpfc.t.1vAll[["Oligo"]][[2]])
+        ## Nice, MBP and PLP1 are in the top 6
+    
+
+sapply(markers.dlpfc.t.1vAll, function(x){
+  table(x[[2]]$stats.0$log.FDR < log10(.001))
+  })
+    #       Oligo Astro Inhib.4 Excit.L4:5 Micro Inhib.6   OPC Excit.L2:3 Excit.ambig
+    # FALSE 25366 23223   21034      19061 23999   20956 23802      22479       20869
+    # TRUE   2745  4888    7077       9050  4112    7155  4309       5632        7242
+    #       Excit.L3:4 Excit.L5:6 Excit.L6.broad Inhib.5 Excit.L5 Inhib.1 Inhib.2
+    # FALSE      23916      22320          21501   23246    23878   26699   26540
+    # TRUE        4195       5791           6610    4865     4233    1412    1571
+    #       Inhib.3
+    # FALSE   25766
+    # TRUE     2345
+
+
+## Let's save this along with the previous pairwise results
+load("rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+save(markers.dlpfc.t.1vAll, markers.dlpfc.t.design,
+     file="rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+# Replace that empty slot with the entry with the actul stats
+markers.dlpfc.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){x[[2]]})
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){
+  rownames(x)[x$stats.0[ ,"log.FDR"] < log10(0.000001)]
+  }
+)
+genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DLPFC/DLPFC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.dlpfc.st, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+## How do they intersect?
+markerList.t.pw <- lapply(markers.dlpfc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+# From pairwise t-tests, FDR < 0.05
+lengths(markerList.t.pw)
+
+# From cluster-vs-all others, FDR < 1e6
+lengths(markerList.t.1vAll)
+
+# Intersection
+sapply(names(markerList.t.pw), function(c){
+  length(intersect(markerList.t.pw[[c]],
+                   markerList.t.1vAll[[c]]))
+})
 
 
 
+## Checking Berger method for pval.type=="all" ====
+    ps.chosen <- markers.dlpfc.t.design[["Astro"]]$p.value
+    ps.chosen <- log10(ps.chosen)
+    head(ps.chosen)
+        # [1] -95.30511 -78.89036 -63.47255 -43.07298 -38.99470 -38.68466
+    
+    ps.pairwise <- cbind(sapply(c(3:18), function(x){markers.dlpfc.t.design[["Astro"]][ ,x]$log.p.value}))
+    head(ps.pairwise)
+    
+    maxpick <- apply(ps.pairwise, 1, which.max)
+    
+    max.p <- vector()
+    for(i in 1:length(maxpick)){
+      max.p[i] <- ps.pairwise[i, maxpick[i]]
+    }
+    
+    head(max.p, n=20)
+    head(ps.chosen, n=20) # not the same as the above..
+    cor(max.p, ps.chosen) # == 1
+        # interesting. So I guess it's NOT just the max p. but this transformed somehow
+    
 
 
 
