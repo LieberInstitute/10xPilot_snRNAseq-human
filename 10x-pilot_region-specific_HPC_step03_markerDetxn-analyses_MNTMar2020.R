@@ -124,7 +124,7 @@ save(markers.hpc.t.design.log, markers.hpc.t.design.countsN,
 ###### Direct limma approach ####
 #################################
 
-## Load in sce.dlpfc and cluster:sample bulk
+## Load in sce.hpc and cluster:sample bulk
  # (already done up top)
 
 # Clean up colData
@@ -565,5 +565,276 @@ top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
 top20genes <- top20genes[ ,sort(colnames(top20genes))]
 
 write.csv(top20genes, file="tables/top20genesLists_HPC-n3_cellTypes.csv")
+
+
+
+
+
+    ### ========================== ###
+    ### SINGLE-NUCLEUS-LEVEL TESTS ###
+    ### ========================== ###
+
+
+### Single-nucleus-level tests for cell-type-specific genes ================================
+# MNT 23Apr2020 - added after seeing much better results in pan-brain analysis
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+# sce.hpc, clusterRefTab.hpc, chosen.hvgs.hpc, ref.sampleInfo
+
+table(sce.hpc$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
+sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
+
+# Remove 0 genes across all nuclei
+sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28757 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.hpc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+
+# Run pairwise t-tests
+markers.hpc.t.design <- findMarkers(sce.hpc, groups=sce.hpc$cellType.split,
+                                      assay.type="logcounts", design=mod, test="t",
+                                      direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.hpc.t.design, function(x){table(x$FDR<0.05)})
+    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3
+    # FALSE 28244   28435   28540   28498   28140   28394   28552   28629   28593
+    # TRUE    513     322     217     259     617     363     205     128     164
+    #       Inhib.4 Inhib.5 Micro Oligo   OPC Tcell
+    # FALSE   28601   28595 28093 28356 28506 28006
+    # TRUE      156     162   664   401   251   751
+
+
+## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
+markers.hpc.wilcox.block <- findMarkers(sce.hpc, groups=sce.hpc$cellType.split,
+                                          assay.type="logcounts", block=sce.hpc$donor, test="wilcox",
+                                          direction="up", pval.type="all", full.stats=T)
+
+# no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
+sapply(markers.hpc.wilcox.block, function(x){table(x$FDR<0.05)})
+      # Actually some decent results but many subclusters with 0 hits
+
+
+## Binomial ===
+markers.hpc.binom.block <- findMarkers(sce.hpc, groups=sce.hpc$cellType.split,
+                                         assay.type="logcounts", block=sce.hpc$donor, test="binom",
+                                         direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.hpc.binom.block, function(x){table(x$FDR<0.05)})
+    # only a couple dozen hits for glia, only - disregard these
+
+## Save all these for future reference
+save(markers.hpc.t.design, markers.hpc.wilcox.block, #markers.hpc.binom.block,
+     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+# Print these to pngs
+markerList.t <- lapply(markers.hpc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+
+
+#dir.create("pdfs/exploration/HPC/")
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HPC/HPC_t-sn-level_pairwise_top40markers-", i, "_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+### Cluster-vs-all single-nucleus-level iteration ================================
+# MNT 30Apr2020
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+
+table(sce.hpc$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
+sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
+
+# Remove 0 genes across all nuclei
+sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28757 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.hpc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+
+markers.hpc.t.1vAll <- list()
+for(i in unique(sce.hpc$cellType.split)){
+  # Make temporary contrast
+  sce.hpc$contrast <- ifelse(sce.hpc$cellType.split==i, 1, 0)
+  # Test cluster vs. all
+  markers.hpc.t.1vAll[[i]] <- findMarkers(sce.hpc, groups=sce.hpc$contrast,
+                                            assay.type="logcounts", design=mod, test="t",
+                                            direction="up", pval.type="all", full.stats=T)
+}
+
+
+class(markers.hpc.t.1vAll[["Astro"]]) # SimpleList
+dim(markers.hpc.t.1vAll[["Astro"]]) # NULL
+head(markers.hpc.t.1vAll[["Astro"]])
+    ## As with DLPFC, for some reason all the results are in the
+     #    second List entry (first is always empty)
+
+
+head(markers.hpc.t.1vAll[["Oligo"]][[2]])
+    ## Nice, MBP and PLP1 are again in the top 6
+
+
+sapply(markers.hpc.t.1vAll, function(x){
+  table(x[[2]]$stats.0$log.FDR < log10(.001))
+})
+    #       Oligo Micro   OPC Inhib.5 Inhib.2 Astro Inhib.3 Excit.2 Inhib.4 Tcell
+    # FALSE 24914 22821 23236   24401   23540 21612   21436   22608   24460 26858
+    # TRUE   3843  5936  5521    4356    5217  7145    7321    6149    4297  1899
+    #       Inhib.1 Excit.5 Excit.3 Excit.1 Excit.4
+    # FALSE   25456   25913   19431   23726   24170
+    # TRUE     3301    2844    9326    5031    4587
+
+
+## Let's save this along with the previous pairwise results
+save(markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block,
+     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+
+# Replace that empty slot with the entry with the actul stats
+markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){x[[2]]})
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){
+  rownames(x)[x$stats.0[ ,"log.FDR"] < log10(0.000001)]
+ }
+)
+genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HPC/HPC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+## How do they intersect?
+markerList.t.pw <- lapply(markers.hpc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+# From pairwise t-tests, FDR < 0.05
+lengths(markerList.t.pw)
+
+# From cluster-vs-all others, FDR < 1e6
+lengths(markerList.t.1vAll)
+
+# Intersection
+sapply(names(markerList.t.pw), function(c){
+  length(intersect(markerList.t.pw[[c]],
+                   markerList.t.1vAll[[c]]))
+})
+
+    # Of top 40's:
+    sapply(names(markerList.t.pw), function(c){
+      length(intersect(lapply(markerList.t.pw, function(l){head(l,n=40)})[[c]],
+                       lapply(markerList.t.1vAll, function(l){head(l,n=40)})[[c]]
+                       ))
+    })
+    #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
+    #      26      24      18      15      28      33      22      10      22      23
+    # Inhib.5   Micro   Oligo     OPC   Tcell
+    #      19      30      26      20      39
+
+
+    
+## Write these top 40 lists to a csv
+names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_HPC-n3_cellType.split_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
+
+## Another aside - comparison to `pairwiseTTests()` === ===
+# Previously:
+    mod <- with(colData(sce.hpc), model.matrix(~ donor))
+    mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+    
+    # Run pairwise t-tests
+    markers.hpc.t.design <- findMarkers(sce.hpc, groups=sce.hpc$cellType.split,
+                                        assay.type="logcounts", design=mod, test="t",
+                                        direction="up", pval.type="all", full.stats=T)
+    
+
+geneExprs <- assay(sce.hpc, "logcounts")
+pw.t.out <- pairwiseTTests(geneExprs, groups=sce.hpc$cellType.split,
+                           design=mod, direction="up", log.p=FALSE)
+
+class(pw.t.out) # list
+length(pw.t.out)  # 2 of names 'statistics' and 'pairs'
+str(pw.t.out, max.level=1)
+    # List of 2
+    # $ statistics:List of 210      (this is == 2 * choose(15,2))
+    # $ pairs     :Formal class 'DFrame' [package "S4Vectors"] with 6 slots
+
+head(pw.t.out[["statistics"]][1])
+    # [[1]]
+    # DataFrame with 28757 rows and 3 columns
+    #                             logFC             p.value                  FDR
+    #                         <numeric>           <numeric>            <numeric>
+    # MIR1302-2HG -8.68987046412422e-06   0.512652389078012                    1
+    # AL627309.1    -0.0280320104458708   0.928025439530432                    1
+    # AL627309.2   0.000148924085898855   0.464018755445893                    1
+    # AC114498.1    -0.0184632378193928    0.99999978363066                    1
+    # AL669831.2  -3.87509797845269e-06   0.501317311819759                    1
+    # ...                           ...                 ...                  ...
+    # AC007325.2       0.20203461809517 6.9000591390308e-60 3.39188035318138e-58
+    # AL354822.1    -0.0511394674854895   0.997025482114199                    1
+    # AC023491.2   0.000203020254921728   0.421357369343429                    1
+    # AC004556.1   -0.00728746929073648   0.920820184508676                    1
+    # AC240274.1     0.0294668805925811   0.036061442566735    0.224754855633203
+
+
+    # Yep so this won't give the t-statistic either...
 
 
