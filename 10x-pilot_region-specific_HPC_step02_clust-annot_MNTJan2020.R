@@ -165,7 +165,7 @@ myplclust(tree.clusCollapsed, main="3x HPC prelim-kNN-cluster relationships", ce
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=475)
+                               minClusterSize=2, deepSplit=1, cutHeight=214)
 
 
 table(clust.treeCut)
@@ -312,10 +312,153 @@ dev.off()
 
 
 
+### MNT 30Apr2020: subcluster-level annotations ========================================
+  # Some motivations:
+  #   i) to see if the high-VCAN-neuronal cluster exists in prelimCluster
+  #      as seen in the pan-brain level
+  #   ii) Tcell cluster ('Ambig.glial') is probably its own prelimCluster
+
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+
+table(sce.hpc$cellType)
+table(sce.hpc$prelimCluster, sce.hpc$cellType)
+    # yes 'Tcell' (26 nuclei) cluster is entirely prelimCluster 31
+table(sce.hpc$cellType, sce.hpc$donor)
+    #     and comes from all three donors
+
+# Look at:   (& the HC dendrogram, printed before)
+table(sce.hpc$prelimCluster, sce.hpc$sample)
+
+
+## More-manual annotations: ====
+    clusterRefTab.hpc$cellType <- sce.hpc$cellType[match(clusterRefTab.hpc$merged, sce.hpc$collapsedCluster)]
+    clusterRefTab.hpc$cellType <- as.character(clusterRefTab.hpc$cellType)
+    # Rename 'Ambig.glial' -> 'Tcell' from what we've seen with downstream PB-modeled markers
+    clusterRefTab.hpc$cellType[clusterRefTab.hpc$cellType=="Ambig.glial"] <- "Tcell"
+    
+    # Make new column for subclusers
+    clusterRefTab.hpc$manual <- clusterRefTab.hpc$cellType
+    # Inhib gets all split up
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$cellType == "Inhib",
+                                         paste0(clusterRefTab.hpc$cellType, ".", c(1:5)),
+                                         as.character(clusterRefTab.hpc$manual))
+    # Excit 
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust %in% c(9,25),
+                                         paste0(clusterRefTab.hpc$cellType, ".1"),
+                                         as.character(clusterRefTab.hpc$manual))
+    
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust %in% c(12,24),
+                                       paste0(clusterRefTab.hpc$cellType, ".2"),
+                                       as.character(clusterRefTab.hpc$manual))
+    
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust %in% c(15,30),
+                                       paste0(clusterRefTab.hpc$cellType, ".3"),
+                                       as.character(clusterRefTab.hpc$manual))
+    
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust %in% c(27),
+                                       paste0(clusterRefTab.hpc$cellType, ".4"),
+                                       as.character(clusterRefTab.hpc$manual))
+    
+    clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust %in% c(14),
+                                       paste0(clusterRefTab.hpc$cellType, ".5"),
+                                       as.character(clusterRefTab.hpc$manual))
+
+        ## All other glial types will be kept the same
+    
+    ## Post-hoc: Looks like Excit.5 truly inhibitory, and Inhib.1 truly excitatory
+     #           (the latter is the 33 high-VCAN nuclei ID'd in this sample at pan-brain) 
+    
+        clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$manual == "Excit.5",
+                                           "Inhib.1",
+                                           as.character(clusterRefTab.hpc$manual))
+        clusterRefTab.hpc$manual <- ifelse(clusterRefTab.hpc$origClust == 28,
+                                           "Excit.5",
+                                           as.character(clusterRefTab.hpc$manual))
+        
+        # --> THEN re-run the below
+    
+    # end subcluster annotation ====
+
+    
+## Add new annotations
+sce.hpc$cellType.split <- clusterRefTab.hpc$manual[match(sce.hpc$prelimCluster,
+                                                         clusterRefTab.hpc$origClust)]
+sce.hpc$cellType.split <- factor(sce.hpc$cellType.split)
+
+table(sce.hpc$cellType.split, sce.hpc$cellType)
+    # good
+
+table(sce.hpc$cellType.split) # (printing post-hoc-corrected annotations)
+    #Ambig.lowNtrxts           Astro         Excit.1         Excit.2         Excit.3
+    #            101            1343             116             117             310
+    #        Excit.4         Excit.5         Inhib.1         Inhib.2         Inhib.3
+    #             26              33              30              90             139
+    #        Inhib.4         Inhib.5           Micro           Oligo             OPC
+    #             55              56            1253            5885             864
+    #          Tcell
+    #             26
+
+## Save these
+save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda")
 
 
 
+## Also print expression at this level of partitioning
 
 
+# First remove "Ambig.lowNtrxts":
+sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
+sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
+
+pdf("pdfs/regionSpecific_HPC-n3_marker-logExprs_cellTypesSplit_Apr2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
+## Let's also re-plot reducedDims with new [broad & split] cell type annotations
+#        (and rename old file with prefix 'zold_')
+pdf("pdfs/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_Apr2020.pdf")
+plotReducedDim(sce.hpc, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="sample", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="sum", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.hpc, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.hpc, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+dev.off()
+
+
+## And finally, for reference:
+table(sce.hpc$cellType.split, sce.hpc$sample)
+    #         hpc.5161 hpc.5212 hpc.5287
+    # Astro        584      582      177
+    # Excit.1        6        9      101
+    # Excit.2      117        0        0
+    # Excit.3        5      289       16
+    # Excit.4        0       21        5
+    # Excit.5       33        0        0
+    # Inhib.1       30        0        0
+    # Inhib.2       34       26       30
+    # Inhib.3       72       37       30
+    # Inhib.4       39       11        5
+    # Inhib.5       28       18       10
+    # Micro        520      536      197
+    # Oligo       2594     2198     1093
+    # OPC          395      263      206
+    # Tcell         13       10        3
 
 
