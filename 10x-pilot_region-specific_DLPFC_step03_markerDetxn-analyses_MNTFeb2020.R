@@ -941,6 +941,9 @@ write.csv(top20genes, file="tables/top20genesLists_DLPFC-n2_cellTypesSplit.csv")
 
 
 
+    ### ========================== ###
+    ### SINGLE-NUCLEUS-LEVEL TESTS ###
+    ### ========================== ###
 
 
 ### Single-nucleus-level tests for cell-type-specific genes ================================
@@ -1077,7 +1080,9 @@ dev.off()
 
 
 ### Cluster-vs-all single-nucleus-level iteration ================================
-  # MNT 30Apr2020
+  # Update MNT 05May2020: add iteration to use and report the standardized logFC (Cohen's D)
+  # -> see 'side-Rscript_markerDetxn-analyses_comparisons-to-sn-levelstats_Apr2020.R'
+  #    which explores this
 
 ## Load SCE with new info
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
@@ -1111,6 +1116,19 @@ for(i in unique(sce.dlpfc.st$cellType.split)){
     #   1: In .fit_lm_internal(x, subset.row, groups, design = design,  ... :
     #     automatically removed intercept column
 
+## Temp set of stats to get the standardized logFC
+temp.1vAll <- list()
+for(i in unique(sce.dlpfc.st$cellType.split)){
+  # Make temporary contrast
+  sce.dlpfc.st$contrast <- ifelse(sce.dlpfc.st$cellType.split==i, 1, 0)
+  # Test cluster vs. all
+  temp.1vAll[[i]] <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$contrast,
+                                 assay.type="logcounts", design=mod, test="t",
+                                 std.lfc=TRUE,
+                                 direction="up", pval.type="all", full.stats=T)
+}
+
+
 class(markers.dlpfc.t.1vAll[["Astro"]]) # SimpleList
 dim(markers.dlpfc.t.1vAll[["Astro"]]) # NULL
 head(markers.dlpfc.t.1vAll[["Astro"]])
@@ -1139,20 +1157,39 @@ sapply(markers.dlpfc.t.1vAll, function(x){
     # FALSE   25766
     # TRUE     2345
 
+# Replace that empty slot with the entry with the actul stats
+markers.dlpfc.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
 
+# Now just pull from the 'stats.0' DataFrame column
+markers.dlpfc.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.dlpfc.t.1vAll[[i]] <- cbind(markers.dlpfc.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.dlpfc.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.dlpfc.t.1vAll[[i]] <- markers.dlpfc.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+  
+  
 ## Let's save this along with the previous pairwise results
 load("rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
 save(markers.dlpfc.t.1vAll, markers.dlpfc.t.design,
      file="rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda")
 
 
-# Replace that empty slot with the entry with the actul stats
-markers.dlpfc.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){x[[2]]})
 
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){
-  rownames(x)[x$stats.0[ ,"log.FDR"] < log10(0.000001)]
+  rownames(x)[x$log.FDR < log10(0.000001)]
   }
 )
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
