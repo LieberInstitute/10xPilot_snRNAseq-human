@@ -55,82 +55,7 @@ sce.amy.PB <- logNormCounts(sce.amy.PB, size_factors=LSFvec)
 			
 	
 ## Find markers using stringent [max-p-value-of-all-pw-comparisons] test ('pval.type="all"')
-## SKIP THIS - MNT 05Mar2020 ================================
- #    - first try no 'design=' argument
-markers.amy.t <- findMarkers(sce.amy.PB, groups=sce.amy.PB$cellType,
-                             assay.type="logcounts",
-                             direction="up", pval.type="all", full.stats=T)
 
-sapply(markers.amy.t, function(x){table(x$FDR<0.05)})
-    # none
-
-
-## With 'design=' ? *** MUST DO ON $counts, NOT NORMALIZED COUNTS
-design.PB <- model.matrix(~sce.amy.PB$sample)
-design.PB <- design.PB[ , -1, drop=F] # 'drop=F' to keep as matrix - otherwise turns into numeric vec
-
-markers.amy.t.design.counts <- findMarkers(sce.amy.PB, groups=sce.amy.PB$cellType,
-                                           assay.type="counts", design=design.PB,
-                                           direction="up", pval.type="all", full.stats=T)
-
-sapply(markers.amy.t.design.counts, function(x){table(x$FDR<0.05)[2]})
-    ##Ambig.lowNtrxts.NA         Astro.TRUE         Excit.TRUE         Inhib.TRUE
-    #                NA                470               1231                 10
-    #        Micro.TRUE         Oligo.TRUE           OPC.TRUE
-    #               528               1903                 78
-
-
-
-## normalized and transformed "logcounts"
-markers.amy.t.design.log <- findMarkers(sce.amy.PB, groups=sce.amy.PB$cellType,
-                                        assay.type="logcounts", design=design.PB,
-                                        direction="up", pval.type="all", full.stats=T)
-
-sapply(markers.amy.t.design.log, function(x){table(x$FDR<0.05)})
-    ##      Ambig.lowNtrxts Astro Excit Inhib Micro Oligo   OPC
-    #FALSE           28381 28241 28223 28427 27375 28229 28403
-    #TRUE               89   229   247    43  1095   241    67
-
-markerList.PB.tDesign.amy.log <- lapply(markers.amy.t.design.log, function(x){
-  rownames(x)[x$FDR < 0.05]
-  }
-)
-
-
-## Normalized $counts, but not log-transformed
-assay(sce.amy.PB, "countsNormd") <- t(apply(assay(sce.amy.PB, "counts"), 1, function(x) {x/LSFvec}))
-
-
-markers.amy.t.design.countsN <- findMarkers(sce.amy.PB, groups=sce.amy.PB$cellType,
-                                            assay.type="countsNormd", design=design.PB,
-                                            direction="up", pval.type="all", full.stats=T)
-
-sapply(markers.amy.t.design.countsN, function(x){table(x$FDR<0.05)})
-    ##      Ambig.lowNtrxts Astro Excit Inhib Micro Oligo   OPC
-    #FALSE           28393 27685 27803 28066 26531 27726 28138
-    #TRUE               77   785   667   404  1939   744   332
-
-markerList.PB.tDesign.amy.countsN <- lapply(markers.amy.t.design.countsN, function(x){
-  rownames(x)[x$FDR < 0.05]
-  }
-)
-
-# Between "logcounts" & "countsNormd"    
-intersectingMarkers <- list()
-for(i in names(markerList.PB.tDesign.amy.log)){
-  intersectingMarkers[[i]] <- intersect(markerList.PB.tDesign.amy.countsN[[i]],
-                                        markerList.PB.tDesign.amy.log[[i]])
-}
-lengths(intersectingMarkers)
-## so most of those detected in "logcounts" are included in "countsNormd" (not surprising)
-
-
-      ## Using 'block=' is N/A in this PB'd setting:
-      #    -> warnings such as "no within-block comparison between ____ and ____"
-
-
-
-### end skip - with no Ambig cluster ===============================
 #sce.amy.PBnoAmbig <- sce.amy.PB[ ,!sce.amy.PB$cellType=="Ambig.lowNtrxts"]
 
     ## MNT comment - replacing the below 'sce.dlpfc.PBnoAmbig', with just 'sce.dlpfc.PB',
@@ -596,13 +521,243 @@ write.csv(top20genes, file="tables/top20genesLists_Amyg-n2_cellTypes.csv")
 
 
 
+### ========================== ###
+### SINGLE-NUCLEUS-LEVEL TESTS ###
+### ========================== ###
+
+
+### Single-nucleus-level tests for cell-type-specific genes ================================
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+
+table(sce.amy$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (50 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+# Remove 0 genes across all nuclei
+sce.amy <- sce.amy[!rowSums(assay(sce.amy, "counts"))==0, ]  # keeps same 28464 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.amy), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+
+# Run pairwise t-tests
+markers.amy.t.design <- findMarkers(sce.amy, groups=sce.amy$cellType.split,
+                                    assay.type="logcounts", design=mod, test="t",
+                                    direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.amy.t.design, function(x){table(x$FDR<0.05)})
+    #      Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5
+    # FALSE 27751   28366   27714   27811   28433   28241   28134   28321   28215
+    # TRUE    713      98     750     653      31     223     330     143     249
+    # Micro Oligo   OPC
+    # FALSE 27475 28030 28170
+    # TRUE    989   434   294
+
+
+## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
+markers.amy.wilcox.block <- findMarkers(sce.amy, groups=sce.amy$cellType.split,
+                                        assay.type="logcounts", block=sce.amy$donor, test="wilcox",
+                                        direction="up", pval.type="all", full.stats=T)
+
+# no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
+sapply(markers.amy.wilcox.block, function(x){table(x$FDR<0.05)})
+    # Actually some decent results but 'Inhib.1' has none
+
+
+## Binomial ===
+markers.amy.binom.block <- findMarkers(sce.amy, groups=sce.amy$cellType.split,
+                                       assay.type="logcounts", block=sce.amy$donor, test="binom",
+                                       direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.amy.binom.block, function(x){table(x$FDR<0.05)})
+# only a couple dozen hits for glia, only - disregard these
+
+## Save all these for future reference
+save(markers.amy.t.design, markers.amy.wilcox.block, #markers.amy.binom.block,
+     file="rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda")
+
+
+        # Btw - some have 0 p.value's and FDR's
+        head(markers.amy.t.design[["Excit.2"]][ ,1:2])
+        head(markers.amy.t.design[["Excit.3"]][ ,1:2])
+        
+
+
+# Print these to pngs
+markerList.t <- lapply(markers.amy.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+
+
+#dir.create("pdfs/exploration/Amyg/")
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/Amyg/Amyg_t-sn-level_pairwise_top40markers-", i, "_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+### Cluster-vs-all single-nucleus-level iteration ======
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+
+table(sce.amy$cellType.split)
+
+# First drop "Ambig.lowNtrxts" (50 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+# Remove 0 genes across all nuclei
+sce.amy <- sce.amy[!rowSums(assay(sce.amy, "counts"))==0, ]  # keeps same 28464 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.amy), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.amy.t.1vAll <- list()
+for(i in levels(sce.amy$cellType.split)){
+  # Make temporary contrast
+  sce.amy$contrast <- ifelse(sce.amy$cellType.split==i, 1, 0)
+  # Test cluster vs. all
+  markers.amy.t.1vAll[[i]] <- findMarkers(sce.amy, groups=sce.amy$contrast,
+                                            assay.type="logcounts", design=mod, test="t",
+                                            direction="up", pval.type="all", full.stats=T)
+}
+
+    ## Then, temp set of stats to get the standardized logFC
+    temp.1vAll <- list()
+    for(i in levels(sce.amy$cellType.split)){
+      # Make temporary contrast
+      sce.amy$contrast <- ifelse(sce.amy$cellType.split==i, 1, 0)
+      # Test cluster vs. all
+      temp.1vAll[[i]] <- findMarkers(sce.amy, groups=sce.amy$contrast,
+                                     assay.type="logcounts", design=mod, test="t",
+                                     std.lfc=TRUE,
+                                     direction="up", pval.type="all", full.stats=T)
+    }
+
+
+## For some reason all the results are in the second List entry (first is always empty)
+
+# Replace that empty slot with the entry with the actul stats
+markers.amy.t.1vAll <- lapply(markers.amy.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+
+# Now just pull from the 'stats.0' DataFrame column
+markers.amy.t.1vAll <- lapply(markers.amy.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.amy.t.1vAll[[i]] <- cbind(markers.amy.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.amy.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.amy.t.1vAll[[i]] <- markers.amy.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+## Let's save this along with the previous pairwise results
+save(markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block,
+     file="rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda")
+
+
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.amy.t.1vAll, function(x){
+  rownames(x)[x[ ,"log.FDR"] < log10(0.001)]
+  }
+)
+genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t.1vAll)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/Amyg/Amyg_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(genes.top40.t.1vAll[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+## How do these top 40 intersect? ===
+sapply(names(genes.top40.t), function(c){
+  length(intersect(genes.top40.t[[c]],
+                   genes.top40.t.1vAll[[c]]))
+})
+    #  Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5   Micro
+    #     35       5      37      32       3      21      32      15      24      37
+    #  Oligo     OPC
+    #     30      27
+
+
+
+## Write these top 40 lists to a csv
+names(markerList.t) <- paste0(names(markerList.t),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+# PW result for "Inhib.1" doesn't have 40 markers:
+markerList.t[["Inhib.1_pw"]] <- c(markerList.t[["Inhib.1_pw"]], rep("",9))
+
+top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_Amyg-n2_cellType.split_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
+
+
+
+
+
 ### Aside - difference b/tw dropping 'Ambig.lowNtrxts' before or after PB'ing ===========
   # MNT 05Mar2020
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
 
 
-# First drop "Ambig.lowNtrxts" (168 nuclei)
+# First drop "Ambig.lowNtrxts" (50 nuclei)
 sce.amy.noAmbig <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
 sce.amy.noAmbig$cellType <- droplevels(sce.amy.noAmbig$cellType)
 # Then make the pseudo-bulked SCE
