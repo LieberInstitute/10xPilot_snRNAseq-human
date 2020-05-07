@@ -584,7 +584,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
 
 table(sce.hpc$cellType.split)
 
-# First drop "Ambig.lowNtrxts" (168 nuclei)
+# First drop "Ambig.lowNtrxts" (101 nuclei)
 sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
 sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
 
@@ -673,7 +673,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
 
 table(sce.hpc$cellType.split)
 
-# First drop "Ambig.lowNtrxts" (168 nuclei)
+# First drop "Ambig.lowNtrxts" (101 nuclei)
 sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
 sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
 
@@ -687,7 +687,7 @@ mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMa
 
 
 markers.hpc.t.1vAll <- list()
-for(i in unique(sce.hpc$cellType.split)){
+for(i in levels(sce.hpc$cellType.split)){
   # Make temporary contrast
   sce.hpc$contrast <- ifelse(sce.hpc$cellType.split==i, 1, 0)
   # Test cluster vs. all
@@ -696,13 +696,22 @@ for(i in unique(sce.hpc$cellType.split)){
                                             direction="up", pval.type="all", full.stats=T)
 }
 
+    ## Then, temp set of stats to get the standardized logFC
+    temp.1vAll <- list()
+    for(i in levels(sce.hpc$cellType.split)){
+      # Make temporary contrast
+      sce.hpc$contrast <- ifelse(sce.hpc$cellType.split==i, 1, 0)
+      # Test cluster vs. all
+      temp.1vAll[[i]] <- findMarkers(sce.hpc, groups=sce.hpc$contrast,
+                                     assay.type="logcounts", design=mod, test="t",
+                                     std.lfc=TRUE,
+                                     direction="up", pval.type="all", full.stats=T)
+    }
 
-class(markers.hpc.t.1vAll[["Astro"]]) # SimpleList
-dim(markers.hpc.t.1vAll[["Astro"]]) # NULL
-head(markers.hpc.t.1vAll[["Astro"]])
+
+
     ## As with DLPFC, for some reason all the results are in the
      #    second List entry (first is always empty)
-
 
 head(markers.hpc.t.1vAll[["Oligo"]][[2]])
     ## Nice, MBP and PLP1 are again in the top 6
@@ -719,19 +728,40 @@ sapply(markers.hpc.t.1vAll, function(x){
     # TRUE     3301    2844    9326    5031    4587
 
 
-## Let's save this along with the previous pairwise results
-save(markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block,
-     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTApr2020.rda")
-
-
 
 # Replace that empty slot with the entry with the actul stats
-markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){x[[2]]})
+markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+
+# Now just pull from the 'stats.0' DataFrame column
+markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.hpc.t.1vAll[[i]] <- cbind(markers.hpc.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.hpc.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.hpc.t.1vAll[[i]] <- markers.hpc.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+
+
+
+## Let's save this along with the previous pairwise results
+save(markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block,
+#     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTApr2020.rda")
+#     (deleting this older version - doesn't have the std.lfc result)
+     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda")
 
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){
-  rownames(x)[x$stats.0[ ,"log.FDR"] < log10(0.000001)]
+  rownames(x)[x$log.FDR < log10(0.000001)]
  }
 )
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
@@ -793,48 +823,5 @@ top40genes <- top40genes[ ,sort(colnames(top40genes))]
 write.csv(top40genes, file="tables/top40genesLists_HPC-n3_cellType.split_SN-LEVEL-tests_May2020.csv",
           row.names=FALSE)
 
-
-
-## Another aside - comparison to `pairwiseTTests()` === ===
-# Previously:
-    mod <- with(colData(sce.hpc), model.matrix(~ donor))
-    mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
-    
-    # Run pairwise t-tests
-    markers.hpc.t.design <- findMarkers(sce.hpc, groups=sce.hpc$cellType.split,
-                                        assay.type="logcounts", design=mod, test="t",
-                                        direction="up", pval.type="all", full.stats=T)
-    
-
-geneExprs <- assay(sce.hpc, "logcounts")
-pw.t.out <- pairwiseTTests(geneExprs, groups=sce.hpc$cellType.split,
-                           design=mod, direction="up", log.p=FALSE)
-
-class(pw.t.out) # list
-length(pw.t.out)  # 2 of names 'statistics' and 'pairs'
-str(pw.t.out, max.level=1)
-    # List of 2
-    # $ statistics:List of 210      (this is == 2 * choose(15,2))
-    # $ pairs     :Formal class 'DFrame' [package "S4Vectors"] with 6 slots
-
-head(pw.t.out[["statistics"]][1])
-    # [[1]]
-    # DataFrame with 28757 rows and 3 columns
-    #                             logFC             p.value                  FDR
-    #                         <numeric>           <numeric>            <numeric>
-    # MIR1302-2HG -8.68987046412422e-06   0.512652389078012                    1
-    # AL627309.1    -0.0280320104458708   0.928025439530432                    1
-    # AL627309.2   0.000148924085898855   0.464018755445893                    1
-    # AC114498.1    -0.0184632378193928    0.99999978363066                    1
-    # AL669831.2  -3.87509797845269e-06   0.501317311819759                    1
-    # ...                           ...                 ...                  ...
-    # AC007325.2       0.20203461809517 6.9000591390308e-60 3.39188035318138e-58
-    # AL354822.1    -0.0511394674854895   0.997025482114199                    1
-    # AC023491.2   0.000203020254921728   0.421357369343429                    1
-    # AC004556.1   -0.00728746929073648   0.920820184508676                    1
-    # AC240274.1     0.0294668805925811   0.036061442566735    0.224754855633203
-
-
-    # Yep so this won't give the t-statistic either...
 
 
