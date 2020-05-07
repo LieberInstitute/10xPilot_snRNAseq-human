@@ -298,7 +298,6 @@ table(sce.amy$cellType, sce.amy$sample)
     # Oligo               1697     1776
     # OPC                  335      292
 
-
 table(sce.amy$prelimCluster, sce.amy$sample)
     #    amy.5161 amy.5212
     # 1       425      339
@@ -324,6 +323,7 @@ table(sce.amy$prelimCluster, sce.amy$sample)
     # 21        0       40
     # 22       14        9
     # 23       11       24
+
 table(sce.amy$cellType, sce.amy$collapsedCluster)
 #                    1    2    3    4    5    6    7
 # Ambig.lowNtrxts    0    0    0    0    0   50    0
@@ -337,3 +337,155 @@ table(sce.amy$cellType, sce.amy$collapsedCluster)
 
 
 
+
+### MNT 06May2020: subcluster-level annotations ========================================
+# Some motivations:
+#   i) to see if the high-VCAN-neuronal cluster exists in prelimCluster
+#      as seen in the pan-brain level
+#   ii) To now formally define subcluster-level populations
+
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+
+# Look at some marker expression at the prelimCluster level
+pdf("pdfs/ztemp_amyg-prelimCluster-neuronalMarkerExpression.pdf", width=8, height=7)
+plotExpression(sce.amy, exprs_values="logcounts", features=c("SNAP25","GAD1","GAD2","SLC17A6","SLC17A7","VCAN"),
+               x="prelimCluster", colour_by="prelimCluster", ncol=2)
+dev.off()
+
+
+## More-manual annotations for neuronal subpops:
+clusterRefTab.amy$cellType <- sce.amy$cellType[match(clusterRefTab.amy$merged, sce.amy$collapsedCluster)]
+clusterRefTab.amy$cellType <- as.character(clusterRefTab.amy$cellType)
+
+# Make new column for subclusers
+clusterRefTab.amy$manual <- clusterRefTab.amy$cellType
+
+    ## Excit subclusters: ====
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(3,9,16,20),
+                                       paste0(clusterRefTab.amy$cellType, ".1"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    # 10 and 12 would cut off at different heights; 12 expresses SLC17A7 and 10 doesn't really any:
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(10),
+                                       paste0(clusterRefTab.amy$cellType, ".2"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(12),
+                                       paste0(clusterRefTab.amy$cellType, ".3"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    ## Inhib subclusters: merge 2/6 and 7/14 pairs, then split the rest
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(2,6),
+                                       paste0(clusterRefTab.amy$cellType, ".1"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(7,14),
+                                       paste0(clusterRefTab.amy$cellType, ".2"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(23),
+                                       paste0(clusterRefTab.amy$cellType, ".3"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(18),
+                                       paste0(clusterRefTab.amy$cellType, ".4"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(21),
+                                       paste0(clusterRefTab.amy$cellType, ".5"),
+                                       as.character(clusterRefTab.amy$manual))
+    
+    ## All other glial types will be kept the same
+    
+        ## Post-hoc: Looks like Excit.2 truly inhibitory, and Inhib.5 truly [or more so] excitatory
+        #           (the latter is the ~39-40 high-VCAN nuclei ID'd in this sample at pan-brain) 
+        #  -> swap them
+        
+        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 10,  # ("Excit.2")
+                                           "Inhib.5",
+                                           as.character(clusterRefTab.amy$manual))
+        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 21,  # ("Inhib.5")
+                                           "Excit.2",
+                                           as.character(clusterRefTab.amy$manual))
+    
+        # --> THEN re-run the below
+        
+    ## end cluster splitting chunk ====
+
+clusterRefTab.amy
+    
+## Add new annotations
+sce.amy$cellType.split <- clusterRefTab.amy$manual[match(sce.amy$prelimCluster,
+                                                         clusterRefTab.amy$origClust)]
+sce.amy$cellType.split <- factor(sce.amy$cellType.split)
+
+table(sce.amy$cellType.split, sce.amy$cellType)
+    # good
+
+table(sce.amy$cellType.split) # (printing post-hoc-corrected annotations)
+    #Ambig.lowNtrxts           Astro         Excit.1         Excit.2         Excit.3
+    #             50             852             334              40              55
+    #        Inhib.1         Inhib.2         Inhib.3         Inhib.4         Inhib.5
+    #            171             109              35              24              98
+    #          Micro           Oligo             OPC
+    #            764            3473             627
+
+## Save these
+save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo,
+     file="rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+
+
+## Also print expression at this level of partitioning ===
+
+# First remove "Ambig.lowNtrxts" (50 nuclei):
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+pdf("pdfs/regionSpecific_Amyg-n2_marker-logExprs_cellTypesSplit_May2020.pdf", height=6, width=8)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(markers.mathys.custom[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+
+## Let's also re-plot reducedDims with new [broad & split] cell type annotations
+#        (and rename old file with prefix 'zold_')
+pdf("pdfs/regionSpecific_Amyg-n2_reducedDims-with-collapsedClusters_May2020.pdf")
+plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="sample", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="sum", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.amy, colour_by="cellType", point_size=3.5, point_alpha=0.5)
+plotUMAP(sce.amy, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
+dev.off()
+
+
+## And finally, for reference:
+table(sce.amy$cellType.split, sce.amy$sample)
+    #         amy.5161 amy.5212
+    # Astro        489      363
+    # Excit.1      141      193
+    # Excit.2       85       13
+    # Excit.3        0       55
+    # Inhib.1       16      155
+    # Inhib.2       33       76
+    # Inhib.3       11       24
+    # Inhib.4       24        0
+    # Inhib.5        0       40
+    # Micro        425      339
+    # Oligo       1697     1776
+    # OPC          335      292
+
+    
