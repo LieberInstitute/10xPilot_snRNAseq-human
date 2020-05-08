@@ -258,7 +258,7 @@ sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
 sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
 
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
@@ -276,7 +276,7 @@ dev.off()
     ## 'genes2plot.more' (added 10Apr2020):
     library(grDevices)
     for(i in names(genes2plot.more)){
-    png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+    png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
       print(
         plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.more[[i]])),
                        x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
@@ -345,7 +345,7 @@ genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
     names(genes2plot.pt.more) <- c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
 
 # Plot these
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
 for(i in 1:length(genes2plot.pt)){
   print(
     plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
@@ -361,7 +361,7 @@ dev.off()
 
     ## 'genes2plot.pt.more' (added 10Apr2020):
     for(i in names(genes2plot.pt.more)){
-      png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_pt-coding_Apr2020.png"), height=1900, width=1200)
+      png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_pt-coding_Apr2020.png"), height=1900, width=1200)
       print(
         plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt.more[[i]])),
                        x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
@@ -542,7 +542,11 @@ for(i in names(markers.gokce)){
 }
 
 
-
+    
+    
+    ### ========================== ###
+    ### SINGLE-NUCLEUS-LEVEL TESTS ###
+    ### ========================== ###
 
 
 ### Single-nucleus level marker detection? =========
@@ -560,13 +564,11 @@ sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]
 
 
 ## Traditional t-test with design as in PB'd/limma approach ===
-mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
+#mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
     # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
     # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
 mod <- with(colData(sce.nac.all), model.matrix(~ processDate))
-
 mod <- mod[ ,-1]
-    # This matrix treats 'Br5161' donor as the baseline:
 
 markers.nac.t.design <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
                                     assay.type="logcounts", design=mod, test="t",
@@ -608,7 +610,7 @@ save(markers.nac.t.design, #markers.nac.wilcox.block, markers.nac.binom.block,
 
 ## Print these to PNGs
 markerList.t <- lapply(markers.nac.t.design, function(x){
-  rownames(x)[x$FDR < 0.05]
+    rownames(x)[x$FDR < 0.05]
   }
 )
 
@@ -629,5 +631,139 @@ for(i in names(genes.top40.t)){
   )
   dev.off()
 }
+
+
+
+### Cluster-vs-all single-nucleus-level iteration ======
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+# Drop genes with all 0's
+sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]  ## keeps 29236 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+# mod <- with(colData(sce.nac), model.matrix(~ donor))
+# mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+
+#mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
+    # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
+    # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
+mod <- with(colData(sce.nac.all), model.matrix(~ processDate))
+mod <- mod[ ,-1]
+
+
+markers.nac.t.1vAll <- list()
+for(i in levels(sce.nac.all$cellType.final)){
+  # Make temporary contrast
+  sce.nac.all$contrast <- ifelse(sce.nac.all$cellType.final==i, 1, 0)
+  # Test cluster vs. all
+  markers.nac.t.1vAll[[i]] <- findMarkers(sce.nac.all, groups=sce.nac.all$contrast,
+                                          assay.type="logcounts", design=mod, test="t",
+                                          direction="up", pval.type="all", full.stats=T)
+}
+
+    ## Then, temp set of stats to get the standardized logFC
+    temp.1vAll <- list()
+    for(i in levels(sce.nac.all$cellType.final)){
+      # Make temporary contrast
+      sce.nac.all$contrast <- ifelse(sce.nac.all$cellType.final==i, 1, 0)
+      # Test cluster vs. all
+      temp.1vAll[[i]] <- findMarkers(sce.nac.all, groups=sce.nac.all$contrast,
+                                     assay.type="logcounts", design=mod, test="t",
+                                     std.lfc=TRUE,
+                                     direction="up", pval.type="all", full.stats=T)
+    }
+
+
+## For some reason all the results are in the second List entry (first is always empty)
+
+# Replace that empty slot with the entry with the actul stats
+markers.nac.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+
+# Now just pull from the 'stats.0' DataFrame column
+markers.nac.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.nac.t.1vAll[[i]] <- cbind(markers.nac.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.nac.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.nac.t.1vAll[[i]] <- markers.nac.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+## Let's save this along with the previous pairwise results
+save(markers.nac.t.design, markers.nac.t.1vAll,
+     file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
+
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
+    rownames(x)[x[ ,"log.FDR"] < log10(0.001)]
+  }
+)
+genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t.1vAll)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:14], length(genes.top40.t.1vAll[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level t-tests, cluster-vs-all-others"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+## How do these top 40 intersect? ===
+sapply(names(genes.top40.t), function(c){
+  length(intersect(genes.top40.t[[c]],
+                   genes.top40.t.1vAll[[c]]))
+})
+    #     Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+    #        35       30       16       26       22       40       17       24
+    #  MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+    #         7        9       23       16       32       29
+
+
+
+## Write these top 40 lists to a csv
+names(markerList.t) <- paste0(names(markerList.t),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_NAc-n5_cellType.final_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
+
+
+
 
 
