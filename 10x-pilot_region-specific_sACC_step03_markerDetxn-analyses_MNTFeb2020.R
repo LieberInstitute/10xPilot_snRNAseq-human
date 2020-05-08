@@ -701,3 +701,237 @@ dev.off()
 
 
 
+
+
+
+
+
+
+
+    ### ========================== ###
+    ### SINGLE-NUCLEUS-LEVEL TESTS ###
+    ### ========================== ###
+
+
+### Single-nucleus-level tests for cell-type-specific genes ================================
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    ## sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
+
+table(sce.sacc$cellType)
+
+# First drop "Ambig.lowNtrxts" (43 nuclei)
+sce.sacc <- sce.sacc[ ,sce.sacc$cellType != "Ambig.lowNtrxts"]
+sce.sacc$cellType <- droplevels(sce.sacc$cellType)
+
+# Remove 0 genes across all nuclei
+sce.sacc <- sce.sacc[!rowSums(assay(sce.sacc, "counts"))==0, ]  # keeps same 28774 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.sacc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+
+# Run pairwise t-tests
+markers.sacc.t.design <- findMarkers(sce.sacc, groups=sce.sacc$cellType,
+                                    assay.type="logcounts", design=mod, test="t",
+                                    direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.sacc.t.design, function(x){table(x$FDR<0.05)})
+    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
+    # FALSE 27821   28246   28493   28378   27967   28455   28282 27319 28059 28272
+    # TRUE    953     528     281     396     807     319     492  1455   715   502
+
+
+## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
+markers.sacc.wilcox.block <- findMarkers(sce.sacc, groups=sce.sacc$cellType,
+                                        assay.type="logcounts", block=sce.sacc$donor, test="wilcox",
+                                        direction="up", pval.type="all", full.stats=T)
+
+# no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
+sapply(markers.sacc.wilcox.block, function(x){table(x$FDR<0.05)})
+    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
+    # FALSE 28312   28377   28615   28600   28337   28581   28560 28129 28247 28476
+    # TRUE    462     397     159     174     437     193     214   645   527   298
+
+
+## Binomial ===
+markers.sacc.binom.block <- findMarkers(sce.sacc, groups=sce.sacc$cellType,
+                                       assay.type="logcounts", block=sce.sacc$donor, test="binom",
+                                       direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.sacc.binom.block, function(x){table(x$FDR<0.05)})
+    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
+    # FALSE 28610   28623   28743   28742   28619   28729   28712 28496 28630 28674
+    # TRUE    164     151      31      32     155      45      62   278   144   100
+
+## Save all these for future reference
+save(markers.sacc.t.design, markers.sacc.wilcox.block, markers.sacc.binom.block,
+     file="rdas/markers-stats_sACC-n2_findMarkers-SN-LEVEL_MNTMay2020.rda")
+
+
+    # Btw (as in other regions) - some have 0 p.value's and FDR's
+    head(markers.sacc.t.design[["Excit.3"]][ ,1:2])
+        # SULF1 top gene with "0" p.value & FDR, but this is clearly a great marker
+        # gene for thsi cluster, so these are probably thresholded at some point
+
+
+# Print these to pngs
+markerList.t.pw <- lapply(markers.sacc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+genes.top40.t <- lapply(markerList.t.pw, function(x){head(x, n=40)})
+
+
+#dir.create("pdfs/exploration/sACC/")
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/sACC/sACC_t-sn-level_pairwise_top40markers-", i, "_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.sacc, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+### Cluster-vs-all single-nucleus-level iteration ======
+
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    ## sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
+
+table(sce.sacc$cellType)
+
+# First drop "Ambig.lowNtrxts" (43 nuclei)
+sce.sacc <- sce.sacc[ ,sce.sacc$cellType != "Ambig.lowNtrxts"]
+sce.sacc$cellType <- droplevels(sce.sacc$cellType)
+
+# Remove 0 genes across all nuclei
+sce.sacc <- sce.sacc[!rowSums(assay(sce.sacc, "counts"))==0, ]  # keeps same 28774 genes
+
+
+## Traditional t-test with design as in PB'd/limma approach ===
+mod <- with(colData(sce.sacc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.sacc.t.1vAll <- list()
+for(i in levels(sce.sacc$cellType)){
+  # Make temporary contrast
+  sce.sacc$contrast <- ifelse(sce.sacc$cellType==i, 1, 0)
+  # Test cluster vs. all
+  markers.sacc.t.1vAll[[i]] <- findMarkers(sce.sacc, groups=sce.sacc$contrast,
+                                          assay.type="logcounts", design=mod, test="t",
+                                          direction="up", pval.type="all", full.stats=T)
+}
+
+    ## Then, temp set of stats to get the standardized logFC
+    temp.1vAll <- list()
+    for(i in levels(sce.sacc$cellType)){
+      # Make temporary contrast
+      sce.sacc$contrast <- ifelse(sce.sacc$cellType==i, 1, 0)
+      # Test cluster vs. all
+      temp.1vAll[[i]] <- findMarkers(sce.sacc, groups=sce.sacc$contrast,
+                                     assay.type="logcounts", design=mod, test="t",
+                                     std.lfc=TRUE,
+                                     direction="up", pval.type="all", full.stats=T)
+    }
+
+
+## For some reason all the results are in the second List entry (first is always empty)
+
+# Replace that empty slot with the entry with the actul stats
+markers.sacc.t.1vAll <- lapply(markers.sacc.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+
+# Now just pull from the 'stats.0' DataFrame column
+markers.sacc.t.1vAll <- lapply(markers.sacc.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.sacc.t.1vAll[[i]] <- cbind(markers.sacc.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.sacc.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.sacc.t.1vAll[[i]] <- markers.sacc.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+## Let's save this along with the previous pairwise results
+save(markers.sacc.t.design, markers.sacc.wilcox.block, markers.sacc.binom.block,  # pairwise set
+     markers.sacc.t.1vAll,
+     file="rdas/markers-stats_sACC-n2_findMarkers-SN-LEVEL_MNTMay2020.rda")
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.sacc.t.1vAll, function(x){
+  rownames(x)[x[ ,"log.FDR"] < log10(0.001)]
+  }
+)
+genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t.1vAll)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/sACC/sACC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.sacc, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(genes.top40.t.1vAll[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+
+
+
+
+## How do these top 40 intersect? ===
+sapply(names(genes.top40.t), function(c){
+  length(intersect(genes.top40.t[[c]],
+                   genes.top40.t.1vAll[[c]]))
+})
+    #  Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2   Micro   Oligo     OPC
+    #     36      21      21      24      32      20      29      36      31      30
+
+
+
+## Write these top 40 lists to a csv
+names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+# PW result for "Inhib.1" doesn't have 40 markers:
+#markerList.t.pw[["Inhib.1_pw"]] <- c(markerList.t.pw[["Inhib.1_pw"]], rep("",9))
+
+top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_sACC-n2_cellType_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
+
+
+
+
