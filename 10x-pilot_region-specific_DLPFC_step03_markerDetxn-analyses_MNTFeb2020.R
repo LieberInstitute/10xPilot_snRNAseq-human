@@ -977,12 +977,12 @@ markers.dlpfc.t.design <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellType
                                     direction="up", pval.type="all", full.stats=T)
 
 sapply(markers.dlpfc.t.design, function(x){table(x$FDR<0.05)})
-    #      Astro Excit.ambig Excit.L2:3 Excit.L3:4 Excit.L4:5 Excit.L5 Excit.L5:6
-    # FALSE 33308       33463      33536      33443      33513    33315      33490
-    # TRUE    230          75          2         95         25      223         48
+    #       Astro Excit.ambig Excit.L2:3 Excit.L3:4 Excit.L4:5 Excit.L5 Excit.L5:6
+    # FALSE 27877       28034      28109      28015      28086    27883      28063
+    # TRUE    234          77          2         96         25      228         48
     #       Excit.L6.broad Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Inhib.6 Micro Oligo   OPC
-    # FALSE          33501   33302   33347   33405   33513   33509   33512 33006 33390 33384
-    # TRUE              37     236     191     133      25      29      26   532   148   154
+    # FALSE          28073   27866   27911   27973   28084   28081   28083 27571 27958 27955
+    # TRUE              38     245     200     138      27      30      28   540   153   156
 
 
 ## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
@@ -1014,7 +1014,7 @@ markers.dlpfc.binom.block <- findMarkers(sce.dlpfc.st, groups=sce.dlpfc.st$cellT
                                        direction="up", pval.type="all", full.stats=T)
 
 sapply(markers.dlpfc.binom.block, function(x){table(x$FDR<0.05)})
-# none - and these are ALL 1's across the board....
+    # none - and these are ALL 1's across the board....
 
 ## Save all these for future reference
 save(markers.dlpfc.t.design, #markers.dlpfc.wilcox.block, markers.dlpfc.binom.block,
@@ -1217,15 +1217,44 @@ markerList.t.pw <- lapply(markers.dlpfc.t.design, function(x){
 
 # From pairwise t-tests, FDR < 0.05
 lengths(markerList.t.pw)
+    #         Astro    Excit.ambig     Excit.L2:3     Excit.L3:4     Excit.L4:5       Excit.L5
+    #           234             77              2             96             25            228
+    #    Excit.L5:6 Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4
+    #            48             38            245            200            138             27
+    #       Inhib.5        Inhib.6          Micro          Oligo            OPC
+    #            30             28            540            153            156
+
 
 # From cluster-vs-all others, FDR < 1e6
 lengths(markerList.t.1vAll)
+    # thousands
 
 # Intersection
 sapply(names(markerList.t.pw), function(c){
   length(intersect(markerList.t.pw[[c]],
                    markerList.t.1vAll[[c]]))
 })
+
+
+
+## Write these top 40 lists to a csv
+names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+# Many of the PW results don't have 40 markers:
+extend.idx <- names(which(lengths(markerList.t.pw) < 40))
+for(i in extend.idx){
+  markerList.t.pw[[i]] <- c(markerList.t.pw[[i]], rep("", 40-length(markerList.t.pw[[i]])))
+}
+
+top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_DLPFC-n2_cellType.split_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
 
 
 
