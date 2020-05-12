@@ -170,14 +170,7 @@ cor_t_panBrain <- cor(ts.fullMat)
 
 
 
-
-
-
-
-
-
-
-### Heatmap (pasted script - for using levelplot, but will want pheatmap bc will cluster cols/rows)
+### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
 theSeq.all = seq(-1, 1, by = 0.025)
 my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
 
@@ -189,6 +182,34 @@ pheatmap(cor_t_panBrain,
          fontsize_row=6.5, fontsize_col=6.5,
          main="Correlation of cluster-specific t's from all regions \n (all shared expressed genes)")
 dev.off()
+
+
+## Subset on neuronal subcluster t's and check
+ts.fullMat.neu <- ts.fullMat
+for(i in c("Astro", "Micro", "Oligo", "OPC", "Tcell")){
+  ts.fullMat.neu <- ts.fullMat.neu[ ,-grep(i, colnames(ts.fullMat.neu))]
+}
+
+
+colnames(ts.fullMat.neu) <- gsub("Excit", "Ex", colnames(ts.fullMat.neu))
+colnames(ts.fullMat.neu) <- gsub("Inhib", "In", colnames(ts.fullMat.neu))
+cor_t_panBrain.neu <- cor(ts.fullMat.neu)
+
+
+### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
+theSeq.all = seq(-1, 1, by = 0.025)
+my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
+
+
+pdf("pdfs/exploration/pan-Brain_correlation_region-specific-NeuronalSubcluster-ts_May2020.pdf")
+pheatmap(cor_t_panBrain.neu,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=6.5, fontsize_col=6.5,
+         main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
+dev.off()
+
+
 
 
 

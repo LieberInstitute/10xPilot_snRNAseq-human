@@ -327,10 +327,13 @@ load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=
     rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy)
 
 ## DLPFC
-load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
-    rm(chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc)
-
+# load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+#     # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
+#     rm(chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc)
+    #or
+    load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+        # sce.dlpfc.st
+    
 ## HPC
 load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
     # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
@@ -377,7 +380,9 @@ regions <- list(sce.amy, sce.dlpfc, sce.hpc, sce.nac.all, sce.sacc)
 
 BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
 
-sce.all.n12$cellType.RS <- NA
+#sce.all.n12$cellType.RS <- NA
+    # or
+    sce.all.n12$cellType.RS.sub <- NA
 
 for(r in regions){
   matchTo <- paste0(colnames(r),".",r$sample)
@@ -389,6 +394,32 @@ table(sce.all.n12$cellType.RS)
 sce.all.n12$cellType.RS <- factor(sce.all.n12$cellType.RS)
 table(sce.all.n12$cellType.RS)
 
+
+## Added chunk 11May2020: add in NON-collapsed region-specific annotations ===
+    # First, just load all objects but don't collapse, above
+
+    # Temp - call everything $cellType.split (if not already)
+    sce.nac.all$cellType.split <- sce.nac.all$cellType.final
+    sce.sacc$cellType.split <- sce.sacc$cellType
+    
+    regions <- list(sce.amy, sce.dlpfc.st, sce.hpc, sce.nac.all, sce.sacc)
+    names(regions) <- c("amy", "dlpfc", "hpc", "nac", "sacc")
+    BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
+    
+    # Add that annotation
+    for(r in names(regions)){
+      matchTo <- paste0(colnames(regions[[r]]),".",regions[[r]]$sample)
+      BC.sample.sub <- BC.sample.ii %in% matchTo
+      # Shorten
+      regions[[r]]$cellType.split <- gsub("Excit", "Ex", regions[[r]]$cellType.split)
+      regions[[r]]$cellType.split <- gsub("Inhib", "In", regions[[r]]$cellType.split)
+      # Add region
+      regions[[r]]$cellType.split <- paste0(regions[[r]]$cellType.split, "_", r)
+      sce.all.n12$cellType.RS.sub[BC.sample.sub] <- as.character(regions[[r]]$cellType.split[match(BC.sample.ii[BC.sample.sub], matchTo)])
+    }
+    sce.all.n12$cellType.RS.sub <- factor(sce.all.n12$cellType.RS.sub)
+    unique(sce.all.n12$cellType.RS.sub)    
+        # 73 == 68 + 5 'Ambig.lowNtrxts' for each region.  good.
 
 
 
