@@ -652,3 +652,179 @@ write.csv(pheno2write, row.names=FALSE, file="pdfs/exploration/DayLab-ratNAc/10x
 
 
 
+
+
+
+### Comparison to Day Lab Rat with SN-LEVEL stats =============================================
+  # Added MNT 11May2020
+
+# Load rat SCE
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
+    # sce.nac.rat, chosen.hvgs.nac.rat
+  
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_findMarkers-SN-LEVEL_MNTMay2020.rda",
+     verbose=T)
+    # markers.rat.t.1vAll
+
+## Calculate and add t-statistic (= std.logFC * sqrt(N)) for rat clusters
+ #      and fix row order to the first entry "Astrocyte"
+fixTo <- rownames(markers.rat.t.1vAll[["Astrocyte"]])
+for(x in names(markers.rat.t.1vAll)){
+  markers.rat.t.1vAll[[x]]$t.stat <- markers.rat.t.1vAll[[x]]$std.logFC * sqrt(ncol(sce.nac.rat))
+  markers.rat.t.1vAll[[x]] <- markers.rat.t.1vAll[[x]][fixTo, ]
+}
+
+# Pull out the t's
+ts.rat <- sapply(markers.rat.t.1vAll, function(x){x$t.stat})
+rownames(ts.rat) <- fixTo
+
+
+
+## Human t stats subset/re-ordering ===
+# Bring in human stats; create t's
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll
+    rm(markers.nac.t.design)
+
+# Need to add t's with N nuclei used in constrasts
+
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,ref.sampleInfo
+    rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,ref.sampleInfo)
+    # First drop "ambig.lowNtrxts" (93 nuclei)
+    sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+    sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) for rat clusters
+ #      and fix row order to the first entry "Astrocyte"
+fixTo <- rownames(markers.nac.t.1vAll[["Astro"]])
+
+for(s in names(markers.nac.t.1vAll)){
+  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac.all))
+  markers.nac.t.1vAll[[s]] <- markers.nac.t.1vAll[[s]][fixTo, ]
+}
+
+# Pull out the t's
+ts.nac <- sapply(markers.nac.t.1vAll, function(x){x$t.stat})
+rownames(ts.nac) <- fixTo
+
+
+
+## Bring in HomoloGene.ID info to subset/match order
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda",
+     verbose=T)
+    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+
+table(rowData(sce.rat.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+    # (see above - these are the intersecting homologs)
+
+# First give [human] ts.nac rownames their respective EnsemblID
+#   (have to use the full sce bc rownames(sce.hsap.PBsub) is EnsemblID and we uniquified the $Symbol)
+rownames(ts.nac) <- rowData(sce.nac.all)$ID[match(rownames(ts.nac), rownames(sce.nac.all))]
+
+# How many human genes with rat homologs are in these?
+table(rownames(sce.hsap.PBsub) %in% rownames(ts.nac)) # 14121 good
+
+# Subset/re-order for these and set to HomoloGene.ID
+ts.nac <- ts.nac[rownames(sce.hsap.PBsub), ]
+rownames(ts.nac) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
+
+
+# Same for rat t's
+table(rownames(sce.rat.PBsub) %in% rownames(ts.rat))
+
+ts.rat <- ts.rat[rownames(sce.rat.PBsub), ]
+rownames(ts.rat) <- rowData(sce.rat.PBsub)$HomoloGene.ID
+
+table(rownames(ts.nac) == rownames(ts.rat)) # all 14121 TRUE (well duh)
+
+cor_t_nac <- cor(ts.nac, ts.rat)
+rownames(cor_t_nac) = paste0(rownames(cor_t_nac),"_","H.sap")
+colnames(cor_t_nac) = paste0(colnames(cor_t_nac),"_","R.nor")
+
+
+### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
+theSeq.all = seq(-.65, .65, by = 0.025)
+my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
+
+
+# or thresholded at .5
+theSeq.th = seq(-.5, .5, by = 0.025)
+my.col.th <- colorRampPalette(brewer.pal(7, "RdYlBu"))(length(theSeq.th)-1)
+
+cor_t_nac.th <- cor_t_nac
+cor_t_nac.th <- ifelse(cor_t_nac.th >= 0.5, 0.5, cor_t_nac.th)
+
+
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_SN-LEVEL-stats_allGenes_May2020.pdf")
+pheatmap(cor_t_nac,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=8.5, fontsize_col=8.5,
+         main="Correlation of cluster-specific t's \n (all shared expressed genes)")
+# or thresholded at .5
+pheatmap(cor_t_nac.th,
+         color=my.col.th,
+         breaks=theSeq.th,
+         fontsize_row=8.5, fontsize_col=8.5,
+         main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
+#dev.off()
+
+
+## Or with manual ordering
+
+
+
+# Manually re-order rat labels
+apply(cor_t_nac, 1, which.max)
+cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
+cor_t_nac.th <- cor_t_nac.th[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_SN-LEVEL-stats_allGenes_v2_May2020.pdf")
+## no cutoff
+# "BrBG"
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
+pheatmap(cor_t_nac,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=11.5, fontsize_col=11.5,
+         main="Correlation of cluster-specific t's \n (all shared expressed genes)")
+# Original "PRGn"
+my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
+pheatmap(cor_t_nac,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=11.5, fontsize_col=11.5,
+         main="Correlation of cluster-specific t's \n (all shared expressed genes)")
+
+## or thresholded at .5
+# "BrBG"
+my.col.th <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.th)-1)
+pheatmap(cor_t_nac.th,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.th,
+         breaks=theSeq.th,
+         fontsize_row=11.5, fontsize_col=11.5,
+         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
+# Original "PRGn"
+my.col.th <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.th)-1)
+pheatmap(cor_t_nac.th,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.th,
+         breaks=theSeq.th,
+         fontsize_row=11.5, fontsize_col=11.5,
+         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
+
+dev.off()
+
+
+
