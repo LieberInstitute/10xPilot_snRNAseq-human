@@ -525,38 +525,6 @@ dev.off()
 
 
 
-## For Day Lab - MNT 03Apr2020
-plotExpression(sce.nac.all, exprs_values = "logcounts", features="RELN",
-               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-               add_legend=F) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:15], 1)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-
-## CHAT? - for cholinergic interneurons
-grep("CHAT", rownames(sce.nac.all))
-plotExpression(sce.nac.all, exprs_values = "logcounts", features="CHAT",
-               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-               add_legend=F) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:15], 1)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-
-## AFTER re-assigning MSN.broad (and added all DRD genes for kicks)
-pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf", width=7, height=9)
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH",
-                                                                   paste0("DRD", 1:5)),
-               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
-               add_legend=F, ncol=3) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-               width = 0.3, colour=rep(tableau20[1:14], 10)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-  ggtitle(label="Miscellaneous genes of interest")
-dev.off()
-
-
 
 ### MNT 06Apr2020: Further dive into 'MSN.broad' cluster, which is entirely Br5212 =============
   # -> revisit SNN clsutering - see if `cut_at()` can tease these differences out
@@ -805,6 +773,53 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("DRD1", "CASZ
 
 
     ##  -> then went ahead and re-printed broad markers with 'cellType.final'
+
+
+## For Day Lab ( & Keri's requests) - MNT 03Apr2020 ===
+# First drop "Ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+## AFTER re-assigning MSN.broad (and added all DRD genes for kicks)
+pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf", width=7, height=9)
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH",
+                                                                   paste0("DRD", 1:5)),
+               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+               add_legend=F, ncol=3) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:14], 10)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  ggtitle(label="Miscellaneous genes of interest")
+pdf.options(height=4.5)
+dev.off()
+
+# Added 27Apr2020
+pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.2.pdf", width=7, height=5)
+plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("NGFR","NTRK1","NTRK2","NTRK3","BDNF"),
+               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+               add_legend=F, ncol=3) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:14], 5)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+
+
+c("NGFR", "NTRK1", "NTRK2", "NTRK3", "BDNF") %in% rownames(sce.nac.all)
+
+# Other checks by request - not to print
+plotExpression(sce.nac.all, exprs_values = "logcounts", features="HTR7",
+               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+               add_legend=F, ncol=3) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
+               width = 0.3, colour=rep(tableau20[1:14], 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+### What does expression of these 0-looking genes look like from the kb-python output? ===
+  #   - wondering if exist in the exonic counts, such as spanning splice jxns
+  #   -> go to 'side-Rscript_comparing-kb-python_vs_CellRanger_all-NAc-n5_MNTApr2020.R'
+
+
 
 
 
