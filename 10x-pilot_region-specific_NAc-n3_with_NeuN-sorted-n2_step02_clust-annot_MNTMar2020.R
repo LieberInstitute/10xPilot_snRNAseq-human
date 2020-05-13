@@ -775,7 +775,110 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("DRD1", "CASZ
     ##  -> then went ahead and re-printed broad markers with 'cellType.final'
 
 
-## For Day Lab ( & Keri's requests) - MNT 03Apr2020 ===
+
+
+## Added MNT 12May2020: tSNE in lower dims ===
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+
+# How many PCs?
+head(attr(reducedDim(sce.nac.all, "PCA"), "percentVar"), n=50)
+    # [1] 27.87823928  4.31556377  2.28210852  1.53394544  1.34230365  0.84148529
+    # [7]  0.80660587  0.68569439  0.60321278  0.46073112  0.43747455  0.32713745
+    # [13]  0.30032199  0.29464166  0.28570101  0.21158092  0.18735573  0.16784829
+    # [19]  0.15606074  0.13760112  0.12960231  0.11897204  0.11822540  0.10666966
+    # [25]  0.09385858  0.09166851  0.08853377  0.08355615  0.08057045  0.07368351
+    # [31]  0.06726170  0.06580073  0.06347227  0.06081381  0.05676892  0.05429146
+    # [37]  0.05142856  0.05020298  0.04900668  0.04745873  0.04702622  0.04585275
+
+
+# 0.05% var or greater
+reducedDim(sce.nac.all, "PCA_38") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:38)]
+# 0.1% var or greater
+reducedDim(sce.nac.all, "PCA_24") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:24)]
+# 0.1% var or greater
+reducedDim(sce.nac.all, "PCA_15") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:15)]
+# Top 10 (as Mathys, et al)
+reducedDim(sce.nac.all, "PCA_10") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:10)]
+
+# First remove this reducedDim bc this has caused trouble previously
+reducedDim(sce.nac.all, "TSNE") <- NULL
+
+## 38 PCs tsNE === 
+set.seed(109)
+sce.all.tsne.38pcs <- runTSNE(sce.nac.all, dimred="PCA_38")
+
+## 24 PCs tSNE ===    (not much different)
+# set.seed(109)
+# sce.all.tsne.24pcs <- runTSNE(sce.nac.all, dimred="PCA_24")
+
+## 15 PCs tsNE ===
+set.seed(109)
+sce.all.tsne.15pcs <- runTSNE(sce.nac.all, dimred="PCA_15")
+
+## 10 PCs tsNE ===
+set.seed(109)
+sce.all.tsne.10pcs <- runTSNE(sce.nac.all, dimred="PCA_10")
+
+
+
+# Drop "Ambig.lowNtrxts" cluster as always
+sce.all.tsne.38pcs <- sce.all.tsne.38pcs[ ,sce.all.tsne.38pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.38pcs$cellType.final <- droplevels(sce.all.tsne.38pcs$cellType.final)
+
+sce.all.tsne.15pcs <- sce.all.tsne.15pcs[ ,sce.all.tsne.15pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.15pcs$cellType.final <- droplevels(sce.all.tsne.15pcs$cellType.final)
+
+sce.all.tsne.10pcs <- sce.all.tsne.10pcs[ ,sce.all.tsne.10pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.10pcs$cellType.final <- droplevels(sce.all.tsne.10pcs$cellType.final)
+
+
+pdf("pdfs/pubFigures/NAc-ALL-n5_tSNE_38-15-10-PCs_MNTMay2020.pdf", width=9)
+# 38 PCs
+plotTSNE(sce.all.tsne.38pcs, colour_by="cellType.final", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 38 PCs (>= 0.05% var)") + theme(plot.title = element_text(size=19))
+# # 24 PCs
+# plotTSNE(sce.all.tsne.24pcs, colour_by="cellType.final", point_alpha=0.5, point_size=4.0,
+#          text_size=8, theme_size=18) +
+#   ggtitle("t-SNE on top 24 PCs (>= 0.10% var)") + theme(plot.title = element_text(size=19))
+# 15 PCs
+plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)") + theme(plot.title = element_text(size=19))
+# 10 PCs
+plotTSNE(sce.all.tsne.10pcs, colour_by="cellType.final", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 10 PCs") + theme(plot.title = element_text(size=19))
+dev.off()
+
+
+
+## Then just some reducedDims once again with these - just sample/processDate & cellType.final
+pdf("pdfs/zforRef_regionSpecific_NAc-ALL-n5_reducedDims-with-cellType.final_15PCs_May2020.pdf", width=8)
+plotTSNE(sce.all.tsne.15pcs, colour_by="processDate", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+plotTSNE(sce.all.tsne.15pcs, colour_by="sample", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+dev.off()
+
+
+# Save the candidates
+save(sce.all.tsne.38pcs, file="rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon38PCs_MNT.rda")
+
+save(sce.all.tsne.10pcs, sce.all.tsne.15pcs,
+     file="rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda")
+
+
+
+## For Day Lab ( & Keri's requests) - MNT 03Apr2020 ========================
 # First drop "Ambig.lowNtrxts" (93 nuclei)
 sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
 sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
