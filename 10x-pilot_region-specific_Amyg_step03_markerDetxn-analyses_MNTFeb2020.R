@@ -747,6 +747,41 @@ write.csv(top40genes, file="tables/top40genesLists_Amyg-n2_cellType.split_SN-LEV
 
 
 
+## 15May2020 for AnJa - print t's and FDRs ===
+# Bring in human stats; create t's
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+    rm(markers.amy.t.design, markers.amy.wilcox.block)
+    
+# Need to add t's with N nuclei used in constrasts
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    #sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy,ref.sampleInfo)
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
+#      and fix row order to the first entry "Astro"
+fixTo <- rownames(markers.amy.t.1vAll[["Astro"]])
+for(s in names(markers.amy.t.1vAll)){
+  markers.amy.t.1vAll[[s]]$t.stat <- markers.amy.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.amy))
+  markers.amy.t.1vAll[[s]] <- markers.amy.t.1vAll[[s]][fixTo, ]
+}
+# Pull out the t's
+ts.amy <- sapply(markers.amy.t.1vAll, function(x){x$t.stat})
+rownames(ts.amy) <- fixTo
+# Change to EnsemblID
+rownames(ts.amy) <- rowData(sce.amy)$ID[match(rownames(ts.amy), rownames(sce.amy))]
+
+# logFDRs
+logFDRs.amy <- sapply(markers.amy.t.1vAll, function(x){x$log.FDR})
+rownames(logFDRs.amy) <- fixTo
+# EnsemblID
+rownames(logFDRs.amy) <- rownames(ts.amy)
+
+save(ts.amy, logFDRs.amy, file="rdas/zForAnJa_AMY-sn-level-markerStats_MNT.rda")
 
 
 

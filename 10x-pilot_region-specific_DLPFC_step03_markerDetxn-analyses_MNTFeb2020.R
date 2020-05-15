@@ -1258,6 +1258,51 @@ write.csv(top40genes, file="tables/top40genesLists_DLPFC-n2_cellType.split_SN-LE
 
 
 
+
+
+## 15May2020 for AnJa - print t's and FDRs ===
+# Bring in human stats; create t's
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.dlpfc.t.1vAll, markers.dlpfc.t.design
+    rm(markers.dlpfc.t.design)
+
+# Need to add t's with N nuclei used in constrasts
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+    rm(clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo)
+
+# First drop "Ambig.lowNtrxts" (168 nuclei)
+sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
+sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
+
+## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
+#      and fix row order to the first entry "Astro"
+fixTo <- rownames(markers.dlpfc.t.1vAll[["Astro"]])
+for(s in names(markers.dlpfc.t.1vAll)){
+  markers.dlpfc.t.1vAll[[s]]$t.stat <- markers.dlpfc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.dlpfc.st))
+  markers.dlpfc.t.1vAll[[s]] <- markers.dlpfc.t.1vAll[[s]][fixTo, ]
+}
+# Pull out the t's
+ts.dlpfc <- sapply(markers.dlpfc.t.1vAll, function(x){x$t.stat})
+rownames(ts.dlpfc) <- fixTo
+# Change to EnsemblID
+rownames(ts.dlpfc) <- rowData(sce.dlpfc.st)$ID[match(rownames(ts.dlpfc), rownames(sce.dlpfc.st))]
+
+# logFDRs
+logFDRs.dlpfc <- sapply(markers.dlpfc.t.1vAll, function(x){x$log.FDR})
+rownames(logFDRs.dlpfc) <- fixTo
+# EnsemblID
+rownames(logFDRs.dlpfc) <- rownames(ts.dlpfc)
+
+save(ts.dlpfc, logFDRs.dlpfc, file="rdas/zForAnJa_DLPFC-sn-level-markerStats_MNT.rda")
+
+
+
+
+
+
+
+
 ## Checking Berger method for pval.type=="all" ====
     ps.chosen <- markers.dlpfc.t.design[["Astro"]]$p.value
     ps.chosen <- log10(ps.chosen)
