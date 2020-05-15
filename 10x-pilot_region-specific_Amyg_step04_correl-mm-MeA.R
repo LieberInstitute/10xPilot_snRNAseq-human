@@ -347,307 +347,238 @@ dev.off()
 
 
 
-### Another comparison: mm nuclei vs human subclusters (t stats) ====================================
-# 10x-pilot human Amyg stats
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.amy.broad, sce.amy.PB, corfit.amy.all
 
-# Day Lab mm NAc stats
-load("/dcl01/ajaffe/data/lab/singleCell/day_mm_snRNAseq/markers-stats_DayLab-mmNAc_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.amy.mm, sce.amy.mm.PB, corfit.amy.mm
 
-# Day Lab mm NAc full nuclei-level SCE
-load("/dcl01/ajaffe/data/lab/singleCell/day_mm_snRNAseq/SCE_mm-NAc_downstream-processing_MNT.rda", verbose=T)
-    # sce.amy.mm, chosen.hvgs.amy.mm
+### Comparison to UCLA mouse MeA with SN-LEVEL stats ==================================
+# Added MNT 14May2020
 
-# Already subsetted on shared homologous genes (14,121):
-load("/dcl01/ajaffe/data/lab/singleCell/day_mm_snRNAseq/SCE_mm-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
+# Load mouse stats
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/markers-stats_mouseMeA-2017-neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.mmMeAneu.t.1vAll
+
+# Load mouse SCE
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/SCE_mouse-MeA-2017_neuronalSubclusters_HVGs_MNT.rda", verbose=T)
+    # sce.amy.mm17hvgs
+
+## Calculate and add t-statistic (= std.logFC * sqrt(N)) for mouse clusters
+#      and fix row order to the first entry "Astrocyte"
+fixTo <- rownames(markers.mmMeAneu.t.1vAll[[1]])
+for(x in names(markers.mmMeAneu.t.1vAll)){
+  markers.mmMeAneu.t.1vAll[[x]]$t.stat <- markers.mmMeAneu.t.1vAll[[x]]$std.logFC * sqrt(ncol(sce.amy.mm17hvgs))
+  markers.mmMeAneu.t.1vAll[[x]] <- markers.mmMeAneu.t.1vAll[[x]][fixTo, ]
+}
+
+# Pull out the t's
+ts.mmMeA <- sapply(markers.mmMeAneu.t.1vAll, function(x){x$t.stat})
+rownames(ts.mmMeA) <- fixTo
+
+
+
+## Human t stats subset/re-ordering ===
+# Bring in human stats; create t's
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+    rm(markers.amy.t.design, markers.amy.wilcox.block)
+
+# Need to add t's with N nuclei used in constrasts
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    #sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy,ref.sampleInfo)
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
+#      and fix row order to the first entry "Astro"
+fixTo <- rownames(markers.amy.t.1vAll[["Astro"]])
+
+for(s in names(markers.amy.t.1vAll)){
+  markers.amy.t.1vAll[[s]]$t.stat <- markers.amy.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.amy))
+  markers.amy.t.1vAll[[s]] <- markers.amy.t.1vAll[[s]][fixTo, ]
+}
+
+# Pull out the t's
+ts.amy <- sapply(markers.amy.t.1vAll, function(x){x$t.stat})
+rownames(ts.amy) <- fixTo
+
+
+
+## Bring in HomoloGene.ID info to subset/match order
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mm-MeA-PBd_w_matchingHsap-Amyg-PBd_HomoloGene.IDs_MNT.rda",
+     verbose=T)
     # sce.mm.PBsub, sce.hsap.PBsub, Readme
 
+table(rowData(sce.mm.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+# (see above - these are the intersecting homologs)
 
-sce.amy.mm
-    # class: SingleCellExperiment
-    # dim: 32883 15631
-    # metadata(1): Samples
-    # assays(2): counts logcounts
-    # rownames(32883): ENSRNOG00000046319 ENSRNOG00000047964 ...
-    #   ENSRNOG00000053444 ENSRNOG00000060590
-    # rowData names(4): ID Symbol Type HomoloGene.ID
-    # colnames(15631): AAACCCATCGGACTGC_1 AAACCCATCTCCTGCA_1 ...
-    #   TTTGGTTTCTCATAGG_4 TTTGTTGGTTCTCGTC_4
-    # colData names(14): Sample Barcode ... Celltype Idents.All_Groups_log.
-    # reducedDimNames(3): PCA TSNE UMAP
-    # spikeNames(0):
-    # altExpNames(0):
+## However!
+table(rownames(ts.mmMeA) %in% rownames(sce.mm.PBsub)) # not all - so will need to get union
+rm(sce.mm.PBsub, sce.hsap.PBsub, Readme)
 
-
-sce.amy.mm <- sce.amy.mm[rownames(sce.mm.PBsub), ]
-rownames(sce.amy.mm) <- rowData(sce.amy.mm)$HomoloGene.ID
-
-
-## Human setup (rownames already in EnsemblID)
-# Specificity stats
-pvals_hsap <- sapply(eb_list.amy.broad, function(x) {
-  x$p.value[, 2, drop = FALSE]
-})
-rownames(pvals_hsap) <- rowData(sce.amy.PB)$ID
-
-ts_hsap <- sapply(eb_list.amy.broad, function(x) {
-  x$t[, 2, drop = FALSE]
-})
-rownames(ts_hsap) <- rowData(sce.amy.PB)$ID
-
-
-# Subset and check matching 'HomoloGene.ID' ===
-pvals_hsap <- pvals_hsap[rownames(sce.hsap.PBsub), ]
-ts_hsap <- ts_hsap[rownames(sce.hsap.PBsub), ]
-
-rownames(ts_hsap) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
-rownames(pvals_hsap) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
+## HomoloGene.ID for all human genes ====
+    hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
+                     as.is=TRUE)
+    
+    hom_hs <- hom[hom$Common.Organism.Name == "human", ]
+    # of 19,124 entries
+    
+    # First Add EntrezID for human
+    hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.amy)$ID, 
+                           column="ENTREZID", keytype="ENSEMBL")
+    # "'select()' returned 1:many mapping between keys and columns"
+    table(!is.na(hs.entrezIds))
+        # 22,818 valid entries (remember this is already subsetted for those non-zero genes only)
+    
+    # Add to rowData
+    rowData(sce.amy) <- cbind(rowData(sce.amy), hs.entrezIds)
+    
+    # Now how many in JAX db?
+    table(rowData(sce.amy)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
+        # 18,865
+    table(rowData(sce.amy)$Symbol %in% hom_hs$Symbol)
+        # 18,479 - not a bad difference
+    
+          # So for mapping === === ===
+          # human.entrez > HomoloGene.ID < mm.Symbol
+          #                ^ filter SCE's on this
+    
+    # Human (by Entrez)
+    rowData(sce.amy)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
+                                                                    hom_hs$EntrezGene.ID)]
+    # end chunk ====
 
 
-# Now both mm SCE and human stats have been subsetted to the row names & order of the matching 'sce.___.PBsub'
-table(rownames(sce.amy.mm) == rownames(ts_hsap))
-    # all TRUE - good.
+# Intersection?
+table(rowData(sce.amy.mm17hvgs)$HomoloGene.ID %in% rowData(sce.amy)$HomoloGene.ID)
+    # FALSE  TRUE
+    #   135  2778
 
 
-### Now look at mm expression vs human t's ========
-mmExprs <- as.matrix(assay(sce.amy.mm, "logcounts"))
-colnames(mmExprs) <- sce.amy.mm$Celltype
+# First give [human] ts.amy rownames their respective EnsemblID
+    #   (have to use the full sce bc rownames(sce.hsap.PBsub) is EnsemblID and we uniquified the $Symbol)
+rownames(ts.amy) <- rowData(sce.amy)$ID[match(rownames(ts.amy), rownames(sce.amy))]
+# Then to HomoloGene.ID
+rownames(ts.amy) <- rowData(sce.amy)$HomoloGene.ID[match(rownames(ts.amy), rowData(sce.amy)$ID)]
+    # Btw some are NA
 
-cor_mmExprs.hsapTs <- cor(mmExprs, ts_hsap)
+# Subset for those with HomoloGene.ID
+ts.amy <- ts.amy[!is.na(rownames(ts.amy)), ]
 
-pdf("pdfs/explommion/DayLab-mmNAc/overlap-DayLab-mmNAc-nucleiExprs_with_LIBD-HsapNAc-ts_Apr2020.pdf", height=12)
-# Break up into mm 'Celltype''s
-for(i in levels(sce.amy.mm$Celltype)){
-  cor_temp <- cor_mmExprs.hsapTs[rownames(cor_mmExprs.hsapTs)==i, ]
-  colnames(cor_temp) <- paste0(colnames(cor_temp),": mean.r=",round(apply(cor_temp,2,mean),3))
-  corRange <- range(cor_temp)
-  pheatmap(cor_temp, fontsize_row=2,main=paste0("Correlation of mm nuclei labelled '", i,
-                                                "' (n=", nrow(cor_temp),
-                                                ") to LIBD NAc cluster t's \n (with average Pearson's r)"),
-           cluster_cols=FALSE, show_rownames=FALSE, breaks=seq(corRange[1],corRange[2],by=((corRange[2]-corRange[1])/99)))
-}
+
+
+# Mouse - can just go to HomoloGene.ID
+rownames(ts.mmMeA) <- rowData(sce.amy.mm17hvgs)$HomoloGene.ID[match(rownames(ts.mmMeA), rownames(sce.amy.mm17hvgs))]
+
+# Intersecting?
+table(rownames(ts.mmMeA) %in% rownames(ts.amy)) # all 14121 TRUE (well duh)
+    # FALSE  TRUE
+    #   193  2720
+
+# Subset and match order
+ts.mmMeA <- ts.mmMeA[rownames(ts.mmMeA) %in% rownames(ts.amy), ]
+ts.amy <- ts.amy[rownames(ts.mmMeA), ]
+
+cor_t_amyNeu <- cor(ts.amy, ts.mmMeA)
+rownames(cor_t_amyNeu) = paste0(rownames(cor_t_amyNeu),"_","H")
+colnames(cor_t_amyNeu) = paste0(colnames(cor_t_amyNeu),"_","M")
+range(cor_t_amyNeu)
+    #[1] -0.2557751  0.2577207      - kinda sucks lol...
+
+### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
+theSeq.all = seq(-.3, .3, by = 0.025)
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
+
+
+# # or thresholded at .5    ( unneeded for now )
+# theSeq.th = seq(-.5, .5, by = 0.025)
+# my.col.th <- colorRampPalette(brewer.pal(7, "RdYlBu"))(length(theSeq.th)-1)
+
+# cor_t_amyNeu.th <- cor_t_amyNeu
+# cor_t_amyNeu.th <- ifelse(cor_t_amyNeu.th >= 0.5, 0.5, cor_t_amyNeu.th)
+
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-neuSubs_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+pheatmap(cor_t_amyNeu,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=9, fontsize_row=12, fontsize_col=12,
+         main="Correlation of cluster-specific t's for mouse MeA neuronal subclusters \n (Wu et al., Neuron 2017)")
 dev.off()
 
 
+## Or with manual ordering (nvm not worth it with this comparison)
+ #    - maybe for combined MeA stats...
 
+# Manually re-order rat labels
+apply(cor_t_amyNeu, 1, which.max)
+cor_t_amyNeu <- cor_t_amyNeu[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
+cor_t_amyNeu.th <- cor_t_amyNeu.th[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
 
-### What if we used this to predict classification of mm nuclei?
-sce.amy.mm$cellType.hsapPredxn <- colnames(cor_mmExprs.hsapTs)[apply(cor_mmExprs.hsapTs,1,which.max)]
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-neuSubs_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+## no cutoff
+# "BrBG"
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
+pheatmap(cor_t_amyNeu,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=11.5, fontsize_col=11.5,
+         main="Correlation of cluster-specific t's \n (all shared expressed genes)")
 
-# Originally
-table(sce.amy.mm$Celltype)
-    # Astrocyte          Drd1-MSN        Drd2-MSN-1        Drd2-MSN-2
-    #      1118              2748              1983               173
-    #  Drd3-MSN    GABA undefined     Glutamatergic          Grm8-MSN
-    #       351              1058               113              1059
-    # Microglia             Mural            Olig-1            Olig-2
-    #       723               157              3147              1564
-    #    Olig-3    Polydendrocyte Pvalb-Interneuron   Sst-Interneuron
-    #       129               835               297               176
+## or thresholded at .5
+# "BrBG"
+my.col.th <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.th)-1)
+pheatmap(cor_t_amyNeu.th,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         color=my.col.th,
+         breaks=theSeq.th,
+         fontsize_row=11.5, fontsize_col=11.5,
+         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
 
-# Human prediction
-table(sce.amy.mm$cellType.hsapPredxn)
-    # Astro  Inhib.1  Inhib.4    Micro MSN.D1.1 MSN.D1.2 MSN.D1.3 MSN.D2.1
-    #   766     3536        4      680     1086     2308      239     2131
-    # Oligo      OPC
-    #  4754      127
-
-# Cross-tabulated
-options(width=120)  # default = 80 (I think)
-table(sce.amy.mm$Celltype, sce.amy.mm$cellType.hsapPredxn)
-    #                   Astro Inhib.1 Inhib.4 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3 MSN.D2.1 Oligo  OPC
-    # Astrocyte           759     326       3     0       22        6        0        1     1    0
-    # Drd1-MSN              0     194       0     0      171     1637       44      702     0    0
-    # Drd2-MSN-1            0     111       0     0       51      619        3     1199     0    0
-    # Drd2-MSN-2            0      24       0     0        9        0        0      140     0    0
-    # Drd3-MSN              0     227       0     0       91       24        4        5     0    0
-    # GABA undefined        0    1048       0     0        9        0        0        1     0    0
-    # Glutamatergic         0     111       0     0        1        1        0        0     0    0
-    # Grm8-MSN              0      85       0     0      713        4      185       72     0    0
-    # Microglia             0      16       0   677        7        5        0        0    18    0
-    # Mural                 7     107       1     3       11       12        3       11     1    1
-    # Olig-1                0       2       0     0        0        0        0        0  3144    1
-    # Olig-2                0       1       0     0        0        0        0        0  1563    0
-    # Olig-3                0      93       0     0        1        0        0        0    27    8
-    # Polydendrocyte        0     718       0     0        0        0        0        0     0  117
-    # Pvalb-Interneuron     0     297       0     0        0        0        0        0     0    0
-    # Sst-Interneuron       0     176       0     0        0        0        0        0     0    0
-
-
-table(sce.amy.mm$cellType.hsapPredxn, sce.amy.mm$Sex_Stim)
-    #          Female_Cocaine Female_Saline Male_Cocaine Male_Saline
-    # Astro               312            69          116         269
-    # Inhib.1             926           910          583        1117
-    # Inhib.4               1             2            0           1
-    # Micro               211           169          150         150
-    # MSN.D1.1            340           215          276         255
-    # MSN.D1.2            718           651          512         427
-    # MSN.D1.3             69            41           72          57
-    # MSN.D2.1            869           400          536         326
-    # Oligo              1407          1190          903        1254
-    # OPC                  39            13           33          42
+#dev.off()
 
 
 
 
-### What if do with top 100 genes defining each human NAc cluster? === === === === ===
-hsap_specific_indices = mapply(function(t, p) {
-  oo = order(t, decreasing = TRUE)[1:100]
-},
-  t=as.data.frame(ts_hsap),
-  p=as.data.frame(pvals_hsap)
-)
-hsap_ind = unique(as.integer(hsap_specific_indices))  # of length 1331
+### Looking into some neuronal marker stats b/tw spp ===
+markers.mmMeAneu.rowsFixed <- markers.mmMeAneu.t.1vAll
 
-table(hsap_ind %in% rowData(sce.hsap.PBsub)$HomoloGene.ID)
-    # only 596... OH this is a POSITION index, not the actual IDs...
-
-table(rownames(ts_hsap) == rownames(mmExprs))
-    # 14121 TRUE
-
-### Now look at mm expression vs human t's
-    #mmExprs <- as.matrix(assay(sce.amy.mm, "logcounts"))       # (previously done)
-    #colnames(mmExprs) <- sce.amy.mm$Celltype
-
-# Make subsets of these
-mmExprs.100sub <- mmExprs[hsap_ind, ]
-ts_hsap.100sub <- ts_hsap[hsap_ind, ]
-
-cor_mmExprs.hsapTs.top100 <- cor(mmExprs.100sub, ts_hsap.100sub)
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/markers-stats_mouseMeA-2017-neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.mmMeAneu.t.1vAll
+sapply(markers.mmMeAneu.t.1vAll, function(x){which(rownames(x)=="Npy")})
+    # N4: 4; N5: 19       (oh but this is poorly expressed in mouse still...)
 
 
-pdf("pdfs/explommion/DayLab-mmNAc/overlap-DayLab-mmNAc-nucleiExprs_with_LIBD-HsapNAc-ts_top100perClust_Apr2020.pdf", height=12)
-# Break up into mm 'Celltype''s
-for(i in levels(sce.amy.mm$Celltype)){
-  cor_temp <- cor_mmExprs.hsapTs.top100[rownames(cor_mmExprs.hsapTs.top100)==i, ]
-  colnames(cor_temp) <- paste0(colnames(cor_temp),": mean.r=",round(apply(cor_temp,2,mean),3))
-  corRange <- range(cor_temp)
-  pheatmap(cor_temp, fontsize_row=2,main=paste0("Correlation of mm nuclei labelled '", i,
-                                                "' (n=", nrow(cor_temp),
-                                                ") to LIBD NAc cluster t's \n (top 100 homologous genes/cluster)"),
-           cluster_cols=FALSE, show_rownames=FALSE, breaks=seq(corRange[1],corRange[2],by=((corRange[2]-corRange[1])/99)))
-}
-dev.off()
+markers.amy.rowsFixed <- markers.amy.t.1vAll
 
+load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+    rm(markers.amy.t.design, markers.amy.wilcox.block)
 
-# Proportion of zeros in genes
-sce.amy.mm$propZeros.top100hsap <- apply(mmExprs.100sub, 2, function(n){mean(n==0)})
-sce.amy.mm$propZeros <- apply(assay(sce.amy.mm, "logcounts"), 2, function(n){mean(n==0)})
+sapply(markers.amy.t.1vAll, function(x){which(rownames(x)=="NPY")}) #nothing
+sapply(markers.amy.t.1vAll, function(x){which(rownames(x)=="TAC1")})  # Inhib.3 looks like
 
+    
 
-pdf("pdfs/explommion/DayLab-mmNAc/dayLab-mmNAc-n4_propZeros_top100hsapClustGenes-or-all_MNTApr2020.pdf")
-par(mar=c(7,4,4,2))
-boxplot(sce.amy.mm$propZeros.top100hsap ~ sce.amy.mm$Celltype, las=2, xlab=NULL, cex.axis=0.8,
-        main="Proportion of zeros across top 1,331 genes defining human NAc clusters", cex.main=0.9)
-boxplot(sce.amy.mm$propZeros ~ sce.amy.mm$Celltype, las=2, xlab=NULL, cex.axis=0.8,
-        main="Proportion of zeros across all (14,121) homologous genes to H. sapiens", cex.main=0.9)
-dev.off()
+# Look at some notable genes from paper
+plotExpression(sce.amy, exprs_values = "logcounts", features=c("NPY", "SST", "CCK", "TAC1", "CARTPT",
+                                                               "SNAP25", "GAD1", "GAD2", "KCNQ2"),
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
+               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                            geom = "crossbar", width = 0.3,
+                                            colour=rep(tableau20[1:12], 9)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) 
 
 
 
-## Assignment by highest proportion of non-zero genes across top 100 human-specific genes === ===
-asgnmtByPropNon0 <- sapply(colnames(hsap_specific_indices), function(c){
-  apply(mmExprs, 2, function(n){
-    mean(n[hsap_specific_indices[ ,c]] != 0)
-  })
-})
-
-sce.amy.mm$asgnmtByPropNon0 <- colnames(asgnmtByPropNon0)[apply(asgnmtByPropNon0,1,which.max)]
-
-options(width=100)
-table(sce.amy.mm$Celltype, sce.amy.mm$asgnmtByPropNon0)
-    #                   Astro Inhib.1 Inhib.2 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3 MSN.D2.1 Oligo  OPC
-    # Astrocyte           230      11     873     0        0        0        0        0     4    0
-    # Drd1-MSN              0       6    2740     0        0        0        0        2     0    0
-    # Drd2-MSN-1            0       2    1980     0        0        1        0        0     0    0
-    # Drd2-MSN-2            0       0     173     0        0        0        0        0     0    0
-    # Drd3-MSN              0       2     348     0        0        1        0        0     0    0
-    # GABA undefined        0       2    1056     0        0        0        0        0     0    0
-    # Glutamatergic         0       0     113     0        0        0        0        0     0    0
-    # Grm8-MSN              0       0    1059     0        0        0        0        0     0    0
-    # Microglia             0       0      79   639        0        0        0        0     5    0
-    # Mural                 1      19     122     2        1        5        1        4     2    0
-    # Olig-1                0       1     243     0        0        0        0        0  2903    0
-    # Olig-2                0       0      74     0        0        0        0        0  1490    0
-    # Olig-3                0       1     118     0        0        0        0        0    10    0
-    # Polydendrocyte        0      39     780     0        0        0        0        0     0   16
-    # Pvalb-Interneuron     0       2     295     0        0        0        0        0     0    0
-    # Sst-Interneuron       0     103      73     0        0        0        0        0     0    0
 
 
 
-## Write out .mtx & colData for Day Lab ========================================
-library(Matrix)
-
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-     # sce.amy.all, chosen.hvgs.amy.all, pc.choice.amy.all, clusterRefTab.amy.all, ref.sampleInfo
-
-# Mtx
-mat2write <- assay(sce.amy.all, "counts")
-Matrix::writeMM(mat2write, file="pdfs/explommion/DayLab-mmNAc/10xCounts/libd_n3-hom_n2-NeuN_countMat.mtx")
-    ## NULL     - uh what?  Lol
-
-# Features
-write.table(rowData(sce.amy.all), file="pdfs/explommion/DayLab-mmNAc/10xCounts/libd_n3-hom_n2-NeuN_features.tsv",
-            sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
-
-# Barcodes
-write.table(sce.amy.all$Barcode, file="pdfs/explommion/DayLab-mmNAc/10xCounts/libd_n3-hom_n2-NeuN_barcodes.tsv",
-            row.names=FALSE, col.names=FALSE, quote=FALSE)
-
-
-## Now try reading back in and comparing === === ===
-path.test <- file.path("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/explommion/DayLab-mmNAc/10xCounts")
-sce.test <- read10xCounts(path.test, col.names=TRUE)
-    ## issues such as "/genes.tsv': No such file or directory" (& mtx file & barcodes.tsv)...
-     #      -> just re-named those in the test dir and re-did
-     #      (Seumm will opemme differently... going to keep those names (i.e. re-write) bc the Day
-     #       Lab shared files with more specific prefixes..)
-
-sce.test
-    # class: SingleCellExperiment
-    # dim: 33538 13241
-    # metadata(1): Samples
-    # assays(1): counts
-    # rownames(33538): ENSG00000243485 ENSG00000237613 ... ENSG00000277475
-    #   ENSG00000268674
-    # rowData names(3): ID Symbol NA
-    # colnames(13241): AAACCCACATCGAACT-1 AAACCCATCCAACCAA-1 ...
-    #   TTTGTTGGTACTGCGC-1 TTTGTTGGTTCCAGGC-1
-    # colData names(2): Sample Barcode
-    # reducedDimNames(0):
-    # spikeNames(0):
-    # altExpNames(0):
-
-head(rownames(assay(sce.test, "counts"))) # ensemblID
-
-table(rownames(sce.test) == rowData(sce.amy.all)$ID)  # all TRUE - so make rownames(sce.test)
-
-rownames(sce.test) <- rownames(sce.amy.all)
-
-all.equal(assay(sce.test, "counts"), assay(sce.amy.all, "counts"))
-    ## [1] TRUE - dope
-
-
-## Write out colData
-colnames(colData(sce.amy.all))
-    # [1] "Sample"                "Barcode"               "sum"
-    # [4] "detected"              "percent_top_50"        "percent_top_100"
-    # [7] "percent_top_200"       "percent_top_500"       "subsets_Mito_sum"
-    # [10] "subsets_Mito_detected" "subsets_Mito_percent"  "high.mito"
-    # [13] "sample"                "region"                "donor"
-    # [16] "processDate"           "protocol"              "prelimCluster"
-    # [19] "collapsedCluster"      "lessCollapsed"         "cellType"
-    # [22] "cellType.split"        "prelimCluster.split"   "cellType.moreSplit"
-    # [25] "cellType.final"
-
-# Keep $Barcode so can rid of the rownames
-    # (because `table(rownames(colData(sce.amy.all)) == sce.amy.all$Barcode)` == all TRUE)
-pheno2write <- colData(sce.amy.all)[ ,c(2, 13, 3,4, 11,12, 14:18, 25)]
-
-write.csv(pheno2write, row.names=FALSE, file="pdfs/explommion/DayLab-mmNAc/10xCounts/libd_n3-hom_n2-NeuN_metadata.csv")
 
 
 
