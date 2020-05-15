@@ -796,7 +796,7 @@ for(i in names(genes.top40.t)){
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:12], length(genes.top40.t[[i]]))) +
+                                                colour=rep(tableau10medium[1:10], length(genes.top40.t[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
       ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
   )
@@ -882,21 +882,21 @@ save(markers.sacc.t.design, markers.sacc.wilcox.block, markers.sacc.binom.block,
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.sacc.t.1vAll, function(x){
-  rownames(x)[x[ ,"log.FDR"] < log10(0.001)]
+  rownames(x)[x[ ,"log.FDR"] < log10(0.01)]
   }
 )
 genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 
 for(i in names(genes.top40.t.1vAll)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/sACC/sACC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_May2020.png"), height=1900, width=1200)
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/sACC/sACC_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
   print(
     plotExpression(sce.sacc, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:12], length(genes.top40.t.1vAll[[i]]))) +
+                                                colour=rep(tableau10medium[1:10], length(genes.top40.t.1vAll[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level t-tests, cluster-vs-all"))
   )
   dev.off()
 }
