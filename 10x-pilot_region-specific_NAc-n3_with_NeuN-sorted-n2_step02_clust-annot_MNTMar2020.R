@@ -865,7 +865,7 @@ plotTSNE(sce.all.tsne.15pcs, colour_by="sample", point_size=4.5, point_alpha=0.5
          text_size=8, theme_size=18) +
   ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
 plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=4.5, point_alpha=0.5,
-         text_size=8, theme_size=18) +
+         text_size=8, theme_size=18, text_by="cellType.final") +
   ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
 dev.off()
 
@@ -875,6 +875,121 @@ save(sce.all.tsne.38pcs, file="rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon38PCs_MNT.rd
 
 save(sce.all.tsne.10pcs, sce.all.tsne.15pcs,
      file="rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda")
+
+
+    # Adapted from scater::plotReducedDim():
+              # Hidden function needed for this chunk ====
+              .coerce_to_factor <- function(x, level.limit, msg) {
+                if (!is.null(x)) {
+                  x <- as.factor(x)
+                  if (nlevels(x) > level.limit) {
+                    stop(sprintf("more than %i levels for '%s'", level.limit, msg))
+                  }
+                }
+                x
+              }
+              # ====
+      
+        text_by <- "cellType.final"
+        text_out <- retrieveCellInfo(sce.all.tsne.15pcs, text_by, search="colData")
+        text_out$val <- .coerce_to_factor(text_out$val, level.limit=Inf)
+            ## actually not necessary if the colData chosen (usually cellType[.etc] is factorized)
+            df_to_plot <- data.frame(reducedDim(sce.all.tsne.15pcs, "TSNE"))
+        by_text_x <- vapply(split(df_to_plot$X1, text_out$val), median, FUN.VALUE=0)
+        by_text_y <- vapply(split(df_to_plot$X2, text_out$val), median, FUN.VALUE=0)
+        # plot_out <- plot_out + annotate("text", x=by_text_x, y=by_text_y, 
+        #                             label=names(by_text_x), size=text_size, colour=text_colour)
+    
+    
+
+## TSNE with [repelled] labels (ggrepel::geom_text_repel()) ===
+ # Added 21May2020 - to finalize-finalize (& for grants)
+load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
+    # sce.all.tsne.10pcs, sce.all.tsne.15pcs
+    rm(sce.all.tsne.10pcs)
+
+
+
+
+plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  annotate("text", x=by_text_x, y=by_text_y, 
+           label=names(by_text_x), size=6) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+
+# OR
+sce.all.tsne.15pcs$labels <- ifelse(!duplicated(sce.all.tsne.15pcs$cellType.final), as.character(sce.all.tsne.15pcs$cellType.final), NA)
+Labs.df <- data.frame(by_text_x, by_text_y, labs=names(by_text_x))
+
+colDF <- data.frame(colData(sce.all.tsne.15pcs))
+DFforLabs <- cbind(reducedDim(sce.all.tsne.15pcs,"TSNE"), data.frame(colDF$labels))
+colnames(DFforLabs) <- c("X","Y","labels")
+
+# plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=4.5, point_alpha=0.5,
+#          text_size=8, theme_size=18) +
+#   geom_text_repel(data=DFforLabs,
+#                   aes(label=labels)) +
+#   ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+    ## OK THIS FINALLY WORKS
+     # -> can replace those X,Y with the median positions for those labels?
+
+DFforLabs.edit <- DFforLabs
+DFforLabs.edit$X[!is.na(DFforLabs$labels)] <- by_text_x[match(as.character(DFforLabs$labels[!is.na(DFforLabs$labels)]),
+                                                         names(by_text_x))]
+DFforLabs.edit$Y[!is.na(DFforLabs$labels)] <- by_text_y[match(as.character(DFforLabs$labels[!is.na(DFforLabs$labels)]),
+                                                              names(by_text_y))]
+
+## Finally print
+pdf("pdfs/pubFigures/FINAL_pilotPaper_NAc-ALL-n5_tSNE_15PCs_MNTMay2020.pdf", width=8)
+set.seed(109)
+plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=5, point_alpha=0.5,
+         theme_size=18) +
+  geom_text_repel(data=DFforLabs.edit, size=5.5,
+                  aes(label=labels)) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+dev.off()
+
+# Grant version - different seeds still overlay D1.1 & D1.3 w/ bigger font, so just adjust those positions
+#               - crank up the axes label sizes too - will just need to trim off the title & legend
+#                 bc these are linked
+DFforLabs.edit[!is.na(DFforLabs$labels), ]
+DFforLabs.edit$Y[which(DFforLabs$labels=="MSN.D1.3")] <- DFforLabs.edit$Y[which(DFforLabs$labels=="MSN.D1.3")]-2
+
+pdf("pdfs/pubFigures/FINAL_forGrant_NAc-ALL-n5_tSNE_15PCs_MNTMay2020.pdf", width=9)
+set.seed(109)
+plotTSNE(sce.all.tsne.15pcs, colour_by="cellType.final", point_size=6.5, point_alpha=0.5,
+         theme_size=25) +
+  geom_text_repel(data=DFforLabs.edit, size=7,
+                  aes(label=labels)) +
+  ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+dev.off()
+
+
+
+## Heatmap of broad marker genes (leaving out defined markers/subcluster for now) ===
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+# First drop "Ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+cell.idx <- splitit(sce.nac.all$cellType.final)
+dat <- as.matrix(assay(sce.nac.all, "logcounts"))
+
+#pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_mean-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
+pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_median-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
+genes <- c('DRD1','TAC1','DRD2','PENK','PPP1R1B','GAD1','SNAP25','CAMK2A','MBP','PDGFRA','AQP4','CD74')
+#current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+# or medians:
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
+    # for some reason `rowMedians()` doesn't keep row names...
+    rownames(current_dat) <- genes
+current_dat <- current_dat[ ,c(7:12, 2:5, 13:14,1,6)]
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100), fontsize = 20)
+dev.off()
+
 
 
 
