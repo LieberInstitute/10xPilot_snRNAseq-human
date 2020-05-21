@@ -542,6 +542,18 @@ quantile(cor(as.matrix(assay(sce.all.n12, "logcounts")[ ,clustIdx.inhib2])), pro
     quantile(cor(as.matrix(assay(sce.all.n12, "logcounts")[ ,clustIdx.excit4])), probs=seq(0.05,1,by=0.05))
         ## less good as "Inhib.2", but still much better than collapsedCluster 16 & 18
 
+        ## Further evidence it's best to drop 'Excit.4' from downstream analyses === ===
+         # (given $cellType.RS.sub annotations)
+        sce.all.n12$cellType.RS.sub[which(sce.all.n12$cellType=="Excit.4")]
+            # [1] In.5_amy     In.1_hpc     MSN.D2.2_nac In.2_nac     MSN.D1.3_nac
+            # [6] MSN.D2.2_nac MSN.D2.1_nac MSN.D2.1_nac MSN.D2.2_nac MSN.D1.4_nac
+            # [11] MSN.D1.4_nac MSN.D1.4_nac Ex.1_sacc    Ex.1_sacc    Ex.1_sacc
+            # [16] Ex.1_sacc    Ex.1_sacc    Ex.1_sacc    Ex.1_sacc    Ex.1_sacc
+            # [21] Ex.3_sacc    Ex.1_sacc    Ex.3_sacc    Ex.1_sacc    In.1_sacc
+            # [26] Ex.3_sacc    Ex.1_sacc    Ex.1_sacc    Ex.1_sacc    Ex.1_sacc
+            # [31] Ex.4_sacc    Ex.1_sacc    Ex.1_sacc
+    
+    
     ## What about collapsedCluster 19?  On second glance, it expresses many markers...
      #      (notably VCAN; some PLP1; and more SLC17A6 than SLC17A7)
     clustIdx.excit8 <- which(sce.all.n12$cellType=="Excit.8")
@@ -693,41 +705,6 @@ rm(sce.all.tsne.26pcs)
 
 
 
-### Metrics and stuff for paper ================================================
-load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
-    # sce.all.n12, ...
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    # sce.nac.all, ...
 
-# Get only NeuNs to add to 'sce.all.n12'
-sce.neuns <- sce.nac.all[ ,sce.nac.all$protocol == "Frank.NeuN"]
-intersectingMetrics <- intersect(colnames(colData(sce.neuns)), colnames(colData(sce.all.n12)))
-colData(sce.neuns) <- colData(sce.neuns)[ ,intersectingMetrics]
-colData(sce.all.n12) <- colData(sce.all.n12)[ ,intersectingMetrics]
 
-# Also have to remove reducedDims to do this
-reducedDims(sce.all.n12) <- NULL
-reducedDims(sce.neuns) <- NULL
 
-sce.n14 <- cbind(sce.neuns, sce.all.n12)
-    # 42,763 nuclei
-
-# Ok what's the median UMI and gene coverage across all 
-quantile(sce.n14$sum)
-    #    0%      25%      50%      75%     100%
-    # 101.0   5279.5   8747.0  19895.0 196431.0
-quantile(sce.n14$detected)
-    # 0%   25%   50%   75%  100%
-    # 95  2224  3047  5359 11838
-
-# What does this coverage look like across cell types?
-cellType.idx <- splitit(sce.n14$cellType)
-sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$detected)})
-    # it's similiar to what we see in total transcript capture ('$sum')
-    sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$sum)})
-
-    
-    
-    
-    
-    

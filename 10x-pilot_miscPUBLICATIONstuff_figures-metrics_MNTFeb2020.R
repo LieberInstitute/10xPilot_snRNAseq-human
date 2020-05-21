@@ -24,7 +24,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 #VIRIDFUN(name = colour_by_name, discrete = TRUE)
 
-### DLPFC ========================================================================
+### DLPFC (for ST) ========================================================================
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
     #   sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
@@ -114,14 +114,100 @@ dev.off()
 save(sce.dlpfc, sce.dlpfc.neu, file="rdas/regionSpecific_DLPFC-n2_neuronalSCE-and-moreExploration.rda")
 
 
+## For BrBa-AnJa, et al (PTSD) ===========
+ # print: c("NPY", "CORT", "CRHBP", "DLL3", "NXPH2", "SST")
+ #        c("FERMT3", "CRHBP", "FOLR2", "PTGS1", "SLCO1C1", "P2RY13", "GLT8D2")
+load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
 
+printThese <- list('first' = c("NPY", "CORT", "CRHBP", "DLL3", "NXPH2", "SST"),
+                   'second' = c("FERMT3", "CRHBP", "FOLR2", "PTGS1", "SLCO1C1", "P2RY13", "GLT8D2"))
 
+# First remove "Ambig.lowNtrxts" (50 nuclei):
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
 
+pdf("pdfs/pubFigures/zforBrBa-AnJa_AMY-cellType.split_requestedExprsPlots_May2020.pdf", height=6, width=8)
+for(i in 1:length(printThese)){
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(printThese[[i]]),
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+                   ncol=3, add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:12], length(printThese[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) #+  
+      #ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
 
+pdf("pdfs/pubFigures/zforBrBa-AnJa_AMY-cellType.split_CORT-Exprs_May2020.pdf", height=4, width=6)
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features="CORT",
+                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+                   add_legend=F, theme_size=18) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                        geom = "crossbar", width = 0.3,
+                                                        colour=rep(tableau20[1:12], 1)) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20)) #+  
+    #ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+dev.off()
+
+sum(assay(sce.amy, "counts")["CORT", ]) # 0
+as.data.frame(prop.table(table(sce.amy$cellType.split)))
+    #       Var1        Freq
+    # 1    Astro 0.129443938
+    # 2  Excit.1 0.050744455
+    # 3  Excit.2 0.006077180
+    # 4  Excit.3 0.008356123
+    # 5  Inhib.1 0.025979945
+    # 6  Inhib.2 0.016560316
+    # 7  Inhib.3 0.005317533
+    # 8  Inhib.4 0.003646308
+    # 9  Inhib.5 0.014889091
+    # 10   Micro 0.116074142
+    # 11   Oligo 0.527651170
+    # 12     OPC 0.095259799
 
 ### METRICS ====================================================
 
-## NAc, all n=5
+## Metrics and stuff for paper, all n=14 samples that went into analyses ===
+load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
+# sce.all.n12, ...
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+# sce.nac.all, ...
+
+# Get only NeuNs to add to 'sce.all.n12'
+sce.neuns <- sce.nac.all[ ,sce.nac.all$protocol == "Frank.NeuN"]
+intersectingMetrics <- intersect(colnames(colData(sce.neuns)), colnames(colData(sce.all.n12)))
+colData(sce.neuns) <- colData(sce.neuns)[ ,intersectingMetrics]
+colData(sce.all.n12) <- colData(sce.all.n12)[ ,intersectingMetrics]
+
+# Also have to remove reducedDims to do this
+reducedDims(sce.all.n12) <- NULL
+reducedDims(sce.neuns) <- NULL
+
+sce.n14 <- cbind(sce.neuns, sce.all.n12)
+# 42,763 nuclei
+
+# Ok what's the median UMI and gene coverage across all 
+quantile(sce.n14$sum)
+#    0%      25%      50%      75%     100%
+# 101.0   5279.5   8747.0  19895.0 196431.0
+quantile(sce.n14$detected)
+# 0%   25%   50%   75%  100%
+# 95  2224  3047  5359 11838
+
+# What does this coverage look like across cell types?
+cellType.idx <- splitit(sce.n14$cellType)
+sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$detected)})
+# it's similiar to what we see in total transcript capture ('$sum')
+sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$sum)})
+
+
+
+
+## NAc, all n=5 ===
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
     #sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
 
