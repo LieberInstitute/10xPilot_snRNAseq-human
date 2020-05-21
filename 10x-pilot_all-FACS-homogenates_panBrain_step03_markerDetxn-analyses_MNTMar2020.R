@@ -628,3 +628,213 @@ dev.off()
 
 
 
+
+### Cluster-vs-all single-nucleus-level iteration ====================================
+  # Added 20May2020 - because this was done at all region-specific-level analyses,
+  #                   once we accepted the sn-level tests to yield more robust results
+
+# Load SCE
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
+     verbose=T)
+    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+
+sce.all.n12
+
+# As before, remove the clusters that won't focus on:
+#     'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
+sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
+
+# Remove 0 genes across all nuclei
+sce.all.n12 <- sce.all.n12[!rowSums(assay(sce.all.n12, "counts"))==0, ]  # keeps same 30031
+
+sce.all.n12
+
+
+
+## Traditional t-test with design as above, for pairwise result
+mod <- with(colData(sce.all.n12), model.matrix(~ region + processDate + donor))
+mod <- mod[ ,-1]    # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.n12.t.1vAll <- list()
+for(i in levels(sce.all.n12$cellType)){
+  # Make temporary contrast
+  sce.all.n12$contrast <- ifelse(sce.all.n12$cellType==i, 1, 0)
+  # Test cluster vs. all
+  markers.n12.t.1vAll[[i]] <- findMarkers(sce.all.n12, groups=sce.all.n12$contrast,
+                                           assay.type="logcounts", design=mod, test="t",
+                                           direction="up", pval.type="all", full.stats=T)
+}
+
+## Then, temp set of stats to get the standardized logFC
+temp.1vAll <- list()
+for(i in levels(sce.all.n12$cellType)){
+  # Make temporary contrast
+  sce.all.n12$contrast <- ifelse(sce.all.n12$cellType==i, 1, 0)
+  # Test cluster vs. all
+  temp.1vAll[[i]] <- findMarkers(sce.all.n12, groups=sce.all.n12$contrast,
+                                 assay.type="logcounts", design=mod, test="t",
+                                 std.lfc=TRUE,
+                                 direction="up", pval.type="all", full.stats=T)
+}
+
+
+## For some reason all the results are in the second List entry (first is always empty)
+
+# Replace that empty slot with the entry with the actul stats
+markers.n12.t.1vAll <- lapply(markers.n12.t.1vAll, function(x){ x[[2]] })
+# Same for that with std.lfc
+temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+
+# Now just pull from the 'stats.0' DataFrame column
+markers.n12.t.1vAll <- lapply(markers.n12.t.1vAll, function(x){ x$stats.0 })
+temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+
+# Re-name std.lfc column and add to the first result
+for(i in names(temp.1vAll)){
+  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+  markers.n12.t.1vAll[[i]] <- cbind(markers.n12.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+  # Oh the colname is kept weird
+  colnames(markers.n12.t.1vAll[[i]])[4] <- "std.logFC"
+  # Then re-organize
+  markers.n12.t.1vAll[[i]] <- markers.n12.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+}
+
+
+## Let's save this along with the previous pairwise results
+load("rdas/markers-stats_panBrain_allTests-single-nuc-lvl_MNTApr2020.rda", verbose=T)
+save(markers.n12.t.design, markers.n12.wilcox.block, markers.n12.binom.block,
+     markers.n12.t.1vAll,
+     file="rdas/markers-stats_panBrain_allTests-single-nuc-lvl_MNTApr2020.rda")
+
+
+## Print these to pngs
+markerList.t.1vAll <- lapply(markers.n12.t.1vAll, function(x){
+  rownames(x)[x[ ,"log.FDR"] < log10(0.000001)]
+  }
+)
+genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t.1vAll)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/panBrainMarkers/panBrain_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:17], length(genes.top40.t.1vAll[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+
+## Write these top 40 lists to a csv ===
+markerList.t.pw <- lapply(markers.n12.t.design, function(x){
+  rownames(x)[x$FDR < 0.05]
+  }
+)
+
+names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+# PW result for "Inhib.1" doesn't have 40 markers:
+#markerList.t.pw[["Inhib.1_pw"]] <- c(markerList.t.pw[["Inhib.1_pw"]], rep("",9))
+
+top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv",
+          row.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Miscellaneous - For KeMa/AnJa 20May2020 =============================
+# Plot separately bc doesn't look like you can plot two genes at once if facetting by region
+pdf("pdfs/exploration/zCRHBP-OXTR_panBrain-clusters-by-region_MNT.pdf", height=3.5, width=10)
+plotExpression(sce.all.n12, exprs_values = "logcounts", features="CRHBP",
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6)) + facet_grid(~ sce.all.n12$region)
+
+plotExpression(sce.all.n12, exprs_values = "logcounts", features="OXTR",
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6)) + facet_grid(~ sce.all.n12$region)
+dev.off()
+
+pdf("pdfs/exploration/zNPY-SST_panBrain-clusters-by-region_MNT.pdf", height=3.5, width=10)
+plotExpression(sce.all.n12, exprs_values = "logcounts", features="NPY",
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6)) + facet_grid(~ sce.all.n12$region)
+
+plotExpression(sce.all.n12, exprs_values = "logcounts", features="C",
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6)) + facet_grid(~ sce.all.n12$region)
+dev.off()
+
+# CACNA1C
+pdf("pdfs/exploration/zCACNA1C_panBrain-clusters-by-region_MNT.pdf", height=3.5, width=10)
+plotExpression(sce.all.n12, exprs_values = "logcounts", features="CACNA1C",
+               x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6)) + facet_grid(~ sce.all.n12$region)
+dev.off()
+
+
+
+dlpfc.inhib4 <- which(sce.all.n12$region=="dlpfc" & sce.all.n12$cellType=="Inhib.4")  # 133
+
+table(sce.all.n12$region=="dlpfc" & sce.all.n12$cellType=="Inhib.4" & assay(sce.all.n12,"logcounts")[])
+
+# DLPFC:Inhib.4
+table(assay(sce.all.n12,"logcounts")["OXTR",dlpfc.inhib4] > 0 &      # 14
+        assay(sce.all.n12,"logcounts")["CRHBP",dlpfc.inhib4] > 0 &   # 7
+        assay(sce.all.n12,"logcounts")["SST",dlpfc.inhib4] > 0 &     # 6
+        assay(sce.all.n12,"logcounts")["NPY",dlpfc.inhib4] > 0)      # 4
+
+# All nuclei...
+table(assay(sce.all.n12,"logcounts")["OXTR", ] > 0 &      # 1038
+        assay(sce.all.n12,"logcounts")["CRHBP", ] > 0 &   # 103
+        assay(sce.all.n12,"logcounts")["SST", ] > 0 &     # 32
+        assay(sce.all.n12,"logcounts")["NPY", ] > 0)      # 15
+
+allFourPos <- which(assay(sce.all.n12,"logcounts")["OXTR", ] > 0 &      # 1038
+        assay(sce.all.n12,"logcounts")["CRHBP", ] > 0 &   # 103
+        assay(sce.all.n12,"logcounts")["SST", ] > 0 &     # 32
+        assay(sce.all.n12,"logcounts")["NPY", ] > 0)      # 15
+
+table(sce.all.n12$cellType[allFourPos], sce.all.n12$region[allFourPos])
+
+assay(sce.all.n12,"logcounts")["CACNA1C", allFourPos]
+
+
+
