@@ -798,7 +798,7 @@ head(attr(reducedDim(sce.nac.all, "PCA"), "percentVar"), n=50)
 reducedDim(sce.nac.all, "PCA_38") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:38)]
 # 0.1% var or greater
 reducedDim(sce.nac.all, "PCA_24") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:24)]
-# 0.1% var or greater
+# 0.25% var or greater
 reducedDim(sce.nac.all, "PCA_15") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:15)]
 # Top 10 (as Mathys, et al)
 reducedDim(sce.nac.all, "PCA_10") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:10)]
@@ -825,13 +825,13 @@ sce.all.tsne.10pcs <- runTSNE(sce.nac.all, dimred="PCA_10")
 
 
 # Drop "Ambig.lowNtrxts" cluster as always
-sce.all.tsne.38pcs <- sce.all.tsne.38pcs[ ,sce.all.tsne.38pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.38pcs <- sce.all.tsne.38pcs[ ,sce.all.tsne.38pcs$cellType.final != "ambig.lowNtrxts"] # 93
 sce.all.tsne.38pcs$cellType.final <- droplevels(sce.all.tsne.38pcs$cellType.final)
 
-sce.all.tsne.15pcs <- sce.all.tsne.15pcs[ ,sce.all.tsne.15pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.15pcs <- sce.all.tsne.15pcs[ ,sce.all.tsne.15pcs$cellType.final != "ambig.lowNtrxts"] # 93
 sce.all.tsne.15pcs$cellType.final <- droplevels(sce.all.tsne.15pcs$cellType.final)
 
-sce.all.tsne.10pcs <- sce.all.tsne.10pcs[ ,sce.all.tsne.10pcs$cellType.final != "ambig.lowNtrxts"] # 445
+sce.all.tsne.10pcs <- sce.all.tsne.10pcs[ ,sce.all.tsne.10pcs$cellType.final != "ambig.lowNtrxts"] # 93
 sce.all.tsne.10pcs$cellType.final <- droplevels(sce.all.tsne.10pcs$cellType.final)
 
 
