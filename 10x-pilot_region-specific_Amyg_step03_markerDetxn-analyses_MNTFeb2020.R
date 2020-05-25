@@ -783,7 +783,13 @@ rownames(logFDRs.amy) <- rownames(ts.amy)
 
 save(ts.amy, logFDRs.amy, file="rdas/zForAnJa_AMY-sn-level-markerStats_MNT.rda")
 
-
+apply(logFDRs.amy, 2, function(x) {table(x<log10(1e-6))})
+    # Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5
+    # FALSE 23194   19604   25841   25201   21979   23391   26181   26787   24329
+    # TRUE   5270    8860    2623    3263    6485    5073    2283    1677    4135
+    # Micro Oligo   OPC
+    # FALSE 24520 25698 24702
+    # TRUE   3944  2766  3762
 
 
 ### Aside - difference b/tw dropping 'Ambig.lowNtrxts' before or after PB'ing ===========

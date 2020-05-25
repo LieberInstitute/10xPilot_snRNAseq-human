@@ -474,18 +474,276 @@ dev.off()
 
 ## And finally, for reference:
 table(sce.amy$cellType.split, sce.amy$sample)
-    #         amy.5161 amy.5212
+    #          amy.5161 amy.5212
     # Astro        489      363
     # Excit.1      141      193
-    # Excit.2       85       13
+    # Excit.2        0       40
     # Excit.3        0       55
     # Inhib.1       16      155
     # Inhib.2       33       76
     # Inhib.3       11       24
     # Inhib.4       24        0
-    # Inhib.5        0       40
+    # Inhib.5       85       13
     # Micro        425      339
     # Oligo       1697     1776
     # OPC          335      292
+
+
+## Some diggings-into for paper =======
+# BLA or central amygdala-specific (Cartpt in all subregions... in mouse at least)
+plotExpression(sce.amy, exprs_values = "logcounts", features=toupper(c("Cyp26b1", "Bmp3", "Cartpt")),
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                            geom = "crossbar", width = 0.3,
+                                            colour=rep(tableau20[1:12], 3)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+# Split by sample
+sce.amy$sample.cellType.split <- paste0(ss(sce.amy$sample,"\\.",2), "_", sce.amy$cellType.split)
+plotExpression(sce.amy, exprs_values = "logcounts", features=toupper(c("Cyp26b1", "Bmp3")),
+               x="sample.cellType.split", colour_by="sample.cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F, show_median=T) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+    ## Looks like some BLA
+
+# Actually faceting is nicer and maintains colors but have to print genes, separately
+# From bulk-RNA-seq (AnJa shared): Look at PART1 (BLA >) & GABRQ/SYTL5 (MeA >)
+pdf("pdfs/exploration/zGenesByDonor_PART1-GABRQ-SYTL5_AMY-subclusters_MNT.pdf", height=3, width=7)
+# BLA-enriched
+plotExpression(sce.amy, exprs_values = "logcounts", features="PART1",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               geom = "crossbar", width = 0.3,
+               colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
+# MeA-enriched
+plotExpression(sce.amy, exprs_values = "logcounts", features="GABRQ",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               geom = "crossbar", width = 0.3,
+               colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
+plotExpression(sce.amy, exprs_values = "logcounts", features="SYTL5",
+               x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
+               add_legend=F) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               geom = "crossbar", width = 0.3,
+               colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
+dev.off()
+
+
+
+
+
+
+## Added MNT 24May2020: tSNE in lower dims =======================================================
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+
+
+# How many PCs?
+head(attr(reducedDim(sce.amy, "PCA"), "percentVar"), n=50)
+    # [1] 20.56604550 10.39668224  6.66923256  3.20654266  1.88015247  0.90499720
+    # [7]  0.63195463  0.30153787  0.28714069  0.27722945  0.25484711  0.23154164
+    # [13]  0.21200112  0.19865766  0.19058467  0.17696622  0.15895906  0.14111373
+    # [19]  0.12953405  0.12661346  0.11187693  0.10874758  0.09528034  0.08876223
+    # [25]  0.08503460  0.08069491  0.07432969  0.07332327  0.07270196  0.07085366
+    # [31]  0.06895861  0.06840260  0.06628307  0.06566241  0.06499767  0.06456945
+    # [37]  0.06311090  0.06122234  0.05977570  0.05910767  0.05887602  0.05824736
+    # [43]  0.05790745  0.05736661  0.05646818  0.05604596  0.05573424  0.05512331
+    # [49]  0.05473937  0.05442114
+
+# Btw: metadata(pc.choice.amy)$chosen == 45 [PCs]
+
+# 0.1% var or greater
+reducedDim(sce.amy, "PCA_22") <- reducedDim(sce.amy, "PCA")[ ,c(1:22)]
+# 0.2% var or greater
+reducedDim(sce.amy, "PCA_13") <- reducedDim(sce.amy, "PCA")[ ,c(1:13)]
+# Top 10 (as Mathys, et al)
+reducedDim(sce.amy, "PCA_10") <- reducedDim(sce.amy, "PCA")[ ,c(1:10)]
+
+# First remove this reducedDim bc this has caused trouble previously
+reducedDim(sce.amy, "TSNE") <- NULL
+
+# This is interesting:
+sapply(c(1:45), function(x){round(cor(reducedDim(sce.amy,"PCA")[ ,x], as.numeric(as.factor(sce.amy$donor))),3)})
+    #[1] -0.03913056  0.18884743 -0.08465435  0.08171014  0.70429054  0.03941123
+    #[7] -0.07619896  0.02419195  0.08840512 -0.05000060
+boxplot(reducedDim(sce.amy,"PCA")[ ,5] ~ sce.amy$donor)
+    # Two distributions for sure, though 'close' to one another
+# Alternatively
+plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="donor", point_alpha=0.5)
+    # Can't really appreciate as well actually
+
+    ## -> let's get rid of PC5 and try on "PCA_optb"
+reducedDim(sce.amy, "PCA_optb") <- reducedDim(sce.amy, "PCA")[ ,c(1:4, 6:(metadata(pc.choice.amy)$chosen))]
+
+
+
+
+# ## 22 PCs tSNE === 
+# set.seed(109)
+# sce.amy.tsne.22pcs <- runTSNE(sce.amy, dimred="PCA_22")
+# 
+# ## 13 PCs tSNE ===
+# set.seed(109)
+# sce.amy.tsne.13pcs <- runTSNE(sce.amy, dimred="PCA_13")
+# 
+# ## 10 PCs tSNE ===
+# set.seed(109)
+# sce.amy.tsne.10pcs <- runTSNE(sce.amy, dimred="PCA_10")
+
+## "optimal-b" PCs tSNE ===
+set.seed(109)
+sce.amy.tsne.optb <- runTSNE(sce.amy, dimred="PCA_optb")
+    ## Overall this is the best.  Still very strong donor/batch effects, but this _could_ also be
+     #   because they seem to be quite different subdivisions of the amygdala...
+
+
+# Drop "Ambig.lowNtrxts" cluster as always
+# sce.amy.tsne.22pcs <- sce.amy.tsne.22pcs[ ,sce.amy.tsne.22pcs$cellType.split != "Ambig.lowNtrxts"] # 50
+# sce.amy.tsne.22pcs$cellType.split <- droplevels(sce.amy.tsne.22pcs$cellType.split)
+# 
+# sce.amy.tsne.13pcs <- sce.amy.tsne.13pcs[ ,sce.amy.tsne.13pcs$cellType.split != "Ambig.lowNtrxts"] # 50
+# sce.amy.tsne.13pcs$cellType.split <- droplevels(sce.amy.tsne.13pcs$cellType.split)
+# 
+# sce.amy.tsne.10pcs <- sce.amy.tsne.10pcs[ ,sce.amy.tsne.10pcs$cellType.split != "Ambig.lowNtrxts"] # 50
+# sce.amy.tsne.10pcs$cellType.split <- droplevels(sce.amy.tsne.10pcs$cellType.split)
+
+sce.amy.tsne.optb <- sce.amy.tsne.optb[ ,sce.amy.tsne.optb$cellType.split != "Ambig.lowNtrxts"] # 50
+sce.amy.tsne.optb$cellType.split <- droplevels(sce.amy.tsne.optb$cellType.split)
+
+
+pdf("pdfs/exploration/zExplore_Amyg-n2_tSNE_22-13-10-optb-PCs_MNTMay2020.pdf", width=8)
+# 22 PCs
+plotTSNE(sce.amy.tsne.22pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 22 PCs (>= 0.1% var)") + theme(plot.title = element_text(size=19))
+# 13 PCs
+plotTSNE(sce.amy.tsne.13pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 13 PCs (>= 0.2% var)") + theme(plot.title = element_text(size=19))
+# 10 PCs
+plotTSNE(sce.amy.tsne.10pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on top 10 PCs") + theme(plot.title = element_text(size=19))
+# optimal PCs, version b (PC 5 removed)
+plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_alpha=0.5, point_size=4.0, text_by="cellType.split",
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed") + theme(plot.title = element_text(size=15))
+# and color by sample
+plotTSNE(sce.amy.tsne.optb, colour_by="sample", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed") + theme(plot.title = element_text(size=15))
+dev.off()
+
+
+
+# Save the candidates
+Readme <- "This AMY SCE already has 50 'ambig.lowNtrxts' nuclei removed, and tSNE is on optimal 45 [-PC5] PCs"
+save(sce.amy.tsne.optb, Readme, file="rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda")
+
+
+
+# Adapted from scater::plotReducedDim():
+# Hidden function needed for this chunk ====
+    .coerce_to_factor <- function(x, level.limit, msg) {
+      if (!is.null(x)) {
+        x <- as.factor(x)
+        if (nlevels(x) > level.limit) {
+          stop(sprintf("more than %i levels for '%s'", level.limit, msg))
+        }
+      }
+      x
+    }
+    # ====
+
+text_by <- "cellType.split"
+text_out <- retrieveCellInfo(sce.amy.tsne.optb, text_by, search="colData")
+text_out$val <- .coerce_to_factor(text_out$val, level.limit=Inf)
+## actually not necessary if the colData chosen (usually cellType[.etc] is factorized)
+df_to_plot <- data.frame(reducedDim(sce.amy.tsne.optb, "TSNE"))
+by_text_x <- vapply(split(df_to_plot$X1, text_out$val), median, FUN.VALUE=0)
+by_text_y <- vapply(split(df_to_plot$X2, text_out$val), median, FUN.VALUE=0)
+# plot_out <- plot_out + annotate("text", x=by_text_x, y=by_text_y, 
+#                             label=names(by_text_x), size=text_size, colour=text_colour)
+
+
+
+plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=4.5, point_alpha=0.5,
+         text_size=8, theme_size=18) +
+  annotate("text", x=by_text_x, y=by_text_y, 
+           label=names(by_text_x), size=6) +
+  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed")
+
+# OR
+sce.amy.tsne.optb$labels <- ifelse(!duplicated(sce.amy.tsne.optb$cellType.split), as.character(sce.amy.tsne.optb$cellType.split), NA)
+Labs.df <- data.frame(by_text_x, by_text_y, labs=names(by_text_x))
+
+colDF <- data.frame(colData(sce.amy.tsne.optb))
+DFforLabs <- cbind(reducedDim(sce.amy.tsne.optb,"TSNE"), data.frame(colDF$labels))
+colnames(DFforLabs) <- c("X","Y","labels")
+
+# plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=4.5, point_alpha=0.5,
+#          text_size=8, theme_size=18) +
+#   geom_text_repel(data=DFforLabs,
+#                   aes(label=labels)) +
+#   ggtitle("t-SNE on top 15 PCs (>= 0.25% var)")
+## OK THIS FINALLY WORKS
+# -> can replace those X,Y with the median positions for those labels?
+
+DFforLabs.edit <- DFforLabs
+DFforLabs.edit$X[!is.na(DFforLabs$labels)] <- by_text_x[match(as.character(DFforLabs$labels[!is.na(DFforLabs$labels)]),
+                                                              names(by_text_x))]
+DFforLabs.edit$Y[!is.na(DFforLabs$labels)] <- by_text_y[match(as.character(DFforLabs$labels[!is.na(DFforLabs$labels)]),
+                                                              names(by_text_y))]
+
+## Finally print
+library(ggrepel)
+
+pdf("pdfs/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
+set.seed(109)
+plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=6, point_alpha=0.5,
+         theme_size=18) +
+  geom_text_repel(data=DFforLabs.edit, size=6.0,
+                  aes(label=labels)) +
+  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed")
+dev.off()
+
+
+
+
+
+
+
+
+
+apply(table(sce.amy$cellType.split, sce.amy$donor),2,function(x){round(prop.table(x),3)})
+    #                 Br5161 Br5212
+    # Ambig.lowNtrxts  0.010  0.005
+    # Astro            0.149  0.109
+    # Excit.1          0.043  0.058
+    # Excit.2          0.000  0.012
+    # Excit.3          0.000  0.016
+    # Inhib.1          0.005  0.046
+    # Inhib.2          0.010  0.023
+    # Inhib.3          0.003  0.007
+    # Inhib.4          0.007  0.000
+    # Inhib.5          0.026  0.004
+    # Micro            0.129  0.101
+    # Oligo            0.516  0.531
+    # OPC              0.102  0.087
+
+round(apply(apply(table(sce.amy$cellType.split, sce.amy$donor),2,prop.table),1,mean),3)
+    # Ambig.lowNtrxts           Astro         Excit.1         Excit.2         Excit.3
+    #           0.008           0.129           0.050           0.006           0.008
+    #         Inhib.1         Inhib.2         Inhib.3         Inhib.4         Inhib.5
+    #           0.026           0.016           0.005           0.004           0.015
+    #           Micro           Oligo             OPC
+    #           0.115           0.524           0.095
 
     
