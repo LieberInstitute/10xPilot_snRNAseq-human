@@ -442,7 +442,7 @@ rownames(ts.amy) <- fixTo
     table(rowData(sce.amy)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
         # 18,865
     table(rowData(sce.amy)$Symbol %in% hom_hs$Symbol)
-        # 18,473 - not a bad difference
+        # 18,472 - not a bad difference
     
           # So for mapping === === ===
           # human.entrez > HomoloGene.ID < mm.Symbol
@@ -500,24 +500,24 @@ my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 # Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
 cor_t_amy <- cor_t_amy[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
 
-#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2017-neuSubs_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
-pheatmap(cor_t_amy,
-         color=my.col.all,
-         cluster_cols=F, cluster_rows=F,
-         breaks=theSeq.all,
-         fontsize=11, fontsize_row=15, fontsize_col=12,
-         #main="Correlation of cluster-specific t's for mouse MeA neuronal subclusters \n (Wu et al., Neuron 2017)")
-         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# Version with mouse glial cell types 'missing' in LIBD data dropped:
-pheatmap(cor_t_amy_sub,
-         color=my.col.all,
-         cluster_cols=F, cluster_rows=F,
-         breaks=theSeq.all,
-         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-
-dev.off()
+# #pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2017-neuSubs_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+# pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+# pheatmap(cor_t_amy,
+#          color=my.col.all,
+#          cluster_cols=F, cluster_rows=F,
+#          breaks=theSeq.all,
+#          fontsize=11, fontsize_row=15, fontsize_col=12,
+#          #main="Correlation of cluster-specific t's for mouse MeA neuronal subclusters \n (Wu et al., Neuron 2017)")
+#          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
+# # Version with mouse glial cell types 'missing' in LIBD data dropped:
+# pheatmap(cor_t_amy_sub,
+#          color=my.col.all,
+#          cluster_cols=F, cluster_rows=F,
+#          breaks=theSeq.all,
+#          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+#          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
+# 
+# dev.off()
 
 
 ## Version with mouse glial cell types 'missing' in LIBD data dropped:
@@ -526,19 +526,112 @@ cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "
 
 
 
-# pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_trimmed_May2020.pdf")
-# pheatmap(cor_t_amy_sub,
-#          color=my.col.all,
-#          cluster_cols=F, cluster_rows=F,
-#          breaks=theSeq.all,
-#          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-#          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# dev.off()
+## Iteration with top N spp:subcluster-specific genes: ========
+ #   Added MNT 25May2020
+ #   -> Basically just run through line 488, under ("Subset and match order")
+
+# Save the ts matrices to reduce work next time
+Readme <- "These t-statistic matrices are subsetted and matched for shared 'HomoloGene.ID', so `cor()` can simply be run or other gene subsets applied first."
+save(ts.amy, ts.mmMeA, Readme, file="rdas/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_25May2020.rda")
+
+
+# # Have to remove the markers objects bc the rows have been fixed  (actually don't need to lol)
+# rm(markers.amy.t.1vAll, markers.mmMeA.t.1vAll)
+# 
+# # Re-load them
+# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+#     # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+#     rm(markers.amy.t.design, markers.amy.wilcox.block)
+# 
+# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+#     # markers.mmMeA.t.1vAll
+#     
+    
+    
+## On just hsap cluster-specific homologous genes ===
+hsap_specific_indices = mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]
+  },
+as.data.frame(ts.amy)
+)
+hsap_ind = unique(as.numeric(hsap_specific_indices))
+length(hsap_ind)  # so of 1200 (100 x 12 cellType.split), 919 unique
+
+cor_t_hsap = cor(ts.amy[hsap_ind, ],
+                 ts.mmMeA[hsap_ind, ])
+range(cor_t_hsap)
+    #[1] -0.2738376  0.6612352
+
+
+## On just mouse cluster-specific homologous genes ===
+mouse_specific_indices = mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]
+},
+as.data.frame(ts.mmMeA)
+)
+mouse_ind = unique(as.numeric(mouse_specific_indices))
+length(mouse_ind)  # so of 2300 (100 x 23 subCluster), 1543 unique
+
+cor_t_mouse = cor(ts.amy[mouse_ind, ],
+                 ts.mmMeA[mouse_ind, ])
+range(cor_t_mouse)
+    # [1] -0.2731605  0.6113445
+
+## UPDATED heatmap:
+theSeq.all = seq(-.65, .65, by = 0.01)
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
+
+# Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
+cor_t_amy <- cor_t_amy[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+cor_t_hsap <- cor_t_hsap[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+    # Then treshold this one to 0.65 max (max is 0.6612)
+    cor_t_hsap <- ifelse(cor_t_hsap >= 0.65, 0.65, cor_t_hsap)
+    # (and)
+    cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "OPC.OL_M"))]
+cor_t_mouse <- cor_t_mouse[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+pheatmap(cor_t_amy,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11, fontsize_row=15, fontsize_col=12,
+         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
+# Version with mouse glial cell types 'missing' in LIBD data dropped:
+pheatmap(cor_t_amy_sub,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
+# On human-specific genes (slightly thresholded)
+pheatmap(cor_t_hsap,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+         main="Correlation of top-100 cluster-specific t's to \n (Chen-Hu-Wu et al., Cell 2019) subclusters")
+# On mm-MeA-specific genes
+pheatmap(cor_t_mouse,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+         main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) top-100 subcluster t's")
+dev.off()
 
 
 
 
-# ### OLD - ignore: Looking into some neuronal marker stats b/tw spp ===
+
+
+
+
+
+
+
+
+# ### OLD - ignore: Looking into some neuronal marker stats b/tw spp ====================
 # markers.mmMeAneu.rowsFixed <- markers.mmMeA.t.1vAll
 # 
 # load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/markers-stats_mouseMeA-2017-neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
