@@ -28,6 +28,8 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 # ===
 
+### Pseudobulk>modeling approach ============================================
+  # * Skip this -> Now using sn-level stats for this comparison
 
 ## load modeling outputs
 # 10x-pilot human Amyg
@@ -390,7 +392,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
     #sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
     rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy,ref.sampleInfo)
 
-# First drop "ambig.lowNtrxts" (93 nuclei)
+# First drop "Ambig.lowNtrxts" (50 nuclei)
 sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
 sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
 
@@ -582,7 +584,6 @@ theSeq.all = seq(-.65, .65, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
 # Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
-cor_t_amy <- cor_t_amy[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
 cor_t_hsap <- cor_t_hsap[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
     # Then treshold this one to 0.65 max (max is 0.6612)
     cor_t_hsap <- ifelse(cor_t_hsap >= 0.65, 0.65, cor_t_hsap)
@@ -590,12 +591,15 @@ cor_t_hsap <- cor_t_hsap[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
     cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "OPC.OL_M"))]
 cor_t_mouse <- cor_t_mouse[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
+    # or
+    pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_numbersPrinted_May2020.pdf")
 pheatmap(cor_t_amy,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
          fontsize=11, fontsize_row=15, fontsize_col=12,
+            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
 # Version with mouse glial cell types 'missing' in LIBD data dropped:
 pheatmap(cor_t_amy_sub,
@@ -603,6 +607,7 @@ pheatmap(cor_t_amy_sub,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
 # On human-specific genes (slightly thresholded)
 pheatmap(cor_t_hsap,
@@ -610,6 +615,7 @@ pheatmap(cor_t_hsap,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
          main="Correlation of top-100 cluster-specific t's to \n (Chen-Hu-Wu et al., Cell 2019) subclusters")
 # On mm-MeA-specific genes
 pheatmap(cor_t_mouse,
@@ -617,52 +623,191 @@ pheatmap(cor_t_mouse,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
+            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
          main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) top-100 subcluster t's")
 dev.off()
 
 
 
+## Intersecting some of the top markers =====================
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+    rm(markers.amy.t.design, markers.amy.wilcox.block)
+
+# Take top 100
+markerList.t.hsap <- lapply(markers.amy.t.1vAll, function(x){
+  rownames(x)[x$log.FDR < log10(1e-6)]
+  }
+)
+genes.top100.hsap <- lapply(markerList.t.hsap, function(x){head(x, n=100)})
+
+
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.mmMeA.t.1vAll
+
+# Just `toupper()` it
+markerList.t.mm <- lapply(markers.mmMeA.t.1vAll, function(x){
+  rownames(x)[x$log.FDR < log10(1e-6)]
+  }
+)
+genes.top100.mm <- lapply(markerList.t.mm, function(x){toupper(head(x, n=100))})
+genes.top100.mm <- sapply(genes.top100.mm, cbind)
+
+## sapply
+sapply(genes.top100.hsap, function(x){
+  apply(genes.top100.mm,2,function(y){length(intersect(x,y))})
+})
+    #        Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo OPC
+    # AS        20       0       1       0       0       1       0       0       1     0     0   1
+    # EN         2       1       1       0       1       2       1       0       0     0     0   2
+    # MG         0       0       0       1       0       0       0       0       0    19     0   0
+    # MU         2       1       0       1       0       0       1       1       0     0     0   0
+    # N.1        1       4       2       0      14       8       3       4       9     0     1   1
+    # N.10       0       6       1       4       7       7       2       0       6     0     0   0
+    # N.11       1      10       5       2       8       3       4       6       8     0     0   4
+    # N.12       2       7       4       3       7       5       2       3       5     0     2   2
+    # N.13       1       2       1       3       1       1       0       0       5     1     0   1
+    # N.14       0       7       2       4       9       6       0       4       7     1     1   2
+    # N.15       0       7       1       6       0       1       1       0       1     0     0   1
+    # N.16       1       3       4       1       7       3       3       6       4     0     0   4
+    # N.2        2       6       2       1       9       5       2       3       6     0     0   3
+    # N.3        2       3       1       4       0       3       0       0       2     0     0   0
+    # N.4        2       5       3       1      10       7       3      10       6     1     1   3
+    # N.5        0       4       3       2       4       4       1       2       5     0     0   2
+    # N.6        1       2       3       0      13      10       6       8       9     0     3   2
+    # N.7        0       4      10       1       1       3       1       2       2     0     0   1
+    # N.8        1       7       4       4       6       6       2       3      19     1     1   3
+    # N.9        0       3       1       1      10       5       2       5       4     0     0   1
+    # OL         0       0       2       0       0       0       0       0       0     0    19   0
+    # OPC        0       0       0       0       0       1       0       0       0     0     0  26
+    # OPC.OL     0       0       0       1       0       0       0       0       1     0     5   7
+
+  
+  
+## Amonst top 40 ===
+genes.top40.hsap <- lapply(markerList.t.hsap, function(x){head(x, n=40)})
+
+genes.top40.mm <- lapply(markerList.t.mm, function(x){toupper(head(x, n=40))})
+genes.top40.mm <- sapply(genes.top40.mm, cbind)
+
+sapply(genes.top40.hsap, function(x){
+  apply(genes.top40.mm,2,function(y){length(intersect(x,y))})
+})
+    #       Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo OPC
+    # AS         7       0       0       0       0       0       0       0       0     0     0   0
+    # EN         1       0       0       0       0       0       0       0       0     0     0   0
+    # MG         0       0       0       0       0       0       0       0       0     4     0   0
+    # MU         0       0       0       0       0       0       0       0       0     0     0   0
+    # N.1        0       0       1       0       1       0       0       0       0     0     0   0
+    # N.10       0       0       0       0       1       2       0       0       2     0     0   0
+    # N.11       0       4       0       0       2       0       0       2       0     0     0   1
+    # N.12       1       2       2       0       0       1       0       0       2     0     0   1
+    # N.13       0       0       0       1       0       0       0       0       1     0     0   0
+    # N.14       0       2       0       1       0       1       0       0       1     1     0   0
+    # N.15       0       3       0       0       0       0       0       0       1     0     0   0
+    # N.16       0       1       1       0       0       1       0       0       1     0     0   2
+    # N.2        0       1       1       0       1       0       0       0       1     0     0   0
+    # N.3        0       1       0       0       0       2       0       0       0     0     0   0
+    # N.4        0       1       1       0       3       3       0       1       0     0     0   1
+    # N.5        0       0       0       0       1       0       0       0       0     0     0   1
+    # N.6        0       1       0       0       2       2       0       0       0     0     0   0
+    # N.7        0       0       2       0       0       1       0       1       0     0     0   0
+    # N.8        0       1       0       0       1       1       1       2       1     0     0   0
+    # N.9        0       0       0       0       0       1       0       1       1     0     0   0
+    # OL         0       0       1       0       0       0       0       0       0     0     7   0
+    # OPC        0       0       0       0       0       0       0       0       0     0     0  10
+    # OPC.OL     0       0       0       0       0       0       0       0       0     0     1   1
+
+# Inhib.5 : N.8 genes ==
+  intersect(genes.top40.hsap[["Inhib.5"]], genes.top100.mm[ ,"N.8"])
+      # [1] "NPFFR2" "SV2C"   "OTOF"   "GRM8"   "OLFM3"  "FOXP2"
+
+  # round(ts.mmMeA["49202", ],3)  # (Tll1 - looking because a highlighted gene in text)
+  #     # AS      EN      MG      MU     N.1    N.10    N.11    N.12    N.13    N.14    N.15    N.16
+  #     # -5.939  -5.932  -6.699   1.698   8.835   2.691 107.521  -5.323  20.345  86.122  -5.484  -5.423
+  #     # N.2     N.3     N.4     N.5     N.6     N.7     N.8     N.9      OL     OPC  OPC.OL
+  #     # 13.117  -5.297  33.339  16.283  -6.203  -5.520 108.310  22.783  -5.886  -4.273  -5.318
+  # 
+  plotExpression(sce.amy.mm, exprs_values="logcounts", x="subCluster", colour_by="subCluster", features="Tll1")
+  #     # ahh nothing but a few outliers
+  
+  sce.amy.mm.sub <- sce.amy.mm[ ,grep("N.", sce.amy.mm$subCluster)]
+  sce.amy.mm.sub$subCluster <- droplevels(sce.amy.mm.sub$subCluster)
+  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
+                 features=c("Npffr2","Sv2c","Otof","Grm8","Olfm3","Foxp2"))
+      # Actually nothing suuuper convicing - mostly outlier.  These just happen to have _more_ lol
+  
+  # N.8 top genes include Pcdh8 & Lamp5
+  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
+                 features=c("Pcdh8","Lamp5"))
+
+  # N.12 reported marker genes (reported in supplementals "mmc2.xlsx" with paper)
+  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
+                 features=c("Eomes","Dsp","Nhlh2","Samd3","Trpc3","Cdhr1","Lhx1"))
+      # Oh six of these were of the top 10 from my own test and plotted lol.  Well good.
+  
+  
+# (and btw) ===
+table(sce.amy$cellType.split, sce.amy$donor)
+    #                 Br5161 Br5212
+    # Ambig.lowNtrxts     34     16
+    # Astro              489    363
+    # Excit.1            141    193
+    # Excit.2              0     40
+    # Excit.3              0     55
+    # Inhib.1             16    155
+    # Inhib.2             33     76
+    # Inhib.3             11     24
+    # Inhib.4             24      0
+    # Inhib.5             85     13
+    # Micro              425    339
+    # Oligo             1697   1776
+    # OPC                335    292
+
+# Glucocorticoid receptors? (in relation to TLL1, as per https://doi.org/10.1016/j.molbrainres.2005.09.016)
+plotExpression(sce.amy, exprs_values="logcounts", x="cellType.split", colour_by="cellType.split",
+               features=c("NR3C1","NR3C2")) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                          geom = "crossbar", width = 0.3,
+                                                          colour=rep(tableau20[1:12], 2)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
+    # No particular high/specific expression in Inhib.5
 
 
 
+### FINAL GRANT VERSION ===
+  # Remove EN, MU, OPC.OL, N.12 & N.15
+load("rdas/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_25May2020.rda", verbose=T)
+    # ts.amy, ts.mmMeA, Readme
 
 
+cor_t_amy <- cor(ts.amy, ts.mmMeA)
+rownames(cor_t_amy) = paste0(rownames(cor_t_amy),"_","H")
+colnames(cor_t_amy) = paste0(colnames(cor_t_amy),"_","M")
 
+# Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
+cor_t_amy <- cor_t_amy[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+# Remove those selected
+cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "OPC.OL_M",
+                                                               "N.12_M", "N.15_M"))]
+range(cor_t_amy_sub)
+    #[1] -0.2203968  0.5023080  --> Threshold to 0.5
 
+cor_t_amy_sub <- ifelse(cor_t_amy_sub >= 0.5, 0.5, cor_t_amy_sub)
 
+### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
+theSeq.all = seq(-.5, .5, by = 0.01)
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-# ### OLD - ignore: Looking into some neuronal marker stats b/tw spp ====================
-# markers.mmMeAneu.rowsFixed <- markers.mmMeA.t.1vAll
-# 
-# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/markers-stats_mouseMeA-2017-neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.mmMeAneu.t.1vAll
-# sapply(markers.mmMeAneu.t.1vAll, function(x){which(rownames(x)=="Npy")})
-#     # N4: 4; N5: 19       (oh but this is poorly expressed in mouse still...)
-# 
-# 
-# markers.amy.rowsFixed <- markers.amy.t.1vAll
-# 
-# load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
-#     rm(markers.amy.t.design, markers.amy.wilcox.block)
-# 
-# sapply(markers.amy.t.1vAll, function(x){which(rownames(x)=="NPY")}) #nothing
-# sapply(markers.amy.t.1vAll, function(x){which(rownames(x)=="TAC1")})  # Inhib.3 looks like
-# 
-#     
-# 
-# # Look at some notable genes from paper
-# plotExpression(sce.amy, exprs_values = "logcounts", features=c("NPY", "SST", "CCK", "TAC1", "CARTPT",
-#                                                                "SNAP25", "GAD1", "GAD2", "KCNQ2"),
-#                x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=5,
-#                add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-#                                             geom = "crossbar", width = 0.3,
-#                                             colour=rep(tableau20[1:12], 9)) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) 
-
-
-
-
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_FINAL_May2020.pdf",width=8)
+pheatmap(cor_t_amy_sub,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         angle_col=90,
+         breaks=theSeq.all,
+         fontsize=11.5, fontsize_row=17, fontsize_col=15,
+         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         main="Correlation of cluster-specific t's to mouse MeA \n subclusters (Chen-Hu-Wu et al., Cell 2019)")
+dev.off()
 
 
 
