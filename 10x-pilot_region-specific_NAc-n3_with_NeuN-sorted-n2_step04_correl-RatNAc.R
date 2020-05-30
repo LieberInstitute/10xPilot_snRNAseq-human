@@ -739,22 +739,29 @@ rownames(ts.rat) <- rowData(sce.rat.PBsub)$HomoloGene.ID
 
 table(rownames(ts.nac) == rownames(ts.rat)) # all 14121 TRUE (well duh)
 
+
+    # Save the ts matrices to reduce work next time
+    Readme <- "These t-statistic matrices are subsetted and matched for shared 'HomoloGene.ID', so `cor()` can simply be run or other gene subsets applied first."
+    save(ts.nac, ts.rat, Readme, file="rdas/zTsMats_libd-NAc_and_DayLab-ratNAc_sharedGenes_29May2020.rda")
+
+
+
 cor_t_nac <- cor(ts.nac, ts.rat)
-rownames(cor_t_nac) = paste0(rownames(cor_t_nac),"_","H.sap")
-colnames(cor_t_nac) = paste0(colnames(cor_t_nac),"_","R.nor")
+rownames(cor_t_nac) = paste0(rownames(cor_t_nac),"_H")
+colnames(cor_t_nac) = paste0(colnames(cor_t_nac),"_R")
 
 
 ### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
-theSeq.all = seq(-.65, .65, by = 0.025)
+theSeq.all = seq(-.65, .65, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
 
 
-# or thresholded at .5
-theSeq.th = seq(-.5, .5, by = 0.025)
+# or thresholded at .55
+theSeq.th = seq(-.55, .55, by = 0.01)
 my.col.th <- colorRampPalette(brewer.pal(7, "RdYlBu"))(length(theSeq.th)-1)
 
 cor_t_nac.th <- cor_t_nac
-cor_t_nac.th <- ifelse(cor_t_nac.th >= 0.5, 0.5, cor_t_nac.th)
+cor_t_nac.th <- ifelse(cor_t_nac.th >= 0.55, 0.55, cor_t_nac.th)
 
 
 #pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_SN-LEVEL-stats_allGenes_May2020.pdf")
@@ -802,7 +809,7 @@ pheatmap(cor_t_nac,
          fontsize_row=11.5, fontsize_col=11.5,
          main="Correlation of cluster-specific t's \n (all shared expressed genes)")
 
-## or thresholded at .5
+## or thresholded at .55
 # "BrBG"
 my.col.th <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.th)-1)
 pheatmap(cor_t_nac.th,
@@ -811,7 +818,7 @@ pheatmap(cor_t_nac.th,
          color=my.col.th,
          breaks=theSeq.th,
          fontsize_row=11.5, fontsize_col=11.5,
-         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         legend_breaks=round(c(seq(-0.55,0.55,by=0.275)),2),
          main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
 # Original "PRGn"
 my.col.th <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.th)-1)
@@ -821,7 +828,7 @@ pheatmap(cor_t_nac.th,
          color=my.col.th,
          breaks=theSeq.th,
          fontsize_row=11.5, fontsize_col=11.5,
-         legend_breaks=c(seq(-0.5,0.5,by=0.25)),
+         legend_breaks=round(c(seq(-0.55,0.55,by=0.275)),2),
          main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
 
 dev.off()
