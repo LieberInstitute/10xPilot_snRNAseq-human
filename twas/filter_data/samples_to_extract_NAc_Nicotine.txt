@@ -1,0 +1,239 @@
+Br5419_OmniJan2018	Br5419_OmniJan2018
+Br5066_Omni5M	Br5066_Omni5M
+Br6105_OmniNov2018	Br6105_OmniNov2018
+Br5393_Omni2pt5	Br5393_Omni2pt5
+Br5878_Macrogen	Br5878_Macrogen
+Br8203_OmniJanJuly	Br8203_OmniJanJuly
+Br5802_Macrogen	Br5802_Macrogen
+Br6129_OmniNov2018	Br6129_OmniNov2018
+Br5820_Macrogen	Br5820_Macrogen
+Br8171_OmniNov2018	Br8171_OmniNov2018
+Br6158_OmniJanJuly	Br6158_OmniJanJuly
+Br5828_Macrogen	Br5828_Macrogen
+Br5825_Macrogen	Br5825_Macrogen
+Br8181_OmniNov2018	Br8181_OmniNov2018
+Br5069_Omni5M	Br5069_Omni5M
+Br2304_Omni5M	Br2304_Omni5M
+Br5168_Omni5M	Br5168_Omni5M
+	
+	
+Br5237_Macrogen	Br5237_Macrogen
+Br5368_Macrogen	Br5368_Macrogen
+Br5422_Omni2pt5	Br5422_Omni2pt5
+Br5434_Macrogen	Br5434_Macrogen
+Br5445_Macrogen	Br5445_Macrogen
+Br5479_OmniJan2018	Br5479_OmniJan2018
+Br5484_Macrogen	Br5484_Macrogen
+Br5619_Macrogen	Br5619_Macrogen
+Br8325_OmniJanJuly	Br8325_OmniJanJuly
+	
+	
+	
+	
+Br8023_OmniJan2018	Br8023_OmniJan2018
+Br5013_Omni2pt5	Br5013_Omni2pt5
+Br2504_Omni2pt5	Br2504_Omni2pt5
+Br5407_Macrogen	Br5407_Macrogen
+Br8150_OmniNov2018	Br8150_OmniNov2018
+Br6292_OmniJanJuly	Br6292_OmniJanJuly
+Br5354_OmniJanJuly	Br5354_OmniJanJuly
+Br5330_Omni5M	Br5330_Omni5M
+Br5329_Omni2pt5	Br5329_Omni2pt5
+Br8002_OmniJan2018	Br8002_OmniJan2018
+Br5628_Macrogen	Br5628_Macrogen
+Br5873_OmniJan2018	Br5873_OmniJan2018
+Br6354_OmniJanJuly	Br6354_OmniJanJuly
+Br5666_OmniJan2018	Br5666_OmniJan2018
+Br5642_Macrogen	Br5642_Macrogen
+Br5826_Macrogen	Br5826_Macrogen
+Br5712_Macrogen	Br5712_Macrogen
+Br5695_OmniJan2018	Br5695_OmniJan2018
+Br5022_Omni5M	Br5022_Omni5M
+Br5021_Omni5M	Br5021_Omni5M
+Br5142_Omni2pt5	Br5142_Omni2pt5
+Br2700_OmniNov2018	Br2700_OmniNov2018
+Br2706_OmniNov2018	Br2706_OmniNov2018
+Br2701_OmniNov2018	Br2701_OmniNov2018
+Br8011_OmniJan2018	Br8011_OmniJan2018
+Br5158_Omni2pt5	Br5158_Omni2pt5
+Br5990_OmniJan2018	Br5990_OmniJan2018
+Br5001_Omni2pt5	Br5001_Omni2pt5
+Br5641_OmniJanJuly	Br5641_OmniJanJuly
+Br5176_Omni2pt5	Br5176_Omni2pt5
+Br5073_Omni2pt5	Br5073_Omni2pt5
+Br8072_OmniJanJuly	Br8072_OmniJanJuly
+Br5996_OmniJan2018	Br5996_OmniJan2018
+Br5157_Omni2pt5	Br5157_Omni2pt5
+Br5012_Omni5M	Br5012_Omni5M
+Br6328_OmniJanJuly	Br6328_OmniJanJuly
+Br6349_OmniJanJuly	Br6349_OmniJanJuly
+Br5600_Macrogen	Br5600_Macrogen
+Br5322_Omni2pt5	Br5322_Omni2pt5
+Br5930_OmniJan2018	Br5930_OmniJan2018
+Br8045_OmniNov2018	Br8045_OmniNov2018
+Br2324_Omni2pt5	Br2324_Omni2pt5
+Br5304_Omni2pt5	Br5304_Omni2pt5
+Br5230_Omni2pt5	Br5230_Omni2pt5
+Br5791_Macrogen	Br5791_Macrogen
+Br5840_OmniJan2018	Br5840_OmniJan2018
+Br5107_Omni5M	Br5107_Omni5M
+Br6162_OmniJanJuly	Br6162_OmniJanJuly
+Br5907_OmniJan2018	Br5907_OmniJan2018
+Br8313_OmniJanJuly	Br8313_OmniJanJuly
+Br5573_Macrogen	Br5573_Macrogen
+	
+	
+Br8114_OmniNov2018	Br8114_OmniNov2018
+Br5300_Omni2pt5	Br5300_Omni2pt5
+Br5515_Omni2pt5	Br5515_Omni2pt5
+Br5713_Macrogen	Br5713_Macrogen
+Br6178_OmniNov2018	Br6178_OmniNov2018
+Br6069_OmniJan2018	Br6069_OmniJan2018
+Br5124_Omni5M	Br5124_Omni5M
+Br6071_OmniJan2018	Br6071_OmniJan2018
+Br5282_Omni2pt5	Br5282_Omni2pt5
+Br5864_Macrogen	Br5864_Macrogen
+Br6173_OmniJanJuly	Br6173_OmniJanJuly
+Br5853_Macrogen	Br5853_Macrogen
+Br5131_Omni5M	Br5131_Omni5M
+Br6037_OmniJan2018	Br6037_OmniJan2018
+Br2337_Omni5M	Br2337_Omni5M
+Br5870_Macrogen	Br5870_Macrogen
+Br5812_OmniJan2018	Br5812_OmniJan2018
+Br5252_Omni2pt5	Br5252_Omni2pt5
+Br2307_1M	Br2307_1M
+Br5800_OmniJan2018	Br5800_OmniJan2018
+Br2388_Omni5M	Br2388_Omni5M
+Br5269_OmniJan2018	Br5269_OmniJan2018
+Br5945_OmniJan2018	Br5945_OmniJan2018
+Br2257_1M	Br2257_1M
+Br5807_OmniJan2018	Br5807_OmniJan2018
+	
+Br2412_1M	Br2412_1M
+Br6286_OmniJanJuly	Br6286_OmniJanJuly
+Br5883_OmniNov2018	Br5883_OmniNov2018
+Br8388_OmniJanJuly	Br8388_OmniJanJuly
+	
+	
+	
+	
+	
+	
+	
+	
+	
+Br5566_OmniJan2018	Br5566_OmniJan2018
+Br5574_Macrogen	Br5574_Macrogen
+Br5601_OmniJan2018	Br5601_OmniJan2018
+Br2285_1M	Br2285_1M
+Br2301_Omni5M	Br2301_Omni5M
+Br2612_OmniJan2018	Br2612_OmniJan2018
+Br5200_Omni5M	Br5200_Omni5M
+Br5363_Macrogen	Br5363_Macrogen
+Br5477_Macrogen	Br5477_Macrogen
+Br5603_Macrogen	Br5603_Macrogen
+Br8159_OmniJanJuly	Br8159_OmniJanJuly
+Br5214_Omni2pt5	Br5214_Omni2pt5
+Br5242_Macrogen	Br5242_Macrogen
+Br5350_Macrogen	Br5350_Macrogen
+Br5389_Macrogen	Br5389_Macrogen
+Br5384_Macrogen	Br5384_Macrogen
+Br5373_Omni2pt5	Br5373_Omni2pt5
+Br5303_OmniJan2018	Br5303_OmniJan2018
+Br5421_Omni2pt5	Br5421_Omni2pt5
+Br5754_OmniNov2018	Br5754_OmniNov2018
+Br5771_OmniJan2018	Br5771_OmniJan2018
+Br8057_OmniNov2018	Br8057_OmniNov2018
+Br8391_OmniJanJuly	Br8391_OmniJanJuly
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+Br6015_OmniJan2018	Br6015_OmniJan2018
+Br5293_Omni2pt5	Br5293_Omni2pt5
+Br5482_Macrogen	Br5482_Macrogen
+Br5556_Macrogen	Br5556_Macrogen
+Br5392_Omni2pt5	Br5392_Omni2pt5
+Br5668_OmniJan2018	Br5668_OmniJan2018
+Br8174_OmniJanJuly	Br8174_OmniJanJuly
+Br5897_Macrogen	Br5897_Macrogen
+Br5859_OmniJan2018	Br5859_OmniJan2018
+Br5645_OmniJan2018	Br5645_OmniJan2018
+Br5082_Omni2pt5	Br5082_Omni2pt5
+Br5369_Macrogen	Br5369_Macrogen

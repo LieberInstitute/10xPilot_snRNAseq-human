@@ -7,9 +7,59 @@ library('data.table')
 library('SummarizedExperiment')
 library('sessioninfo')
 
+## To avoid issues with running this code on qsub
+data.table::setDTthreads(threads = 1)
+
+## Find the samples for this project
+load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
+stopifnot(length(unique(rse_gene$BrNum)) == ncol(rse_gene))
+
+## For converting BrNum's into numbers
+brnumerical <- function(x) {
+    as.integer(gsub("Br|_.*", "", x))
+}
+
+libd_bfile <- "/dcl01/lieber/ajaffe/Brain/Imputation/Subj_Cleaned/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38"
+
+## Read the LIBD fam data
+libd_fam <- fread(
+    paste0(libd_bfile, ".fam"), 
+    col.names = c('famid', 'w_famid', 'w_famid_fa', 'w_famid_mo', 'sex_code', 'phenotype'))
+libd_fam$brnumerical <- brnumerical(libd_fam$famid)
+setkey(libd_fam, 'brnumerical')
+
+## Filter the LIBD data to the one specific to this project
+# region <- "NAc_Nicotine"
+for(region in c("NAc_Nicotine")) {
+    message(paste(Sys.time(), 'processing', region))
+    samp_file <- paste0('samples_to_extract_', region, '.txt')
+
+    fwrite(
+        libd_fam[brnumerical(rse_gene$BrNum), 1:2], ## can be more involved
+        file = samp_file,
+        sep = '\t', col.names = FALSE
+    )
+    newbfile <- paste0(
+        '/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_',
+        region
+    )
+
+    ## Extract
+    message(paste(Sys.time(), 'running bfile extract'))
+    ## --biallelic-only doesn't really do anything at this point
+    ## since we already dropped the duplicated snps
+    system(paste("plink --bfile", libd_bfile, #'--extract', filt_snps, 
+    	"--keep", samp_file, "--make-bed --out", 
+    	newbfile, " --memory 100000 --biallelic-only"))
+}
+
+
+
+
+
 ## get the snpMap that contains the hg38 positions
-message(paste(Sys.time(), 'loading BSP2 genotype data'))
-load('/dcl01/lieber/ajaffe/lab/brainseq_phase2/genotype_data/BrainSeq_Phase2_RiboZero_Genotypes_n551.rda', verbose = TRUE)
+message(paste(Sys.time(), 'loading LIBD genotype data'))
+load('/dcl01/lieber/ajaffe/Brain/Imputation/Subj_Cleaned/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38.Rdata', verbose = TRUE)
 
 colnames(snpMap) <- tolower(colnames(snpMap))
 colnames(snpMap)[colnames(snpMap) == 'pos'] <- 'basepair'
