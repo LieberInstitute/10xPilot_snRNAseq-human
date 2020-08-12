@@ -9,23 +9,26 @@ library("data.table")
 library("sessioninfo")
 library("getopt")
 library("BiocParallel")
+library("sva")
+library("recount")
+library("tidyr")
 
 ## style this script
 # styler::style_file("build_bims.R", transformers = styler::tidyverse_style(indent_by = 4))
 
 ## Without this, the memory use blows up
 ## getDTthreads() will detect 64 threads in some cases here
-setDTthreads(threads = 1)
+# setDTthreads(threads = 1)
 
-## Specify parameters
+## Flags that are supplied with RScript
 spec <- matrix(c(
-    "region", "r", 1, "character", "Either DLPFC, HIPPO or DentateGyrus",
-    "feature", "f", 1, "character", "One of: gene, exon, jxn, tx",
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
-    "pgconly", "p", 1, "logical", "Subset to only PGC loci?",
     "help", "h", 0, "logical", "Display help"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
+
+opt$region <- "NAc"
+opt$feat <- "gene"
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
@@ -34,75 +37,74 @@ if (!is.null(opt$help)) {
     q(status = 1)
 }
 
-## For testing
-if (FALSE) {
-    opt <- list(region = "HIPPO", feature = "gene", cores = 1, "pgconly" = TRUE)
-    opt <- list(region = "HIPPO", feature = "gene", cores = 1, "pgconly" = FALSE)
-    opt <- list(region = "DLPFC", feature = "gene", cores = 1, "pgconly" = FALSE)
-    opt <- list(region = "HIPPO", feature = "gene", cores = 3, "pgconly" = FALSE)
-    # feat = opt$feature; reg = opt$reg
-
-    opt <- list(region = "HIPPO", feature = "exon", cores = 3, "pgconly" = FALSE)
-
-    opt <- list(region = "DentateGyrus", feature = "gene", cores = 1, "pgconly" = FALSE)
-}
-
-stopifnot(opt$region %in% c("HIPPO", "DLPFC", "DentateGyrus"))
-stopifnot(opt$feature %in% c("gene", "exon", "jxn", "tx"))
+stopifnot(opt$region %in% c("NAc"))
+stopifnot(opt$feature %in% c("gene"))
 
 dir.create(opt$region, showWarnings = FALSE)
-dir.create(file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", ""))), showWarnings = FALSE)
+dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 
 load_rse <- function(feat, reg) {
     message(paste(Sys.time(), "loading expression data"))
-    if (feat == "gene") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/expr_cutoff/rse_gene.Rdata", verbose = TRUE)
-        rse <- rse_gene
-        assays(rse)$raw_expr <- assays(rse_gene)$rpkm
-    } else if (feat == "exon") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/expr_cutoff/rse_exon.Rdata", verbose = TRUE)
-        rse <- rse_exon
-        assays(rse)$raw_expr <- assays(rse_exon)$rpkm
-    } else if (feat == "jxn") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/expr_cutoff/rse_jxn.Rdata", verbose = TRUE)
-        rse <- rse_jxn
-        assays(rse)$raw_expr <- assays(rse_jxn)$rp10m
-    } else if (feat == "tx") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/expr_cutoff/rse_tx.Rdata", verbose = TRUE)
-        rse <- rse_tx
-        assays(rse)$raw_expr <- assays(rse_tx)$tpm
-    }
 
-    message(paste(Sys.time(), "subsetting to age and region data"))
-    keepInd <- which(colData(rse)$Age > 13 & colData(rse)$Region == reg)
-    rse <- rse[, keepInd]
+    # expmnt data
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = T)
 
-    message(paste(Sys.time(), "loading model pieces"))
-    if (reg == "HIPPO") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/eQTL_full/eqtl_tables/rdas/pcs_hippo_4features_filtered_over13.rda", verbose = TRUE)
-    } else if (reg == "DLPFC") {
-        load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/eQTL_full/eqtl_tables/rdas/pcs_dlpfc_4features_filtered_over13.rda", verbose = TRUE)
-    }
+    # use a test var so not needed to reload - remove
+    rse_test <- rse_gene
+    assays(rse_test)$raw_expr <- getRPKM(rse_gene, "Length")
 
-    message(paste(Sys.time(), "building model"))
-    if (feat == "gene") {
-        pcs <- genePCs
-    } else if (feat == "exon") {
-        pcs <- exonPCs
-    } else if (feat == "jxn") {
-        pcs <- jxnPCs
-    } else if (feat == "tx") {
-        pcs <- txPCs
-    }
-    colData(rse) <- cbind(colData(rse), pcs)
-    mod <- model.matrix(~ Dx + Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-        data = colData(rse)
-    )
+    # We might need to find a more updated set of genotype information for these samples
+    # ask for help from Andrew
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose=T)
 
+    # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
+
+    table(rse_test$BrNum %in% rownames(mds)) # matching samples == 195
+    # T = 195
+
+    mds_test <- na.omit(mds) # omits nas, inits test var
+
+    # this is wrong,should be other way around
+    mds_test <- mds_test[rownames(mds_test) %in% rse_test$BrNum,] %>%
+        na.omit()# only use rows in mds_test that are present as brain samples in rse
+
+    dim(mds_test)
+
+    dim(rse_test)
+
+    # IMPORTANT:
+    # assays() gives you expmnt data
+    # colData() gives you sample metadata
+    # rowRanges(rse) is for genomic range metadata
+
+    stopifnot(identical(nrow(mds_test), ncol(rse_test)))
+
+    rse_test <- rse_test[,rse_test$BrNum %in% rownames(mds_test)]
+
+    mod = model.matrix(~ Sex + as.matrix(mds_test [,1:5]), data = colData(rse_test))
+
+    pcaGene = prcomp(t(log2(assays(rse_test)$raw_expr + 1)))
+    kGene = num.sv(log2(assays(rse_test)$raw_expr + 1), mod)
+
+    genePCs = pcaGene$x[,1:kGene]
+
+    pcs <- genePCs
+
+    colData(rse_test) <- cbind(colData(rse_test), pcs, mds_test) #cbind mds[,1:]
+
+    save(rse_test, file = "/users/aseyedia/NAc_TWAS/rse_test.Rdata")
+
+    # what is snpPC??
+    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
+        data = colData(rse_test))
+
+    # install.packages(jaffelab) not available for 4.0 and doesn't work for 3.6
+    source("../jaffelab/R/cleaningY.R")
     message(paste(Sys.time(), "cleaning expression"))
-    assays(rse) <- List(
-        "raw_expr" = assays(rse)$raw_expr,
-        "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
+    assays(rse_test) <- List(
+        "raw_expr" = assays(rse_test)$raw_expr,
+        # Can't run this command bc I can't find PCs
+        "clean_expr" = cleaningY(log2(assays(rse_test)$raw_expr + 1), mod, P = 2)
     )
 
     message(paste(Sys.time(), "switch column names to BrNum"))
@@ -112,6 +114,7 @@ load_rse <- function(feat, reg) {
     return(rse)
 }
 
+# requires degredation data
 if (opt$region == "DentateGyrus") {
     ## Based on code by Emily Burke at
     ## /dcl01/ajaffe/data/lab/dg_hippo/twas/compute_weights.R
@@ -181,6 +184,8 @@ if (opt$region == "DentateGyrus") {
 }
 
 rse_file <- file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", "")), "working_rse.Rdata")
+
+
 if (!file.exists(rse_file)) {
     rse <- load_rse(opt$feature, opt$region)
     message(paste(Sys.time(), "saving the rse file for later at", rse_file))
@@ -190,26 +195,21 @@ if (!file.exists(rse_file)) {
     load(rse_file, verbose = TRUE)
 }
 
-if (opt$region == "DentateGyrus") {
-    bim_file <- paste0(
-        "/dcl01/ajaffe/data/lab/dg_hippo/twas/filter_data/LIBD_Brain_Illumina_h650_1M_Omni5M_Omni2pt5_Macrogen_imputed_run2_LDfiltered_",
-        opt$region
-    )
-} else {
-    bim_file <- paste0(
-        "/dcl01/lieber/ajaffe/lab/brainseq_phase2/twas/filter_data/LIBD_Brain_Illumina_h650_1M_Omni5M_Omni2pt5_Macrogen_imputed_run2_LDfiltered_",
-        opt$region
-    )
-}
+# Edit to load the NAc data
+bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
+
+
 message(paste(Sys.time(), "reading the bim file", bim_file))
 bim <- fread(
     paste0(bim_file, ".bim"),
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
+
 bim_gr <- GRanges(
     paste0("chr", bim$chr),
     IRanges(bim$basepair, width = 1)
 )
+
 mcols(bim_gr) <- bim[, -c("chr", "basepair")]
 
 ## Based on http://gusevlab.org/projects/fusion/#computing-your-own-functional-weights
@@ -217,7 +217,7 @@ mcols(bim_gr) <- bim[, -c("chr", "basepair")]
 rse_window <- resize(rowRanges(rse), width(rowRanges(rse)) + 500000 * 2, fix = "center")
 mcols(rse_window) <- NULL
 
-
+# Ignore below
 if (opt$pgconly) {
     load("/dcl01/lieber/ajaffe/lab/brainseq_phase2/twas/pgc_scz2/scz2_anneal_gr_hg19.Rdata", verbose = TRUE)
 
@@ -296,7 +296,7 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     }
 
     base <- paste0(opt$region, "_", opt$feature, "_", i)
-    filt_snp <- paste0("LIBD_Brain_Illumina_h650_1M_Omni5M_Omni2pt5_Macrogen_imputed_run2_LDfiltered_", base, ".txt")
+    filt_snp <- paste0("LIBD_Brain_Illumina_h650_1M_Omni5M_Omni2pt5_Macrogen_imputed_run2_LDfiltered_", base, ".txt") # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
     dir.create(file.path("bim_files", base))
