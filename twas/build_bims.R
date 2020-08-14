@@ -18,14 +18,14 @@ library("styler")
 styler::style_file("build_bims.R", transformers = styler::tidyverse_style(indent_by = 4))
 
 ## getDTthreads() will detect 64 threads in some cases here
-setDTthreads(threads = 1)
+# setDTthreads(threads = 1)
 
 ## Flags that are supplied with RScript
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
     "help", "h", 0, "logical", "Display help",
-    "degradation", "d", F, "boolean", "degradation data present? T/F",
-    "test", "t", F, "boolean", "Test run? T/F"
+    "degradation", "d", 2, "boolean", "degradation data present? T/F",
+    "test", "t", 2, "boolean", "Test run? T/F"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
 
@@ -35,6 +35,11 @@ opt$feat <- "gene"
 # create the NAc_gene dir
 dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 
+# default arguments for flags
+if ( is.null(opt$degradation ) ) { opt$degradation = F }
+if ( is.null(opt$test ) ) { opt$test = F }
+if ( is.null(opt$cores ) ) { opt$cores = 1 }
+
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
@@ -42,9 +47,6 @@ if (!is.null(opt$help)) {
     cat(getopt(spec, usage = TRUE))
     q(status = 1)
 }
-
-stopifnot(opt$region %in% c("NAc"))
-stopifnot(opt$feature %in% c("gene"))
 
 dir.create(opt$region, showWarnings = FALSE)
 dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
@@ -109,7 +111,7 @@ load_rse <- function(feat, reg) {
 }
 
 # requires degredation data - saving for later
-if (opt$deg == TRUE) {
+if (opt$degradation == TRUE) {
 
     library("recount")
     load_rse <- function(feat, reg) {
