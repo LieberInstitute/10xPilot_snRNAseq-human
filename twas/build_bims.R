@@ -249,7 +249,7 @@ dir.create("bim_files", showWarnings = FALSE)
 
 ## For testing
 if(opt$test == T) {
-    rse_test <- head(rse, n = 20)
+    rse <- head(rse, n = 20)
 }
 
 ## For checking if the triplet of bim files exists
@@ -260,7 +260,13 @@ check_bim <- function(x) {
 ## Create the bim files
 i <- seq_len(nrow(rse))
 i.names <- rownames(rse)
-save(i, i.names, file = "i_info.Rdata")
+
+if (file.exists((file.path("i_info.Rdata")))) {
+    load(file.path("i_info.Rdata"))
+} else {
+    save(i, i.names, file = "i_info.Rdata")
+}
+
 
 ## Save the ids
 write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
@@ -271,11 +277,14 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
         message(paste(Sys.time(), "building bim file for i =", i, "corresponding to feature", feat_id))
     }
 
+
     base <- paste0(opt$region, "_", opt$feature, "_", i)
-    filt_snp <- paste0("LIBD_Brain_Illumina_h650_1M_Omni5M_Omni2pt5_Macrogen_imputed_run2_LDfiltered_", base, ".txt") # change this file
+    filt_snp <- paste0("LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_", base, ".txt")
+
+    # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
-    dir.create(file.path("bim_files", base))
+    dir.create(file.path("bim_files", base), showWarnings = F) # Invalid "path" argument??
     filt_bim <- file.path("bim_files", base, filt_bim)
 
     ## Re-use the bim file if it exists already
@@ -286,14 +295,14 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
 
     fwrite(
-        bim[j, "snp"],
+        bim[j, "snp"] %>% unique(),
         file = filt_snp,
         sep = "\t", col.names = FALSE
     )
 
     system(paste(
         "plink --bfile", bim_file, "--extract", filt_snp,
-        "--make-bed --out", filt_bim, "--memory 2000 --threads 1 --silent"
+        "--make-bed --out", filt_bim, "--memory 8000 --threads 12 --silent"
     ))
 
     ## Edit the "phenotype" column of the fam file
