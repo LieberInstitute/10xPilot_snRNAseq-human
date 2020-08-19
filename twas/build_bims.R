@@ -42,8 +42,8 @@ if (!is.null(opt$help)) {
     q(status = 1)
 }
 
-dir.create(opt$region, showWarnings = FALSE)
-dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
+# dir.create(opt$region, showWarnings = FALSE)
+# dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 
 load_rse <- function(feat, reg) {
     message(paste(Sys.time(), "loading expression data"))
@@ -174,11 +174,12 @@ if (opt$degradation == TRUE) {
 
 rse_file <- file.path("NAc_gene/working_rse.Rdata")
 
-if (!file.exists(rse_file)) {
+if (!file.exists(rse_file) == TRUE) {
+    message(paste(Sys.time(), "rse file does not already exist, generating now", rse_file))
     rse <- load_rse(opt$feature, opt$region)
     message(paste(Sys.time(), "saving the rse file for later at", rse_file))
     save(rse, file = rse_file)
-} else {
+} else if (file.exists(rse_file) == TRUE) {
     message(paste(Sys.time(), "loading previous rse file", rse_file))
     load(rse_file, verbose = TRUE)
 }
@@ -191,12 +192,19 @@ bim <- fread(
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
 
+# convert 23 to X, as is std in plink
+bim$chr <- as.character(bim$chr)
+bim[chr == "23",]$chr <- "X"
+
 bim_gr <- GRanges(
     paste0("chr", bim$chr),
     IRanges(bim$basepair, width = 1)
 )
 
 mcols(bim_gr) <- bim[, -c("chr", "basepair")]
+
+# drops non-overlapping chromosomes
+# bim_gr <- bim_gr[seqnames(bim_gr) != "chr23",]
 
 ## Based on http://gusevlab.org/projects/fusion/#computing-your-own-functional-weights
 ## they restrict to 500kb on each side
@@ -213,10 +221,20 @@ rse <- rse[keep_feat, ]
 rse_window <- rse_window[keep_feat, ]
 stopifnot(nrow(rse) == length(rse_window))
 
+# drops non-overlapping chromosomes
+rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"),]
+
+# > seqnames(rowRanges(rse))
+# factor-Rle of length 56888 with 23 runs
+#   Lengths:  5178  3971  2911  2505  2868 ...  2926  1372   795  1281  2332
+#   Values :  chr1  chr2  chr3  chr4  chr5 ... chr19 chr20 chr21 chr22  chrX
+# Levels(25): chr1 chr2 chr3 chr4 chr5 chr6 ... chr20 chr21 chr22 chrX chrY chrM <--- Important?
+
+
 print("Final RSE feature dimensions:")
 print(dim(rse))
 
-rse_file <- file.path("NAc_gene", "subsetted_rse.Rdata")
+rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
 message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
 save(rse, file = rse_file)
 
