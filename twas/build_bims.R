@@ -14,30 +14,24 @@ library("recount")
 library("tidyr")
 library("styler")
 
-## style this script
-styler::style_file("build_bims.R", transformers = styler::tidyverse_style(indent_by = 4))
-
-## getDTthreads() will detect 64 threads in some cases here
-# setDTthreads(threads = 1)
-
 ## Flags that are supplied with RScript
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
     "help", "h", 0, "logical", "Display help",
-    "degradation", "d", 2, "boolean", "degradation data present? T/F",
-    "test", "t", 2, "boolean", "Test run? T/F"
+    "degradation", "d", 2, "logical", "degradation data present? T/F",
+    "test", "t", 2, "logical", "Test run? T/F"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
 
 opt$region <- "NAc"
-opt$feat <- "gene"
+opt$feature <- "gene"
 
 # create the NAc_gene dir
 dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 
 # default arguments for flags
-if ( is.null(opt$degradation ) ) { opt$degradation = F }
-if ( is.null(opt$test ) ) { opt$test = F }
+if ( is.null(opt$degradation ) ) { opt$degradation = FALSE }
+if ( is.null(opt$test ) ) { opt$test = FALSE }
 if ( is.null(opt$cores ) ) { opt$cores = 1 }
 
 
