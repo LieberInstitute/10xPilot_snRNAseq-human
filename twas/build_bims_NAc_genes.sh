@@ -1,11 +1,11 @@
 #!/bin/bash
 #$ -cwd
-#$ -l mem_free=7G,h_vmem=7G,h_fsize=100G
-#$ -pe local 10
+#$ -l mem_free=10G,h_vmem=10G,h_fsize=100G
+#$ -pe local 12
 #$ -N "build_bims_NAc_genes"
 #$ -m e
 
-mkdir -p logs
+# mkdir -p logs
 
 echo "**** Job starts ****"
 date
@@ -25,7 +25,7 @@ module load conda_R/4.0
 module list
 
 ## Compute weights for the given region/feature pair
-Rscript build_bims.R -c 10 -t TRUE
+Rscript build_bims.R -c 12
 
 echo "**** Job ends ****"
 date
