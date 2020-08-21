@@ -25,7 +25,7 @@ module load conda_R/4.0
 module list
 
 ## Compute weights for the given region/feature pair
-Rscript build_bims.R -c 12
+Rscript build_bims.R -c 12 -t $1 -d $2
 
 echo "**** Job ends ****"
 date

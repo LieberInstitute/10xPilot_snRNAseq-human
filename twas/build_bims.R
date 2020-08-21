@@ -32,7 +32,7 @@ dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 # default arguments for flags
 if ( is.null(opt$degradation ) ) { opt$degradation = FALSE }
 if ( is.null(opt$test ) ) { opt$test = FALSE }
-if ( is.null(opt$cores ) ) { opt$cores = 1 }
+if ( is.null(opt$cores ) ) { opt$cores = 12 }
 
 
 ## if help was asked for print a friendly message

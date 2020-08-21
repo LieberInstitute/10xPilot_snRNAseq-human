@@ -26,3 +26,5 @@ R_batchsub.sh
 twas/filter_data/.Rhistory
 
 twas/.Rhistory
+
+.DS_Store
