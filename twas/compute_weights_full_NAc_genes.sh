@@ -1,14 +1,9 @@
 #!/bin/bash
-
-## Usage:
-# sh compute_weights_indv.sh
-# what's ${NUM}?
 #$ -cwd
 #$ -l bluejay,mem_free=4G,h_vmem=4G,h_fsize=100G
 #$ -N compute_weights_full_NAc_genes
 #$ -o ./logs/NAc/genes/compute_weights_full_NAc_genes.\$TASK_ID.txt
 #$ -e ./logs/NAc/genes/compute_weights_full_NAc_genes.\$TASK_ID.txt
-# -t 300001-375000 ???????????????????
 #$ -t 1-${NUM}
 #$ -tc 40
 #$ -m a
@@ -30,7 +25,8 @@ module load conda_R/4.0
 ## List current modules
 module list
 
-mkdir -p logs
+# relative path for FILELIST
+FILELIST=$(echo "twas/NAc_gene/input_ids.txt")
 
 ## File id and feature name
 FEATURENUM=\$(awk 'BEGIN {FS="\t"} {print \$1}' ${FILELIST} | awk "NR==\${SGE_TASK_ID}")
