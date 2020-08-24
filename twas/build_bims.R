@@ -14,6 +14,8 @@ library("recount")
 library("tidyr")
 library("styler")
 
+setDTthreads(threads = 1)
+
 ## Flags that are supplied with RScript
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
@@ -33,7 +35,6 @@ dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 if ( is.null(opt$degradation ) ) { opt$degradation = FALSE }
 if ( is.null(opt$test ) ) { opt$test = FALSE }
 if ( is.null(opt$cores ) ) { opt$cores = 12 }
-
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
@@ -184,6 +185,9 @@ if (!file.exists(rse_file) == TRUE) {
     load(rse_file, verbose = TRUE)
 }
 
+# file below may need to be edited to make snp names unique
+# maybe edit script that makes this bim file to make unique snps
+# make.names()
 bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))
@@ -262,7 +266,7 @@ i <- seq_len(nrow(rse))
 i.names <- rownames(rse)
 
 if (file.exists((file.path("i_info.Rdata")))) {
-    load(file.path("i_info.Rdata"))
+    load(file.path("i_info.Rdata"), verbose = T)
 } else {
     save(i, i.names, file = "i_info.Rdata")
 }
@@ -284,7 +288,7 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
-    dir.create(file.path("bim_files", base), showWarnings = F) # Invalid "path" argument??
+    dir.create(file.path("bim_files", base), showWarnings = F)
     filt_bim <- file.path("bim_files", base, filt_bim)
 
     ## Re-use the bim file if it exists already
@@ -295,14 +299,14 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
 
     fwrite(
-        bim[j, "snp"] %>% unique(),
+        bim[j, "snp"], # %>% unique()
         file = filt_snp,
         sep = "\t", col.names = FALSE
     )
 
     system(paste(
         "plink --bfile", bim_file, "--extract", filt_snp,
-        "--make-bed --out", filt_bim, "--memory 8000 --threads 12 --silent"
+        "--make-bed --out", filt_bim, "--memory 8000 --threads 1 --silent"
     ))
 
     ## Edit the "phenotype" column of the fam file
