@@ -8,7 +8,7 @@ library('SummarizedExperiment')
 library('sessioninfo')
 
 ## To avoid issues with running this code on qsub
-#data.table::setDTthreads(threads = 1)
+data.table::setDTthreads(threads = 1)
 
 ## Find the samples for this project
 load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)

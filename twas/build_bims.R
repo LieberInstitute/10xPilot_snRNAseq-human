@@ -196,6 +196,9 @@ bim <- fread(
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
 
+newsnp <- make.names(bim$snp, unique = T) # make snp names unique, see 188 - 190
+bim$snp <- newsnp
+
 # convert 23 to X, as is std in plink
 bim$chr <- as.character(bim$chr)
 bim[chr == "23",]$chr <- "X"
