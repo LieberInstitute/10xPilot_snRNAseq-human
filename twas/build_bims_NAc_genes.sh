@@ -42,7 +42,7 @@ else
   Rscript build_bims.R -c 12;
 fi
 
-
+mv build_bims_NAc_genes.* logs/
 
 echo "**** Job ends ****"
 date
