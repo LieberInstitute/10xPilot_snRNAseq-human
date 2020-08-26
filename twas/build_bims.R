@@ -241,7 +241,7 @@ rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"),]
 print("Final RSE feature dimensions:")
 print(dim(rse))
 
-rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
+rse_file_subset <- file.path("NAc_genes/subsetted_rse.Rdata")
 message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
 save(rse, file = rse_file)
 
