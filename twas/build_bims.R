@@ -196,8 +196,8 @@ bim <- fread(
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
 
-newsnp <- make.names(bim$snp, unique = T) # make snp names unique, see 188 - 190
-bim$snp <- newsnp
+# newsnp <- make.names(bim$snp, unique = T) # make snp names unique, see 188 - 190
+# bim$snp <- newsnp
 
 # convert 23 to X, as is std in plink
 bim$chr <- as.character(bim$chr)
@@ -209,9 +209,6 @@ bim_gr <- GRanges(
 )
 
 mcols(bim_gr) <- bim[, -c("chr", "basepair")]
-
-# drops non-overlapping chromosomes
-# bim_gr <- bim_gr[seqnames(bim_gr) != "chr23",]
 
 ## Based on http://gusevlab.org/projects/fusion/#computing-your-own-functional-weights
 ## they restrict to 500kb on each side
@@ -274,7 +271,6 @@ if (file.exists((file.path("i_info.Rdata")))) {
     save(i, i.names, file = "i_info.Rdata")
 }
 
-
 ## Save the ids
 write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
 
@@ -309,7 +305,7 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
 
     system(paste(
         "plink --bfile", bim_file, "--extract", filt_snp,
-        "--make-bed --out", filt_bim, "--memory 8000 --threads 1 --silent"
+        "--make-bed --out", filt_bim, "--memory 8000 --threads 1"
     ))
 
     ## Edit the "phenotype" column of the fam file

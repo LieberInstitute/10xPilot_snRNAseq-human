@@ -3,8 +3,6 @@
 #$ -l mem_free=10G,h_vmem=10G,h_fsize=100G
 #$ -pe local 12
 #$ -N "build_bims_NAc_genes"
-#$ -o logs/NAc_genes/build_bims_full_NAc_genes.txt
-#$ -e logs/NAc_genes/build_bims_full_NAc_genes.txt
 #$ -m e
 
 # mkdir -p logs
