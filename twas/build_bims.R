@@ -185,9 +185,6 @@ if (!file.exists(rse_file) == TRUE) {
     load(rse_file, verbose = TRUE)
 }
 
-# file below may need to be edited to make snp names unique
-# maybe edit script that makes this bim file to make unique snps
-# make.names()
 bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))

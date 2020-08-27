@@ -51,21 +51,21 @@ system(paste("plink --bfile", libd_bfile,
 	"--keep", samp_file, "--make-bed --out",
 	newbfile, " --memory 100000 --biallelic-only"))
 
-message(paste(Sys.time(), "reading the bim file", newbfile))
-bim <- fread(
-    paste0(newbfile, ".bim"),
-    col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
-)
-
-# > table(duplicated(bim$snp))
+# message(paste(Sys.time(), "reading the bim file", newbfile))
+# bim <- fread(
+#     paste0(newbfile, ".bim"),
+#     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
+# )
 #
-#    FALSE     TRUE
-# 10943065    44114
-
-newsnp <- make.names(bim$snp, unique = T)
-bim$snp <- newsnp
-
-fwrite(bim, file = paste0(newbfile, ".bim"), sep = " ", col.names = FALSE)
+# # > table(duplicated(bim$snp))
+# #
+# #    FALSE     TRUE
+# # 10943065    44114
+#
+# newsnp <- make.names(bim$snp, unique = T)
+# bim$snp <- newsnp
+#
+# fwrite(bim, file = paste0(newbfile, ".bim"), sep = " ", col.names = FALSE)
 
 
 ## Reproducibility information
