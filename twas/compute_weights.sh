@@ -1,44 +1,10 @@
 #!/bin/bash
-
-## Usage:
-# sh compute_weights.sh
-
-mkdir -p logs
-
-CORES=10
-
-for region in DLPFC HIPPO #DentateGyrus
-do
-    
-    # for feature in gene exon jxn tx
-    for feature in exon jxn
-    do
-        echo "$feature"
-        if [ "${feature}" == "gene" ] 
-        then
-            COREMEM=4
-        elif [ "${feature}" == "exon" ] 
-        then
-            COREMEM=10
-        elif [ "$feature" == 'jxn' ]
-        then
-            COREMEM=10
-        else
-            COREMEM=6
-        fi
-        
-        SHORT="compute_weights_full_${region}_${feature}"
-
-        # Construct shell file
-        echo "Creating script for chromosome ${region} at the ${feature} level for ${CORES} cores with ${COREMEM}G of mem per core"
-        cat > .${SHORT}.sh <<EOF
-#!/bin/bash
 #$ -cwd
-#$ -l mem_free=${COREMEM}G,h_vmem=${COREMEM}G,h_fsize=100G
-#$ -pe local ${CORES}
-#$ -N ${SHORT}
-#$ -o ./logs/${SHORT}.txt
-#$ -e ./logs/${SHORT}.txt
+#$ -l mem_free=4G,h_vmem=4G,h_fsize=100G
+#$ -pe local 10
+#$ -N compute_weights_full_NAc_genes
+#$ -o ./logs/compute_weights_full_NAc_genes.txt
+#$ -e ./logs/compute_weights_full_NAc_genes.txt
 #$ -m a
 
 echo "**** Job starts ****"
@@ -59,13 +25,7 @@ module load conda_R/3.6
 module list
 
 ## Compute weights for the given region/feature pair
-Rscript compute_weights.R -r ${region} -f ${feature} -c ${CORES} -p FALSE
+Rscript compute_weights.R -c 10 
 
 echo "**** Job ends ****"
 date
-EOF
-        call="qsub .${SHORT}.sh"
-        echo $call
-        $call
-    done
-done

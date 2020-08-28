@@ -8,15 +8,16 @@ library("sessioninfo")
 library("getopt")
 library("BiocParallel")
 
-## Specify parameters
+## Flags that are supplied with RScript
 spec <- matrix(c(
-    "region", "r", 1, "character", "Either DLPFC, HIPPO or DentateGyrus",
-    "feature", "f", 1, "character", "One of: gene, exon, jxn, tx",
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
     "pgconly", "p", 1, "logical", "Subset to only PGC loci?",
     "help", "h", 0, "logical", "Display help"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
+
+opt$region <- "NAc"
+opt$feat <- "gene"
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
@@ -24,23 +25,17 @@ if (!is.null(opt$help)) {
     cat(getopt(spec, usage = TRUE))
     q(status = 1)
 }
-
-## For testing
+## Not sure what if(FALSE) really does
 if (FALSE) {
-    opt <- list(region = "HIPPO", feature = "gene", cores = 1, "pgconly" = TRUE)
-    opt <- list(region = "HIPPO", feature = "gene", cores = 1, "pgconly" = FALSE)
-    opt <- list(region = "DLPFC", feature = "gene", cores = 1, "pgconly" = FALSE)
-    opt <- list(region = "HIPPO", feature = "gene", cores = 3, "pgconly" = FALSE)
     # feat = opt$feature; reg = opt$reg
-
-    opt <- list(region = "HIPPO", feature = "exon", cores = 3, "pgconly" = FALSE)
+    opt <- list(region = "NAc", feature = "gene", cores = 3, "pgconly" = FALSE)
 }
 
-stopifnot(opt$region %in% c("HIPPO", "DLPFC", "DentateGyrus"))
-stopifnot(opt$feature %in% c("gene", "exon", "jxn", "tx"))
+stopifnot(opt$region %in% c("NAc"))
+stopifnot(opt$feature %in% c("gene"))
 
 ## Use the rse file from build_bims.R
-rse_file <- file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", "")), "subsetted_rse.Rdata")
+rse_file <- file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", "")), "subsetted_rse.Rdata") # can't make .Rdata
 stopifnot(file.exists(rse_file))
 
 
