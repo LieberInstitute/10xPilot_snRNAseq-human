@@ -235,9 +235,14 @@ rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"),]
 print("Final RSE feature dimensions:")
 print(dim(rse))
 
-rse_file_subset <- file.path("NAc_genes/subsetted_rse.Rdata")
-message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
-save(rse, file = rse_file)
+rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
+
+if (!file.exists(rse_file_subset)){
+    message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
+    save(rse, file = rse_file)
+} else {
+    message(paste(Sys.time(), "subsetted rse file already exists:", rse_file))
+}
 
 ## Simplify RSE file to reduce mem
 assays(rse) <- list("clean_expr" = assays(rse)$clean_expr)
@@ -270,6 +275,9 @@ if (file.exists((file.path("i_info.Rdata")))) {
 
 ## Save the ids
 write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
+# rm(b, q, feat_id, base, j, filt_fam, m)
+# setwd("NAc_gene/")
+# load("pre-bimFilesFxn.RData")
 
 bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     if (i == 1 || i %% 1000 == 0) {
@@ -288,9 +296,9 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     filt_bim <- file.path("bim_files", base, filt_bim)
 
     ## Re-use the bim file if it exists already
-    if (check_bim(filt_bim)) {
-        return(TRUE)
-    }
+    # if (check_bim(filt_bim)) {
+    #     return(TRUE)
+    # }
 
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
 
