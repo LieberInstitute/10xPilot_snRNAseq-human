@@ -236,8 +236,8 @@ print(dim(rse))
 rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
 
 if (!file.exists(rse_file_subset)){
-    message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
-    save(rse, file = rse_file)
+    message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file_subset))
+    save(rse, file = rse_file_subset)
 } else {
     message(paste(Sys.time(), "subsetted rse file already exists:", rse_file))
 }
