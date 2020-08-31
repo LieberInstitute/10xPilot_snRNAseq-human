@@ -185,16 +185,14 @@ if (!file.exists(rse_file) == TRUE) {
     load(rse_file, verbose = TRUE)
 }
 
-bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
+# using bim file with duplicate snp ids... make.names() doesn't work
+bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/duplicate_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_duplicateSNPs"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))
 bim <- fread(
     paste0(bim_file, ".bim"),
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
-
-# newsnp <- make.names(bim$snp, unique = T) # make snp names unique, see 188 - 190
-# bim$snp <- newsnp
 
 # convert 23 to X, as is std in plink
 bim$chr <- as.character(bim$chr)
