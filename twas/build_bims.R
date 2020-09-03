@@ -43,7 +43,7 @@ dir.create(paste0(opt$region, "_", opt$feature), showWarnings = FALSE)
 
 # default arguments for flags
 if (is.null(opt$degradation)) {
-    opt$degradation <- TRUE
+    opt$degradation <- FALSE
 }
 if (is.null(opt$test)) {
     opt$test <- FALSE
@@ -67,69 +67,8 @@ print(opt)
 # dir.create(opt$region, showWarnings = FALSE)
 # dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 
-load_rse <- function(feat, reg) {
-    message(paste(Sys.time(), "loading expression data"))
-
-    # expmnt data
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
-
-    rse <- rse_gene
-    assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
-
-    # genotype file, contains mds object
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = TRUE)
-
-    # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
-
-    table(rse$BrNum %in% rownames(mds)) # matching samples == 195
-    # T = 195
-
-    mds <- na.omit(mds) # omits nas, inits test var
-
-    # subset rows in mds that are present as samples in rse
-    mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
-        na.omit()
-
-    dim(mds)
-
-    dim(rse)
-
-    # only keep columns in rse that are present as rows in mds
-    rse <- rse[, rse$BrNum %in% rownames(mds)]
-
-    stopifnot(identical(nrow(mds), ncol(rse)))
-
-    mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
-
-    pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
-    kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
-
-    genePCs <- pcaGene$x[, 1:kGene]
-
-    pcs <- genePCs
-
-    colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
-
-    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-        data = colData(rse)
-    )
-
-    message(paste(Sys.time(), "cleaning expression"))
-    assays(rse) <- List(
-        "raw_expr" = assays(rse)$raw_expr,
-        "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
-    )
-
-    message(paste(Sys.time(), "switch column names to BrNum"))
-    stopifnot(!any(duplicated(colnames(rse))))
-    colnames(rse) <- colData(rse)$BrNum
-
-    return(rse)
-}
-
 # requires degredation data - saving for later
 if (opt$degradation == TRUE) {
-    library("recount")
     load_rse <- function(feat, reg) {
         message(paste(Sys.time(), "loading expression data"))
         load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
@@ -192,6 +131,66 @@ if (opt$degradation == TRUE) {
 
         return(rse)
     }
+} else {
+    load_rse <- function(feat, reg) {
+        message(paste(Sys.time(), "loading expression data"))
+
+        # expmnt data
+        load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
+
+        rse <- rse_gene
+        assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
+
+        # genotype file, contains mds object
+        load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = TRUE)
+
+        # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
+
+        table(rse$BrNum %in% rownames(mds)) # matching samples == 195
+        # T = 195
+
+        mds <- na.omit(mds) # omits nas, inits test var
+
+        # subset rows in mds that are present as samples in rse
+        mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
+            na.omit()
+
+        dim(mds)
+
+        dim(rse)
+
+        # only keep columns in rse that are present as rows in mds
+        rse <- rse[, rse$BrNum %in% rownames(mds)]
+
+        stopifnot(identical(nrow(mds), ncol(rse)))
+
+        mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
+
+        pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
+        kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
+
+        genePCs <- pcaGene$x[, 1:kGene]
+
+        pcs <- genePCs
+
+        colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
+
+        mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
+            data = colData(rse)
+        )
+
+        message(paste(Sys.time(), "cleaning expression"))
+        assays(rse) <- List(
+            "raw_expr" = assays(rse)$raw_expr,
+            "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
+        )
+
+        message(paste(Sys.time(), "switch column names to BrNum"))
+        stopifnot(!any(duplicated(colnames(rse))))
+        colnames(rse) <- colData(rse)$BrNum
+
+        return(rse)
+    }    
 }
 
 rse_file <- file.path("NAc_gene/working_rse.Rdata")
