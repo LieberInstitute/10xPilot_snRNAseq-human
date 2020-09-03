@@ -5,7 +5,7 @@
 #$ -N "build_bims_NAc_genes"
 #$ -m e
 #$ -j y
-#$ -o logs/build_bims_NAc_genes_${JOB_ID}.txt
+#$ -o logs/build_bims_NAc_genes_$JOB_ID.txt
 
 echo "**** Job starts ****"
 date
