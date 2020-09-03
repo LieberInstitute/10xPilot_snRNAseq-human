@@ -30,11 +30,16 @@ spec <- matrix(c(
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
 
+## For an interactive test
+if(FALSE) {
+    opt <- list("cores" = 1, "degradation" = TRUE, "test" = TRUE)
+}
+
 opt$region <- "NAc"
 opt$feature <- "gene"
 
 # create the NAc_gene dir
-dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
+dir.create(paste0(opt$region, "_", opt$feature), showWarnings = FALSE)
 
 # default arguments for flags
 if (is.null(opt$degradation)) {
