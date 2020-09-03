@@ -261,7 +261,7 @@ dir.create("snp_files", showWarnings = FALSE)
 dir.create("bim_files", showWarnings = FALSE)
 
 ## For testing
-if (opt$test == T) {
+if (opt$test == TRUE) {
     rse <- head(rse, n = 20)
 }
 
