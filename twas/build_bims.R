@@ -25,8 +25,8 @@ setDTthreads(threads = 1)
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
     "help", "h", 0, "logical", "Display help",
-    "degradation", "d", 2, "logical", "degradation data present? T/F",
-    "test", "t", 2, "logical", "Test run? T/F"
+    "degradation", "d", 2, "logical", "degradation data present? TRUE/FALSE",
+    "test", "t", 2, "logical", "Test run? TRUE/FALSE"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
 
@@ -44,7 +44,8 @@ if (is.null(opt$test)) {
     opt$test <- FALSE
 }
 if (is.null(opt$cores)) {
-    opt$cores <- 12
+    ## Default to 1 core
+    opt$cores <- 1
 }
 
 ## if help was asked for print a friendly message
@@ -61,13 +62,13 @@ load_rse <- function(feat, reg) {
     message(paste(Sys.time(), "loading expression data"))
 
     # expmnt data
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = T)
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
 
     rse <- rse_gene
     assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
 
     # genotype file, contains mds object
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = T)
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = TRUE)
 
     # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
 
@@ -204,7 +205,7 @@ bim <- fread(
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
 
-# newsnp <- make.names(bim$snp, unique = T) # make snp names unique, see 188 - 190
+# newsnp <- make.names(bim$snp, unique = TRUE) # make snp names unique, see 188 - 190
 # bim$snp <- newsnp
 
 # convert 23 to X, as is std in plink
@@ -274,7 +275,7 @@ i <- seq_len(nrow(rse))
 i.names <- rownames(rse)
 
 if (file.exists((file.path("i_info.Rdata")))) {
-    load(file.path("i_info.Rdata"), verbose = T)
+    load(file.path("i_info.Rdata"), verbose = TRUE)
 } else {
     save(i, i.names, file = "i_info.Rdata")
 }
@@ -295,7 +296,7 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
-    dir.create(file.path("bim_files", base), showWarnings = F)
+    dir.create(file.path("bim_files", base), showWarnings = FALSE)
     filt_bim <- file.path("bim_files", base, filt_bim)
 
     ## Re-use the bim file if it exists already
