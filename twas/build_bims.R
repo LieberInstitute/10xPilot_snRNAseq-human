@@ -291,6 +291,10 @@ if (file.exists((file.path("i_info.Rdata")))) {
     save(i, i.names, file = "i_info.Rdata")
 }
 
+message(paste(Sys.time(), "length of i and i.names"))
+print(length(i))
+print(length(i.names))
+
 ## Save the ids
 write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
 
