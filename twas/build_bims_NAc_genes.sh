@@ -4,8 +4,8 @@
 #$ -pe local 12
 #$ -N "build_bims_NAc_genes"
 #$ -m e
-
-# mkdir -p logs
+#$ -j y
+#$ -o logs/build_bims_NAc_genes.txt
 
 echo "**** Job starts ****"
 date
@@ -39,8 +39,6 @@ then
 else
   Rscript build_bims.R -c 12;
 fi
-
-mv *${JOB_ID}* logs/
 
 echo "**** Job ends ****"
 date
