@@ -40,8 +40,8 @@ fwrite(
     sep = '\t', col.names = FALSE
 )
 newbfile <- paste0(
-    '/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_',
-    "NAc_Nicotine"
+    '/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/duplicate_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_',
+    "NAc_Nicotine_duplicateSNPs"
 )
 
 ## Extract

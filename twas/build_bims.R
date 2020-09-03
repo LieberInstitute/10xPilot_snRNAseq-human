@@ -208,16 +208,14 @@ if (!file.exists(rse_file) == TRUE) {
 message(paste(Sys.time(), "RSE dimensions"))
 print(dim(rse))
 
-bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
+# using bim file with duplicate snp ids... make.names() doesn't work
+bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/duplicate_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_duplicateSNPs"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))
 bim <- fread(
     paste0(bim_file, ".bim"),
     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
 )
-
-# newsnp <- make.names(bim$snp, unique = TRUE) # make snp names unique, see 188 - 190
-# bim$snp <- newsnp
 
 # convert 23 to X, as is std in plink
 bim$chr <- as.character(bim$chr)
@@ -258,9 +256,14 @@ rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"), ]
 print("Final RSE feature dimensions:")
 print(dim(rse))
 
-rse_file_subset <- file.path("NAc_genes/subsetted_rse.Rdata")
-message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file))
-save(rse, file = rse_file)
+rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
+
+if (!file.exists(rse_file_subset)){
+    message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file_subset))
+    save(rse, file = rse_file_subset)
+} else {
+    message(paste(Sys.time(), "subsetted rse file already exists:", rse_file))
+}
 
 ## Simplify RSE file to reduce mem
 assays(rse) <- list("clean_expr" = assays(rse)$clean_expr)
@@ -297,6 +300,9 @@ print(length(i.names))
 
 ## Save the ids
 write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE)
+# rm(b, q, feat_id, base, j, filt_fam, m)
+# setwd("NAc_gene/")
+# load("pre-bimFilesFxn.RData")
 
 bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     if (i == 1 || i %% 1000 == 0) {
@@ -315,9 +321,9 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     filt_bim <- file.path("bim_files", base, filt_bim)
 
     ## Re-use the bim file if it exists already
-    if (check_bim(filt_bim)) {
-        return(TRUE)
-    }
+    # if (check_bim(filt_bim)) {
+    #     return(TRUE)
+    # }
 
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
 
