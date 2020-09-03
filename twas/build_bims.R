@@ -38,7 +38,7 @@ dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 
 # default arguments for flags
 if (is.null(opt$degradation)) {
-    opt$degradation <- FALSE
+    opt$degradation <- TRUE
 }
 if (is.null(opt$test)) {
     opt$test <- FALSE
@@ -196,6 +196,8 @@ if (!file.exists(rse_file) == TRUE) {
     message(paste(Sys.time(), "loading previous rse file", rse_file))
     load(rse_file, verbose = TRUE)
 }
+message(paste(Sys.time(), "RSE dimensions"))
+print(dim(rse))
 
 bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
 
