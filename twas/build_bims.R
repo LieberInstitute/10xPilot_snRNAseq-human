@@ -37,9 +37,15 @@ opt$feature <- "gene"
 dir.create(paste0(opt$region, "_", opt$feature), showWarnings = F)
 
 # default arguments for flags
-if ( is.null(opt$degradation ) ) { opt$degradation = FALSE }
-if ( is.null(opt$test ) ) { opt$test = FALSE }
-if ( is.null(opt$cores ) ) { opt$cores = 12 }
+if (is.null(opt$degradation)) {
+    opt$degradation <- FALSE
+}
+if (is.null(opt$test)) {
+    opt$test <- FALSE
+}
+if (is.null(opt$cores)) {
+    opt$cores <- 12
+}
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
@@ -61,7 +67,7 @@ load_rse <- function(feat, reg) {
     assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
 
     # genotype file, contains mds object
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose=T)
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = T)
 
     # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
 
@@ -71,7 +77,7 @@ load_rse <- function(feat, reg) {
     mds <- na.omit(mds) # omits nas, inits test var
 
     # subset rows in mds that are present as samples in rse
-    mds <- mds[rownames(mds) %in% rse$BrNum,] %>%
+    mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
         na.omit()
 
     dim(mds)
@@ -79,23 +85,24 @@ load_rse <- function(feat, reg) {
     dim(rse)
 
     # only keep columns in rse that are present as rows in mds
-    rse <- rse[,rse$BrNum %in% rownames(mds)]
+    rse <- rse[, rse$BrNum %in% rownames(mds)]
 
     stopifnot(identical(nrow(mds), ncol(rse)))
 
-    mod = model.matrix(~ Sex + as.matrix(mds [,1:5]), data = colData(rse))
+    mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
 
-    pcaGene = prcomp(t(log2(assays(rse)$raw_expr + 1)))
-    kGene = num.sv(log2(assays(rse)$raw_expr + 1), mod)
+    pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
+    kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
 
-    genePCs = pcaGene$x[,1:kGene]
+    genePCs <- pcaGene$x[, 1:kGene]
 
     pcs <- genePCs
 
-    colData(rse) <- cbind(colData(rse), pcs, mds) #cbind mds[,1:]
+    colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
 
     mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-        data = colData(rse))
+        data = colData(rse)
+    )
 
     message(paste(Sys.time(), "cleaning expression"))
     assays(rse) <- List(
@@ -112,7 +119,6 @@ load_rse <- function(feat, reg) {
 
 # requires degredation data - saving for later
 if (opt$degradation == TRUE) {
-
     library("recount")
     load_rse <- function(feat, reg) {
         message(paste(Sys.time(), "loading expression data"))
@@ -203,7 +209,7 @@ bim <- fread(
 
 # convert 23 to X, as is std in plink
 bim$chr <- as.character(bim$chr)
-bim[chr == "23",]$chr <- "X"
+bim[chr == "23", ]$chr <- "X"
 
 bim_gr <- GRanges(
     paste0("chr", bim$chr),
@@ -228,7 +234,7 @@ rse_window <- rse_window[keep_feat, ]
 stopifnot(nrow(rse) == length(rse_window))
 
 # drops non-overlapping chromosomes
-rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"),]
+rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"), ]
 
 # > seqnames(rowRanges(rse))
 # factor-Rle of length 56888 with 23 runs
@@ -254,7 +260,7 @@ dir.create("snp_files", showWarnings = FALSE)
 dir.create("bim_files", showWarnings = FALSE)
 
 ## For testing
-if(opt$test == T) {
+if (opt$test == T) {
     rse <- head(rse, n = 20)
 }
 
