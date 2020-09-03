@@ -12,8 +12,13 @@ library("BiocParallel")
 library("sva")
 library("recount")
 library("tidyr")
-library("styler")
 
+## For styling this script
+# library("styler")
+# styler::style_file("build_bims.R", transformers = biocthis::bioc_style())
+
+## Without this, the memory use blows up
+## getDTthreads() will detect 64 threads in some cases here
 setDTthreads(threads = 1)
 
 ## Flags that are supplied with RScript
