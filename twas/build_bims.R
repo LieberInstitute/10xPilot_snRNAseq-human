@@ -190,7 +190,7 @@ if (opt$degradation == TRUE) {
         colnames(rse) <- colData(rse)$BrNum
 
         return(rse)
-    }    
+    }
 }
 
 rse_file <- file.path("NAc_gene/working_rse.Rdata")
@@ -302,13 +302,13 @@ write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, c
 # rm(b, q, feat_id, base, j, filt_fam, m)
 # setwd("NAc_gene/")
 # load("pre-bimFilesFxn.RData")
+# save.image(file = "testing_bim_files.RData")
 
 bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     if (i == 1 || i %% 1000 == 0) {
         message("*******************************************************************************")
         message(paste(Sys.time(), "building bim file for i =", i, "corresponding to feature", feat_id))
     }
-
 
     base <- paste0(opt$region, "_", opt$feature, "_", i)
     filt_snp <- paste0("LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_", base, ".txt")
@@ -332,34 +332,33 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
         sep = "\t", col.names = FALSE
     )
 
-    system(paste(
-        "plink --bfile", bim_file, "--extract", filt_snp,
-        "--make-bed --out", filt_bim, "--memory 8000 --threads 1"
-    ))
+    # system(paste(
+    #     "plink --bfile", bim_file, "--extract", filt_snp,
+    #     "--make-bed --out", filt_bim, "--memory 8000 --threads 1"
+    # ))
+    #
+    # ## Edit the "phenotype" column of the fam file
+    # filt_fam <- fread(paste0(filt_bim, ".fam"),
+    #     col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
+    # )
+    #
+    # ## Note BrNums might be duplicated, hence the use of match()
+    # m <- match(filt_fam$famid, colData(rse)$BrNum)
+    #
+    # ## Use cleaned expression for now. Could be an argument for the code.
+    # filt_fam$phenotype <- assays(rse)$clean_expr[i, m]
+    #
+    # ## Ovewrite fam file (for the phenotype info)
+    # fwrite(filt_fam, file = paste0(filt_bim, ".fam"), sep = " ", col.names = FALSE)
 
-    ## Edit the "phenotype" column of the fam file
-    filt_fam <- fread(paste0(filt_bim, ".fam"),
-        col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
-    )
-
-    ## Note BrNums might be duplicated, hence the use of match()
-    m <- match(filt_fam$famid, colData(rse)$BrNum)
-
-    ## Use cleaned expression for now. Could be an argument for the code.
-    filt_fam$phenotype <- assays(rse)$clean_expr[i, m]
-
-    ## Ovewrite fam file (for the phenotype info)
-    fwrite(filt_fam, file = paste0(filt_bim, ".fam"), sep = " ", col.names = FALSE)
-
-    ## Clean up
-    if (clean) unlink(filt_snp)
-
-    return(check_bim(filt_bim))
+    # ## Clean up
+    # if (clean) unlink(filt_snp)
+    #
+    # return(check_bim(filt_bim))
 }, i, i.names, BPPARAM = MulticoreParam(workers = opt$cores), SIMPLIFY = FALSE)
 
 message(paste(Sys.time(), "finished creating the bim files"))
 stopifnot(all(unlist(bim_files)))
-
 
 ## Reproducibility information
 print("Reproducibility information:")
