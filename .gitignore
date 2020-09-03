@@ -10,21 +10,40 @@ ref_*
 pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_Apr2020.pdf
 pdfs/exploration/regionSpecific_NAc-ALL-n5_top20markers_logExprs_pt-coding_Apr2020.pdf
 pdfs/exploration/regionSpecific_NAc-ALL-n5_top40markers*
+pdfs/exploration/Habib_DroNc-seq
+pdfs/exploration/Velmeshev-ASD_pfc-acc
+pdfs/exploration/anova_mathys-PFC-BA-10_pseudo-bulked_Jul2020.pdf
+
 
 ## Files to share with Day Lab (via Dropbox)
 pdfs/exploration/DayLab-ratNAc/10xCounts/
 
 
-## Logs
+## Logs and Rdata files
 logs/*
 rdas
+
 
 ## Misc
 R_batchsub.sh
 .RData
+.Rhistory
 
 twas/filter_data/.Rhistory
 
 twas/.Rhistory
 
 .DS_Store
+
+
+## MAGMA stuff other than plotting results
+MAGMA/*.loc
+MAGMA/GWAS_Results
+MAGMA/SNP_Data
+MAGMA/*MarkerSets_fdr1e-12.txt
+MAGMA/logs
+MAGMA/hg38ToHg19.over.chain
+
+
+## AnJa LDSC work
+LDSC/*
