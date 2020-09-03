@@ -55,6 +55,10 @@ if (!is.null(opt$help)) {
     q(status = 1)
 }
 
+## Show the options used
+message(paste(Sys.time(), "options used"))
+print(opt)
+
 # dir.create(opt$region, showWarnings = FALSE)
 # dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 

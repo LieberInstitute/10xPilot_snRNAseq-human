@@ -189,8 +189,24 @@ write.table(snploc.smokInit, file="./GWAS_Results/SmokingInitiation.snploc",
 rm(list=ls(pattern=".smokInit"))
 
 
+## GWAS for coronary artery disease (2015, downloaded to /GWAS_Results/)
+ #    added MNT 02Sep2020 for 'negative' control
+sumStats.CAD <- read.table("./GWAS_Results/cad.add.160614.website.txt", header=T)
+class(sumStats.CAD)
+dim(sumStats.CAD)
+head(sumStats.CAD)
+unique(sumStats.CAD$CHROM)  # only 1:22 as well
+snploc.CAD <- sumStats.CAD[ ,c(1:3)]
+colnames(snploc.CAD) <- c("SNP", "CHR", "BP")
+write.table(snploc.CAD, file="./GWAS_Results/CoronaryArteryDisease.snploc",
+            sep="\t", col.names=T, row.names=F, quote=F)
 
+# Add column for N_estim_mnt: using '60,801 CAD cases and 123,504 controls' across 48 studies
+sumStats.CAD$N_estim_mnt <- round(sumStats.CAD$n_studies / 48 * (60801+123504), 0)
+write.table(sumStats.CAD, file="./GWAS_Results/CoronaryArteryDisease_Nikpay2015_MNTaddn.txt",
+            sep="\t", col.names=T, row.names=F, quote=F)
 
+rm(list=ls(pattern=".CAD"))
 
 ### Gene marker sets (analagous to layer marker setup) ==============
   # We'll just use the 'enriched' stats--i.e. '1vAll'

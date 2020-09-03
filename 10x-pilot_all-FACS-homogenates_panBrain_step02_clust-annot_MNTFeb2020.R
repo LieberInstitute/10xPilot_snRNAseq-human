@@ -689,8 +689,121 @@ plotReducedDim(sce.all.tsne.59pcs, dimred="PCA", ncomponents=3, colour_by="cellT
 dev.off()
 
 
+    ### MNT update 31Aug2020 === ===
+      # Facet some different iterations of this 'best' tSNE: maybe by region
+    
+    pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_faceted_Aug2020.pdf", width=9)
+    plotTSNE(sce.all.tsne.59pcs, colour_by="region", point_alpha=0.5, point_size=4.0, theme_size=22) +
+      facet_wrap(~ sce.all.tsne.59pcs$region)
+      ggtitle("t-SNE on top 59 PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
+    dev.off()
+    
+    ## More manually to have shadow of those for each region ======
+    custom.cols <- c("DLPFC"=tableau20[1],
+                  "sACC"=tableau20[3],
+                  "HPC"=tableau20[5],
+                  "AMY"=tableau20[7],
+                  "NAc"=tableau20[9])
+    
+    sce.temp <- sce.all.tsne.59pcs
+    
+    ## DLPFC
+    # Reorder to plot the region nuclei last
+    sce.temp <- cbind(sce.temp[ ,sce.temp$region!="dlpfc"],
+                      sce.temp[ ,sce.temp$region=="dlpfc"])
+    # Grey out other regions
+    sce.temp$reg.temp <- ifelse(sce.temp$region=="dlpfc", "DLPFC", NA)
+    
+    p.dlpfc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
+             add_legend=FALSE) +
+      scale_fill_manual(values=custom.cols["DLPFC"]) + ggtitle("DLPFC") +
+      theme(plot.title = element_text(size=30),
+            axis.title = element_text(size=0),
+            axis.text = element_text(size=20))
+    
+    ## HPC
+    # Reorder to plot the region nuclei last
+    sce.temp <- cbind(sce.temp[ ,sce.temp$region!="hpc"],
+                      sce.temp[ ,sce.temp$region=="hpc"])
+    # Grey out other regions
+    sce.temp$reg.temp <- ifelse(sce.temp$region=="hpc", "HPC", NA)
+    
+    p.hpc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
+                        add_legend=FALSE) +
+      scale_fill_manual(values=custom.cols["HPC"]) + ggtitle("HIPPO") +
+      theme(plot.title = element_text(size=30),
+            axis.title = element_text(size=0),
+            axis.text = element_text(size=20))
+    
+    ## sACC
+    # Reorder to plot the region nuclei last
+    sce.temp <- cbind(sce.temp[ ,sce.temp$region!="sacc"],
+                      sce.temp[ ,sce.temp$region=="sacc"])
+    # Grey out other regions
+    sce.temp$reg.temp <- ifelse(sce.temp$region=="sacc", "sACC", NA)
+    
+    p.sacc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
+                      add_legend=FALSE) +
+      scale_fill_manual(values=custom.cols["sACC"]) + ggtitle("sACC") +
+      theme(plot.title = element_text(size=30),
+            axis.title = element_text(size=0),
+            axis.text = element_text(size=20))
+    
+    ## AMY
+    # Reorder to plot the region nuclei last
+    sce.temp <- cbind(sce.temp[ ,sce.temp$region!="amy"],
+                      sce.temp[ ,sce.temp$region=="amy"])
+    # Grey out other regions
+    sce.temp$reg.temp <- ifelse(sce.temp$region=="amy", "AMY", NA)
+    
+    p.amy <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
+                       add_legend=FALSE) +
+      scale_fill_manual(values=custom.cols["AMY"]) + ggtitle("AMY") +
+      theme(plot.title = element_text(size=30),
+            axis.title = element_text(size=0),
+            axis.text = element_text(size=20))
+    
+    ## NAc
+    # Reorder to plot the region nuclei last
+    sce.temp <- cbind(sce.temp[ ,sce.temp$region!="nac"],
+                      sce.temp[ ,sce.temp$region=="nac"])
+    # Grey out other regions
+    sce.temp$reg.temp <- ifelse(sce.temp$region=="nac", "NAc", NA)
+    
+    p.nac <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
+                      add_legend=FALSE) +
+      scale_fill_manual(values=custom.cols["NAc"]) + ggtitle("NAc") +
+      theme(plot.title = element_text(size=30),
+            axis.title = element_text(size=0),
+            axis.text = element_text(size=20))
+    
+            ## end region-colored t-SNEs ========
+    
+    
+    ## All nuclei (pan-brain annotation, from above) ===
+    p.full <- plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=4.0,
+             text_by="cellType.broad", text_size=8, theme_size=24) +
+      ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=28))
+    
+    lay <- rbind(c(1,1,2),
+                 c(1,1,3),
+                 c(6,5,4))
+    
+    pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_faceted_v2_Aug2020.pdf", width=13.5, height=12.5)
+    grid.arrange(grobs=list(p.full,
+                         p.nac,
+                         p.amy,
+                         p.hpc,
+                         p.dlpfc,
+                         p.sacc),
+                 layout_matrix=lay)
+    dev.off()
 
-## 26 PCs tSNE ===
+
+
+
+
+## 26 PCs tSNE ======
 set.seed(109)
 sce.all.tsne.26pcs <- runTSNE(sce.all.n12, dimred="PCA_26")
 

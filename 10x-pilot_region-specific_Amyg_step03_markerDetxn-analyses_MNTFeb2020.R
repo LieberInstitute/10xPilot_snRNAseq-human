@@ -792,6 +792,80 @@ apply(logFDRs.amy, 2, function(x) {table(x<log10(1e-6))})
     # TRUE   3944  2766  3762
 
 
+
+### For fig: Plot some top markers in vlnplot array (12Jun2020) === === === ===
+  #     * had been done on local machine, but realized chunk isn't in script
+  #       - updating 31Aug2020
+
+load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+    # Focus on the pairwise result (".design") bc more specific
+    rm(markers.amy.t.1vAll, markers.amy.wilcox.block)
+
+# First drop "ambig.lowNtrxts" (50 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
+sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+
+
+# Take top two for broad glia
+topToPrint <- as.data.frame(sapply(markers.amy.t.design, function(x) {head(rownames(x),n=2)}))
+topToPrint <- c(topToPrint$Astro, c("NPTX1", "SLC30A3", # Excit.1
+                                    "SLC17A6", "SOX4", "SOX11", #Excit.2
+                                    "MCHR2", "CDH22", # Excit.3
+                                    "CCK", "CALB2", "KIT", # Inhib.1/2/4
+                                    "CNTNAP3", "CNTNAP3B", "CALB1", # Inhib.3
+                                    "NPFFR2", "TLL1"), # Inhib.5
+                topToPrint$Micro, topToPrint$Oligo, topToPrint$OPC)
+
+table(topToPrint %in% rownames(sce.amy)) # good
+
+# With top 2 per glial
+pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v1.pdf", height=17, width=4)
+print(
+  plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
+                 x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=1,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:12], length(topToPrint))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
+    ggtitle(label="AMY top marker array (with glial)")
+)
+dev.off()
+
+# Neuronal markers only (highlighted in paper)
+topToPrint <- c("NPTX1", "SLC30A3", # Excit.1
+  "SLC17A6", "SOX4", "SOX11", #Excit.2
+  "MCHR2", "CDH22", # Excit.3
+  "CCK", "CALB2", "KIT", # Inhib.1/2/4
+  "CNTNAP3", "CNTNAP3B", "CALB1", # Inhib.3
+  "NPFFR2", "TLL1")
+
+pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v2.pdf", height=11, width=4.5)
+print(
+  plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
+                 x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=1,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:12], length(topToPrint))) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
+          axis.title.y = element_text(angle = 90, size = 16),
+          plot.title = element_text(size = 20),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))# +  
+    #ggtitle(label="AMY top marker array (neuronal only)")
+)
+dev.off()
+
+
+
+
+
+
+
+
+
 ### Aside - difference b/tw dropping 'Ambig.lowNtrxts' before or after PB'ing ===========
   # MNT 05Mar2020
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",

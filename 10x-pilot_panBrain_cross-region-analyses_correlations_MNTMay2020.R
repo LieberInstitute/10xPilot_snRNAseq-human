@@ -146,8 +146,8 @@ save(FMstats.list, sampleNumNuclei, readme.mnt, ref.sampleInfo,
 
 
 # (If needed)
-#load("rdas/markers-stats_SN-LEVEL_1vAll_all-regions-combined_May2020.rda", verbose=T)
-#readme.mnt
+load("rdas/markers-stats_SN-LEVEL_1vAll_all-regions-combined_May2020.rda", verbose=T)
+readme.mnt
 
 ## Create matrix of t's with region:subcluster identifiers
 ts.list <- lapply(FMstats.list, function(x){
@@ -200,16 +200,31 @@ cor_t_panBrain.neu <- cor(ts.fullMat.neu)
 theSeq.all = seq(-1, 1, by = 0.025)
 my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
 
+# pdf("pdfs/exploration/pan-Brain_correlation_region-specific-NeuronalSubcluster-ts_May2020.pdf")
+# pheatmap(cor_t_panBrain.neu,
+#          color=my.col.all,
+#          breaks=theSeq.all,
+#          fontsize_row=6.5, fontsize_col=6.5,
+#          main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
+# dev.off()
 
-pdf("pdfs/exploration/pan-Brain_correlation_region-specific-NeuronalSubcluster-ts_May2020.pdf")
+## Updated 31Aug2020 - for paper === === ===
+# Add some cluster info for add'l heatmap annotations
+clusterInfo <- data.frame(class=ss(colnames(ts.fullMat.neu), "\\.", 1),
+                          region=ss(colnames(ts.fullMat.neu), "_",2))
+rownames(clusterInfo) <- colnames(ts.fullMat.neu)
+
+
+# Print
+pdf("pdfs/pubFigures/pan-Brain_correlation_region-specific-NeuronalSubcluster-ts_Aug2020.pdf")
 pheatmap(cor_t_panBrain.neu,
+         annotation_col=clusterInfo,
+         show_colnames=FALSE,
          color=my.col.all,
          breaks=theSeq.all,
-         fontsize_row=6.5, fontsize_col=6.5,
+         fontsize_row=6.5, #fontsize_col=6.5,
          main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
 dev.off()
-
-
 
 
 
