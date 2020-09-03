@@ -8,7 +8,7 @@ date
 
 ## Could be fancier and use the date or something
 mkdir -p trash
-mv logs/build_bims_NAc_genes.txt trash/
+mv logs/build_bims_NAc_genes_*.txt trash/
 mv NAc_gene trash/
 
 ## Create logs dir if needed
