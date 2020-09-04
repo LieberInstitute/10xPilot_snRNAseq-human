@@ -5,6 +5,7 @@
 ## Now run R code
 library('data.table')
 library('SummarizedExperiment')
+library("here")
 library('sessioninfo')
 
 ## To avoid issues with running this code on qsub
@@ -28,7 +29,6 @@ libd_fam <- fread(
 libd_fam$brnumerical <- brnumerical(libd_fam$famid)
 setkey(libd_fam, 'brnumerical')
 
-
 ## Filter the LIBD data to the one specific to this project
 # region <- "NAc_Nicotine"
 message(paste(Sys.time(), 'processing', "NAc_Nicotine"))
@@ -39,33 +39,61 @@ fwrite(
     file = samp_file,
     sep = '\t', col.names = FALSE
 )
-newbfile <- paste0(
-    '/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/duplicate_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_',
-    "NAc_Nicotine_duplicateSNPs"
-)
+newbfile_root <- 'LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine'
+
+dir.create("duplicate_snps_bim", showWarnings = FALSE)
+newbfile <- here::here("twas", "filter_data", "duplicate_snps_bim", paste0(
+    newbfile_root,
+    "_duplicateSNPs"
+))
 
 ## Extract
-message(paste(Sys.time(), 'running bfile extract'))
+message(paste(Sys.time(), 'running bfile extract for', newbfile))
 
 system(paste("plink --bfile", libd_bfile,
 	"--keep", samp_file, "--make-bed --out",
 	newbfile, " --memory 100000 --biallelic-only"))
 
-# message(paste(Sys.time(), "reading the bim file", newbfile))
-# bim <- fread(
-#     paste0(newbfile, ".bim"),
-#     col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
-# )
-#
-# # > table(duplicated(bim$snp))
-# #
-# #    FALSE     TRUE
-# # 10943065    44114
-#
-# newsnp <- make.names(bim$snp, unique = T)
-# bim$snp <- newsnp
-#
-# fwrite(bim, file = paste0(newbfile, ".bim"), sep = " ", col.names = FALSE)
+## Check that we have the right data
+newbfile_fam <- fread(paste0(newbfile, ".fam"),
+    col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
+)
+m <- match(brnumerical(newbfile_fam$famid), brnumerical(colData(rse_gene)$BrNum))
+stopifnot(all(!is.na(m)))
+
+
+## Re-run but now make the SNV names unique
+dir.create("unique_snps_bim", showWarnings = FALSE)
+newbfile_unique <- here::here("twas", "filter_data", "unique_snps_bim", paste0(
+    newbfile_root,
+    "_uniqueSNPs"
+))
+
+## Extract again (could also copy and rename, but it's fast this way)
+message(paste(Sys.time(), 'running bfile extract for', newbfile_unique))
+
+system(paste("plink --bfile", libd_bfile,
+             "--keep", samp_file, "--make-bed --out",
+             newbfile_unique, " --memory 100000 --biallelic-only"))
+
+
+message(paste(Sys.time(), "reading the bim file", newbfile_unique))
+bim <- fread(
+    paste0(newbfile_unique, ".bim"),
+    col.names = c("chr", "snp", "position", "basepair", "allele1", "allele2")
+)
+
+table(duplicated(bim$snp))
+#    FALSE     TRUE
+# 10943065    44114
+
+## Make names unique
+message(Sys.time(), " making the variant names unique")
+bim$snp <- make.names(bim$snp, unique = TRUE)
+stopifnot(all(!duplicated(bim$snp)))
+
+## Ovewrite the PLINK bim file
+fwrite(bim, file = paste0(newbfile_unique, ".bim"), sep = " ", col.names = FALSE)
 
 
 ## Reproducibility information
