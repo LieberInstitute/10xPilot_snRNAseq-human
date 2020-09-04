@@ -25,26 +25,24 @@ setDTthreads(threads = 1)
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
     "help", "h", 0, "logical", "Display help",
-    "degradation", "d", 2, "logical", "degradation data present? TRUE/FALSE",
     "test", "t", 2, "logical", "Test run? TRUE/FALSE"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
 
 ## For an interactive test
 if(FALSE) {
-    opt <- list("cores" = 1, "degradation" = TRUE, "test" = TRUE)
+    opt <- list("cores" = 1, "test" = TRUE)
 }
 
-opt$region <- "NAc"
+opt$region <- "NAc" 
 opt$feature <- "gene"
 
 # create the NAc_gene dir
+# dir.create(opt$region, showWarnings = FALSE)
+# dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 dir.create(paste0(opt$region, "_", opt$feature), showWarnings = FALSE)
 
 # default arguments for flags
-if (is.null(opt$degradation)) {
-    opt$degradation <- FALSE
-}
 if (is.null(opt$test)) {
     opt$test <- FALSE
 }
@@ -64,133 +62,65 @@ if (!is.null(opt$help)) {
 message(paste(Sys.time(), "options used"))
 print(opt)
 
-# dir.create(opt$region, showWarnings = FALSE)
-# dir.create(file.path(opt$region, opt$feature), showWarnings = FALSE)
 
-# requires degredation data - saving for later
-if (opt$degradation == TRUE) {
-    load_rse <- function(feat, reg) {
-        message(paste(Sys.time(), "loading expression data"))
-        load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
-        if (feat == "gene") {
-            rse <- rse_gene_joint
-            assays(rse)$raw_expr <- recount::getRPKM(rse, "Length")
-        } else if (feat == "exon") {
-            rse <- rse_exon_joint
-            assays(rse)$raw_expr <- recount::getRPKM(rse, "Length")
-        } else if (feat == "jxn") {
-            rse <- rse_jxn_joint
-            rowRanges(rse)$Length <- 100
-            assays(rse)$raw_expr <- recount::getRPKM(rse, "Length")
-        } else if (feat == "tx") {
-            rse <- rse_tx_joint
-            assays(rse)$raw_expr <- assays(rse)$tpm
-        }
-
-        message(paste(Sys.time(), "subsetting to age and region data"))
-        keepInd <- which(colData(rse)$Age > 13 & colData(rse)$Region == reg)
-        rse <- rse[, keepInd]
-
-        message(paste(Sys.time(), "loading model pieces"))
-        if (reg == "HIPPO") {
-            ## NOTE:
-            ## As written right now, this won't ever run since HIPPO will be processed with the BSP2 files
-            load("/dcl01/ajaffe/data/lab/dg_hippo/eQTL_all_SNPs_n596/rdas/pcs_4features_hippo_333.rda", verbose = TRUE)
-            load("/dcl01/ajaffe/data/lab/dg_hippo/genotype_data/merged_dg_hippo_allSamples_n596.rda", verbose = TRUE)
-            mds <- mds[rse$BrNum, ]
-        } else if (reg == "DentateGyrus") {
-            load("/dcl01/ajaffe/data/lab/dg_hippo/eQTL_all_SNPs_n596/rdas/pcs_4features_dg_263.rda", verbose = TRUE)
-            load("/dcl01/ajaffe/data/lab/dg_hippo/genotype_data/astellas_dg_genotype_data_n263.rda", verbose = TRUE)
-            stopifnot(identical(rse$BrNum, rownames(mds)))
-        }
-
-        message(paste(Sys.time(), "building model"))
-        if (feat == "gene") {
-            pcs <- genePCs
-        } else if (feat == "exon") {
-            pcs <- exonPCs
-        } else if (feat == "jxn") {
-            pcs <- jxnPCs
-        } else if (feat == "tx") {
-            pcs <- txPCs
-        }
-        colData(rse) <- cbind(colData(rse), pcs, mds)
-        mod <- model.matrix(~ Dx + Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-            data = colData(rse)
-        )
-
-        message(paste(Sys.time(), "cleaning expression"))
-        assays(rse) <- List(
-            "raw_expr" = assays(rse)$raw_expr,
-            "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
-        )
-
-        message(paste(Sys.time(), "switch column names to BrNum"))
-        stopifnot(!any(duplicated(colnames(rse))))
-        colnames(rse) <- colData(rse)$BrNum
-
-        return(rse)
-    }
-} else {
-    load_rse <- function(feat, reg) {
-        message(paste(Sys.time(), "loading expression data"))
-
-        # expmnt data
-        load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
-
-        rse <- rse_gene
-        assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
-
-        # genotype file, contains mds object
-        load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206.rda", verbose = TRUE)
-
-        # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
-
-        table(rse$BrNum %in% rownames(mds)) # matching samples == 195
-        # T = 195
-
-        mds <- na.omit(mds) # omits nas, inits test var
-
-        # subset rows in mds that are present as samples in rse
-        mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
-            na.omit()
-
-        dim(mds)
-
-        dim(rse)
-
-        # only keep columns in rse that are present as rows in mds
-        rse <- rse[, rse$BrNum %in% rownames(mds)]
-
-        stopifnot(identical(nrow(mds), ncol(rse)))
-
-        mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
-
-        pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
-        kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
-
-        genePCs <- pcaGene$x[, 1:kGene]
-
-        pcs <- genePCs
-
-        colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
-
-        mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-            data = colData(rse)
-        )
-
-        message(paste(Sys.time(), "cleaning expression"))
-        assays(rse) <- List(
-            "raw_expr" = assays(rse)$raw_expr,
-            "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
-        )
-
-        message(paste(Sys.time(), "switch column names to BrNum"))
-        stopifnot(!any(duplicated(colnames(rse))))
-        colnames(rse) <- colData(rse)$BrNum
-
-        return(rse)
-    }
+load_rse <- function(feat, reg) {
+    message(paste(Sys.time(), "loading expression data"))
+    
+    # expmnt data
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
+    
+    rse <- rse_gene
+    assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
+    
+    # genotype file, contains mds object
+    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206_mds.rda", verbose = TRUE)
+    
+    # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
+    
+    table(rse$BrNum %in% rownames(mds)) # matching samples == 195
+    # T = 195
+    
+    mds <- na.omit(mds) # omits nas, inits test var
+    
+    # subset rows in mds that are present as samples in rse
+    mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
+        na.omit()
+    
+    print(dim(mds))
+    
+    print(dim(rse))
+    
+    # only keep columns in rse that are present as rows in mds
+    rse <- rse[, rse$BrNum %in% rownames(mds)]
+    
+    stopifnot(identical(nrow(mds), ncol(rse)))
+    
+    mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
+    
+    pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
+    kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
+    
+    genePCs <- pcaGene$x[, 1:kGene]
+    
+    pcs <- genePCs
+    
+    colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
+    
+    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
+                        data = colData(rse)
+    )
+    
+    message(paste(Sys.time(), "cleaning expression"))
+    assays(rse) <- List(
+        "raw_expr" = assays(rse)$raw_expr,
+        "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
+    )
+    
+    message(paste(Sys.time(), "switch column names to BrNum"))
+    stopifnot(!any(duplicated(colnames(rse))))
+    colnames(rse) <- colData(rse)$BrNum
+    
+    return(rse)
 }
 
 rse_file <- file.path("NAc_gene/working_rse.Rdata")
@@ -224,7 +154,6 @@ bim_gr <- GRanges(
     paste0("chr", bim$chr),
     IRanges(bim$basepair, width = 1)
 )
-
 mcols(bim_gr) <- bim[, -c("chr", "basepair")]
 
 ## Based on http://gusevlab.org/projects/fusion/#computing-your-own-functional-weights
@@ -242,15 +171,8 @@ rse <- rse[keep_feat, ]
 rse_window <- rse_window[keep_feat, ]
 stopifnot(nrow(rse) == length(rse_window))
 
-# drops non-overlapping chromosomes
-rse <- rse[!seqnames(rowRanges(rse)) %in% c("chrM", "chrY"), ]
-
-# > seqnames(rowRanges(rse))
-# factor-Rle of length 56888 with 23 runs
-#   Lengths:  5178  3971  2911  2505  2868 ...  2926  1372   795  1281  2332
-#   Values :  chr1  chr2  chr3  chr4  chr5 ... chr19 chr20 chr21 chr22  chrX
-# Levels(25): chr1 chr2 chr3 chr4 chr5 chr6 ... chr20 chr21 chr22 chrX chrY chrM <--- Important?
-
+message(Sys.time(), " number of genes per chr")
+table(seqnames(rse))
 
 print("Final RSE feature dimensions:")
 print(dim(rse))
@@ -272,6 +194,8 @@ mcols(rowRanges(rse)) <- NULL
 setwd(file.path("NAc_gene"))
 dir.create("snp_files", showWarnings = FALSE)
 dir.create("bim_files", showWarnings = FALSE)
+message(Sys.time(), " current files:")
+print(dir())
 
 ## For testing
 if (opt$test == TRUE) {
@@ -283,13 +207,21 @@ check_bim <- function(x) {
     all(file.exists(paste0(x, c(".fam", ".bed", ".bim"))))
 }
 
+## For matching, due to complicated BrNums
+## this function was used in filter_data/filter_snps.R
+brnumerical <- function(x) {
+    as.integer(gsub("Br|_.*", "", x))
+}
+
 ## Create the bim files
 i <- seq_len(nrow(rse))
 i.names <- rownames(rse)
 
 if (file.exists((file.path("i_info.Rdata")))) {
+    message(Sys.time(), " loading pre-existing i_info.Rdata")
     load(file.path("i_info.Rdata"), verbose = TRUE)
 } else {
+    message(Sys.time(), " creating the i_info.Rdata file")
     save(i, i.names, file = "i_info.Rdata")
 }
 
@@ -309,52 +241,52 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
         message("*******************************************************************************")
         message(paste(Sys.time(), "building bim file for i =", i, "corresponding to feature", feat_id))
     }
-
+    
     base <- paste0(opt$region, "_", opt$feature, "_", i)
     filt_snp <- paste0("LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_", base, ".txt")
-
+    
     # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
     dir.create(file.path("bim_files", base), showWarnings = FALSE)
     filt_bim <- file.path("bim_files", base, filt_bim)
-
+    
     ## Re-use the bim file if it exists already
-    # if (check_bim(filt_bim)) {
-    #     return(TRUE)
-    # }
-
+    if (check_bim(filt_bim)) {
+        return(TRUE)
+    }
+    
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
-
+    
     fwrite(
         bim[j, "snp"], # %>% unique()
         file = filt_snp,
         sep = "\t", col.names = FALSE
     )
+    
+    system(paste(
+        "plink --bfile", bim_file, "--extract", filt_snp,
+        "--make-bed --out", filt_bim, "--memory 5000 --threads 1"
+    ))
 
-    # system(paste(
-    #     "plink --bfile", bim_file, "--extract", filt_snp,
-    #     "--make-bed --out", filt_bim, "--memory 8000 --threads 1"
-    # ))
-    #
-    # ## Edit the "phenotype" column of the fam file
-    # filt_fam <- fread(paste0(filt_bim, ".fam"),
-    #     col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
-    # )
-    #
-    # ## Note BrNums might be duplicated, hence the use of match()
-    # m <- match(filt_fam$famid, colData(rse)$BrNum)
-    #
-    # ## Use cleaned expression for now. Could be an argument for the code.
-    # filt_fam$phenotype <- assays(rse)$clean_expr[i, m]
-    #
-    # ## Ovewrite fam file (for the phenotype info)
-    # fwrite(filt_fam, file = paste0(filt_bim, ".fam"), sep = " ", col.names = FALSE)
+    ## Edit the "phenotype" column of the fam file
+    filt_fam <- fread(paste0(filt_bim, ".fam"),
+        col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
+    )
 
-    # ## Clean up
-    # if (clean) unlink(filt_snp)
-    #
-    # return(check_bim(filt_bim))
+    ## Note BrNums might be duplicated, hence the use of match()
+    m <- match(brnumerical(filt_fam$famid), brnumerical(colData(rse)$BrNum))
+    stopifnot(all(!is.na(m)))
+
+    ## Use cleaned expression for now. Could be an argument for the code.
+    filt_fam$phenotype <- assays(rse)$clean_expr[i, m]
+
+    ## Ovewrite fam file (for the phenotype info)
+    fwrite(filt_fam, file = paste0(filt_bim, ".fam"), sep = " ", col.names = FALSE)
+    ## Clean up
+    if (clean) unlink(filt_snp)
+
+    return(check_bim(filt_bim))
 }, i, i.names, BPPARAM = MulticoreParam(workers = opt$cores), SIMPLIFY = FALSE)
 
 message(paste(Sys.time(), "finished creating the bim files"))
