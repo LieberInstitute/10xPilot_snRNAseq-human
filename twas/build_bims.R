@@ -75,6 +75,14 @@ load_rse <- function(feat, reg) {
     # genotype file, contains mds object
     load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206_mds.rda", verbose = TRUE)
     
+    ## Drop Br1563 since it has no genotype data, although it shows up in the MDS
+    ## dropping it here, will then drop it also from the RSE once we make sure that they match
+    mds <- mds[-which(rownames(mds) == "Br1563"), ]
+    # > which(is.na(match(brnumerical(rownames(mds)), brnumerical(newbfile_fam$famid))))
+    # [1] 91
+    # > rownames(mds)[91]
+    # [1] "Br1563"
+    
     # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
     
     table(rse$BrNum %in% rownames(mds)) # matching samples == 195
