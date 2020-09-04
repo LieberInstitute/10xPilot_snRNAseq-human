@@ -1,0 +1,813 @@
+Adding LIBD modules
+Loading git
+Loading LIBD module for git-status-size/github
+Loading LIBD module for git-lfs/2.8.0
+Loading LIBD module for rmate/1.5.9
+Loading LIBD module for ruby/2.6.4p104
+Loading conda_R/4.0
+**** Job starts ****
+Fri Sep  4 18:14:58 EDT 2020
+**** JHPCE info ****
+User: lcollado
+Job id: 2410287
+Job name: build_bims_NAc_genes
+Hostname: compute-097.cm.cluster
+Task id: undefined
+Loading LIBD module for plink/1.90b6.6
+Loading LIBD module for fusion_twas/github
+Loading LIBD module for plink/1.90b6.6
+Loading LIBD module for plink/1.90b6.6
+See /jhpce/shared/jhpce/libd/fusion_twas/github/README.md for installing the R
+dependencies 
+Run using the full path, for example: Rscript
+/jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.compute_weights.R
+--help 
+Unloading conda_R/4.0
+Loading conda_R/4.0
+
+Currently Loaded Modules:
+  1) matlab/R2019a                   9) git/2.23.0
+  2) stata/16                       10) git-lfs/2.8.0
+  3) JHPCE_tools/1.0                11) ruby/2.6.4p104
+  4) sge/8.1.9                      12) rmate/1.5.9
+  5) gcc/4.4.7                      13) plink/1.90b6.6
+  6) COMMUNITY_CENTOS7_DEFAULT_ENV  14) fusion_twas/github
+  7) JHPCE_CENTOS7_DEFAULT_ENV      15) conda/3-4.6.14
+  8) git-status-size/github         16) conda_R/4.0
+
+ 
+
+Loading required package: GenomicRanges
+Loading required package: stats4
+Loading required package: BiocGenerics
+Loading required package: parallel
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:parallel’:
+
+    clusterApply, clusterApplyLB, clusterCall, clusterEvalQ,
+    clusterExport, clusterMap, parApply, parCapply, parLapply,
+    parLapplyLB, parRapply, parSapply, parSapplyLB
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colnames,
+    dirname, do.call, duplicated, eval, evalq, Filter, Find, get, grep,
+    grepl, intersect, is.unsorted, lapply, Map, mapply, match, mget,
+    order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, setdiff, sort, table, tapply,
+    union, unique, unsplit, which, which.max, which.min
+
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following object is masked from ‘package:base’:
+
+    expand.grid
+
+Loading required package: IRanges
+Loading required package: GenomeInfoDb
+Loading required package: Biobase
+Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation("Biobase")', and for packages 'citation("pkgname")'.
+
+Loading required package: DelayedArray
+Loading required package: matrixStats
+
+Attaching package: ‘matrixStats’
+
+The following objects are masked from ‘package:Biobase’:
+
+    anyMissing, rowMedians
+
+
+Attaching package: ‘DelayedArray’
+
+The following objects are masked from ‘package:matrixStats’:
+
+    colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges
+
+The following objects are masked from ‘package:base’:
+
+    aperm, apply, rowsum
+
+Loading required package: rafalib
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:SummarizedExperiment’:
+
+    shift
+
+The following object is masked from ‘package:GenomicRanges’:
+
+    shift
+
+The following object is masked from ‘package:IRanges’:
+
+    shift
+
+The following objects are masked from ‘package:S4Vectors’:
+
+    first, second
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:S4Vectors’:
+
+    expand
+
+here() starts at /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
+2020-09-04 18:15:10 options used
+$ARGS
+character(0)
+
+$cores
+[1] 10
+
+$test
+[1] TRUE
+
+$region
+[1] "NAc"
+
+$feature
+[1] "gene"
+
+2020-09-04 18:15:10 rse file does not already exist, generating now NAc_gene/working_rse.Rdata
+2020-09-04 18:15:10 loading expression data
+Loading objects:
+  rse_gene
+Loading objects:
+  genePCs
+2020-09-04 18:15:14 cleaning expression
+2020-09-04 18:15:18 switch column names to BrNum
+2020-09-04 18:15:18 saving the rse file for later at NAc_gene/working_rse.Rdata
+2020-09-04 18:15:48 working RSE dimensions
+[1] 58037   205
+2020-09-04 18:15:48 reading the bim file /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+2020-09-04 18:16:40 number of features kept: 56888
+2020-09-04 18:16:41 number of genes per chr
+
+ chr1  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9 chr10 chr11 chr12 chr13 
+ 5178  3971  2911  2505  2868  2660  2867  2353  2199  2204  3235  2940  1304 
+chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22  chrX  chrY  chrM 
+ 2223  2088  2511  2995  1170  2926  1372   795  1281  2332     0     0 
+[1] "Final RSE feature dimensions:"
+[1] 56888   205
+2020-09-04 18:16:41 saving the subsetted rse file for later at NAc_gene/subsetted_rse.Rdata
+2020-09-04 18:17:11 current files:
+[1] "bim_files"           "snp_files"           "subsetted_rse.Rdata"
+[4] "working_rse.Rdata"  
+2020-09-04 18:17:11 creating the i_info.Rdata file
+2020-09-04 18:17:11 length of i and i.names
+[1] 20
+[1] 20
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_1/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_1/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1 variant remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_7/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_7/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 135 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%1%2%2%3%3%4%4%5%5%6%6%7%7%8%8%9%9%10%10%11%12%13%14%11%15%12%16%13%17%14%18%15%19%16%20%17%21%18%22%19%23%20%24%21%25%22%26%23%27%24%28%25%29%26%30%27%31%28%32%29%33%30%34%31%35%32%36%33%37%34%38%35%39%36%40%37%41%38%42%39%43%40%44%41%45%42%46%43%47%44%48%45%49%46%50%47%51%48%52%49%53%50%54%51%55%52%56%53%57%54%58%55%59%56%60%57%61%58%62%59%63%60%64%61%65%62%66%63%67%64%68%65%69%66%70%67%71%68%72%69%73%70%74%71%75%72%76%73%77%74%78%75%79%76%80%77%81%78%82%79%83%80%84%81%85%82%86%83%87%84%88%85%89%86%90%87%91%88%92%89%93%90%94%91%95%92%96%93%97%94%98%95%99%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_5/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_5/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 31 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_9/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_9/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 162 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_11/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_11/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 375 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%1%2%2%3%3%4%4%5%5%6%6%7%7%8%8%9%9%10%10%11%11%12%12%13%13%14%14%15%15%16%16%17%17%18%18%19%19%20%20%21%21%22%22%23%23%24%24%25%25%26%26%27%27%28%28%29%29%30%30%31%31%32%32%33%33%34%34%35%35%36%36%37%37%38%38%39%39%40%40%41%41%42%42%43%43%44%44%45%45%46%46%47%47%48%48%49%49%50%50%51%51%52%52%53%53%54%54%55%55%56%56%57%57%58%58%59%59%60%60%61%61%62%62%63%63%64%64%65%65%66%66%67%67%68%68%69%69%70%70%71%71%72%72%73%73%74%74%75%75%76%76%77%77%78%78%79%79%80%80%81%81%82%82%83%83%84%84%85%85%86%86%87%87%88%88%89%89%90%90%91%91%92%92%93%93%94%94%95%95%96%96%97%97%98%98%99%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_3/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_3/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1 variant remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_15/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_15/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 571 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_17/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_17/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1907 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%1%2%2%3%3%4%4%5%5%6%6%7%7%8%8%9%9%10%10%11%11%12%12%13%13%14%14%15%15%16%16%17%17%18%18%19%19%20%20%21%21%22%23%22%24%23%25%24%26%25%27%26%28%27%29%28%30%29%31%30%32%31%33%32%34%33%35%34%36%35%37%36%38%37%39%38%40%39%41%40%42%41%43%42%44%43%45%44%46%45%47%46%48%47%49%48%50%49%51%50%52%51%53%52%54%53%55%54%56%55%57%56%58%57%59%58%60%59%61%60%62%61%63%62%64%63%65%64%66%65%67%66%68%67%69%68%70%69%71%70%72%71%73%72%74%73%75%74%76%75%77%76%78%77%79%78%80%79%81%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_19/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_19/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1072 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%80%82%1%81%83%2%82%84%3%83%85%4%84%86%5%85%87%6%86%88%7%87%89%8%88%90%9%89%91%10%90%92%11%91%93%12%92%94%13%93%95%14%94%96%15%95%97%16%96%98%17%97%99%18%98%19%99%20%21%22%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_13/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_13/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 540 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%23%1%24%2%25%3%26%4%27%5%28%6%29%7%30%8%31%9%32%10%33%11%34%12%35%13%36%14%37%15%38%16%39%17%40%18%41%19%42%20%43%21%44%22%45%23%46%24%47%25%48%26%49%27%50%28%51%29%52%30%53%31%54%32%55%33%56%34%57%35%58%36%59%37%60%38%61%39%62%40%63%41%64%42%65%43%66%44%67%45%68%46%69%47%70%48%71%49%72%50%73%51%74%52%75%53%76%54%77%55%78%56%79%57%80%58%81%59%82%60%83%61%84%62%85%63%86%64%87%65%88%66%89%67%90%68%91%69%92%70%93%71%94%72%95%73%96%74%97%75%98%76% done.
+Total genotyping rate is 0.864318.
+135 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+99%77%--make-bed to
+bim_files/NAc_gene_7/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7.bed
++
+bim_files/NAc_gene_7/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7.bim
++
+bim_files/NAc_gene_7/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_7.fam
+... 0%1%78%2%79%3%80%4%81%5%82%6%83%7%84%8%85%9%86%10%87%11%88%12%89%13%90%14%91%15%92%16%93%17%94%18%95%19%96%20%97%21%98%22%99%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.926471.
+1907 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_17/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17.bed
++
+bim_files/NAc_gene_17/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17.bim
++
+bim_files/NAc_gene_17/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_17.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.878088.
+375 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_11/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11.bed
++
+bim_files/NAc_gene_11/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11.bim
++
+bim_files/NAc_gene_11/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_11.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.884986.
+571 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_15/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15.bed
++
+bim_files/NAc_gene_15/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15.bim
++
+bim_files/NAc_gene_15/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_15.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.885086.
+540 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_13/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13.bed
++
+bim_files/NAc_gene_13/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13.bim
++
+bim_files/NAc_gene_13/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_13.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.86474.
+162 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_9/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9.bed
++
+bim_files/NAc_gene_9/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9.bim
++
+bim_files/NAc_gene_9/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_9.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.858537.
+1 variant and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_3/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3.bed
++
+bim_files/NAc_gene_3/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3.bim
++
+bim_files/NAc_gene_3/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_3.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.90597.
+1072 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_19/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19.bed
++
+bim_files/NAc_gene_19/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19.bim
++
+bim_files/NAc_gene_19/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_19.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.859481.
+31 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_5/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5.bed
++
+bim_files/NAc_gene_5/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5.bim
++
+bim_files/NAc_gene_5/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_5.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.858537.
+1 variant and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_1/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1.bed
++
+bim_files/NAc_gene_1/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1.bim
++
+bim_files/NAc_gene_1/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_1.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+done.
+done.
+done.
+done.
+done.
+done.
+done.
+done.
+done.
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_14/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_14/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 556 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.884655.
+556 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_14/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14.bed
++
+bim_files/NAc_gene_14/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14.bim
++
+bim_files/NAc_gene_14/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_14.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_10/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_10/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 597 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.885795.
+597 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_10/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10.bed
++
+bim_files/NAc_gene_10/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10.bim
++
+bim_files/NAc_gene_10/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_10.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_18/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_18/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 903 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.897242.
+903 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_18/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18.bed
++
+bim_files/NAc_gene_18/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18.bim
++
+bim_files/NAc_gene_18/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_18.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_16/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_16/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 647 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_12/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_12/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 430 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%2%1%3%2%4%3%5%4%6%5%7%6%8%7%9%8%10%9%11%10%12%11%13%12%14%13%15%14%16%15%17%16%18%17%19%18%20%19%21%20%22%21%23%22%24%23%25%24%26%25%27%26%28%27%29%28%30%29%31%30%32%31%33%32%34%33%35%34%36%35%37%36%38%37%39%38%40%39%41%40%42%41%43%42%44%43%45%44%46%45%47%46%48%47%49%48%50%49%51%50%52%51%53%52%54%53%55%54%56%55%57%56%58%57%59%58%60%59%61%60%62%61%63%62%64%63%65%64%66%65%67%66%68%67%69%68%70%69%71%70%72%71%73%72%74%73%75%74%76%75%77%76%78%77%79%78%80%79%81%80%82%81%83%82%84%83%85%84%86%85%87%86%88%87%89%88%90%89%91%90%92%91%93%92%94%93%95%94%96%95%97%96%98%97%99%98%99% done.
+Total genotyping rate is 0.887895.
+647 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_16/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16.bed
++
+bim_files/NAc_gene_16/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16.bim
++
+bim_files/NAc_gene_16/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_16.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.883313.
+430 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_12/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12.bed
++
+bim_files/NAc_gene_12/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12.bim
++
+bim_files/NAc_gene_12/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_12.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+done.
+done.
+done.
+done.
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_4/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_4/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1 variant remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.858537.
+1 variant and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_4/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4.bed
++
+bim_files/NAc_gene_4/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4.bim
++
+bim_files/NAc_gene_4/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_4.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_6/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_6/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 5 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_2/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_2/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1 variant remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.81561.
+5 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_6/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6.bed
++
+bim_files/NAc_gene_6/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6.bim
++
+bim_files/NAc_gene_6/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_6.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.858537.
+1 variant and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_2/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2.bed
++
+bim_files/NAc_gene_2/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2.bim
++
+bim_files/NAc_gene_2/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_2.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+*******************************************************************************
+2020-09-04 18:17:11 building bim file for i = 1 corresponding to feature ENSG00000241860.6
+done.
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_20/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_20/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 1077 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.906072.
+1077 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_20/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20.bed
++
+bim_files/NAc_gene_20/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20.bim
++
+bim_files/NAc_gene_20/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_20.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
+(C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
+Logging to bim_files/NAc_gene_8/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8.log.
+Options in effect:
+  --bfile /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+  --extract snp_files/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8.txt
+  --make-bed
+  --memory 5000
+  --out bim_files/NAc_gene_8/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8
+  --threads 1
+
+257850 MB RAM detected; reserving 5000 MB for main workspace.
+10987179 variants loaded from .bim file.
+205 people (155 males, 50 females) loaded from .fam.
+--extract: 147 variants remaining.
+Using 1 thread.
+Before main variant filters, 205 founders and 0 nonfounders present.
+Calculating allele frequencies... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99% done.
+Total genotyping rate is 0.863614.
+147 variants and 205 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to
+bim_files/NAc_gene_8/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8.bed
++
+bim_files/NAc_gene_8/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8.bim
++
+bim_files/NAc_gene_8/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_8.fam
+... 0%1%2%3%4%5%6%7%8%9%10%11%12%13%14%15%16%17%18%19%20%21%22%23%24%25%26%27%28%29%30%31%32%33%34%35%36%37%38%39%40%41%42%43%44%45%46%47%48%49%50%51%52%53%54%55%56%57%58%59%60%61%62%63%64%65%66%67%68%69%70%71%72%73%74%75%76%77%78%79%80%81%82%83%84%85%86%87%88%89%90%91%92%93%94%95%96%97%98%99%done.
+2020-09-04 18:17:49 finished creating the bim files
+[1] "Reproducibility information:"
+[1] "2020-09-04 18:17:49 EDT"
+   user  system elapsed 
+254.189  95.589 169.416 
+─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────
+ setting  value                                      
+ version  R version 4.0.2 Patched (2020-06-24 r78746)
+ os       CentOS Linux 7 (Core)                      
+ system   x86_64, linux-gnu                          
+ ui       X11                                        
+ language (EN)                                       
+ collate  en_US.UTF-8                                
+ ctype    en_US.UTF-8                                
+ tz       US/Eastern                                 
+ date     2020-09-04                                 
+
+─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+ package              * version  date       lib source                                   
+ assertthat             0.2.1    2019-03-21 [2] CRAN (R 4.0.0)                           
+ backports              1.1.6    2020-04-05 [1] CRAN (R 4.0.0)                           
+ Biobase              * 2.48.0   2020-04-27 [1] Bioconductor                             
+ BiocGenerics         * 0.34.0   2020-04-27 [1] Bioconductor                             
+ BiocParallel         * 1.22.0   2020-04-27 [1] Bioconductor                             
+ bitops                 1.0-6    2013-08-17 [2] CRAN (R 4.0.0)                           
+ cli                    2.0.2    2020-02-28 [1] CRAN (R 4.0.0)                           
+ crayon                 1.3.4    2017-09-16 [1] CRAN (R 4.0.0)                           
+ data.table           * 1.12.8   2019-12-09 [1] CRAN (R 4.0.0)                           
+ DelayedArray         * 0.14.0   2020-04-27 [1] Bioconductor                             
+ dplyr                  0.8.5    2020-03-07 [1] CRAN (R 4.0.0)                           
+ ellipsis               0.3.0    2019-09-20 [1] CRAN (R 4.0.0)                           
+ fansi                  0.4.1    2020-01-08 [1] CRAN (R 4.0.0)                           
+ GenomeInfoDb         * 1.24.0   2020-04-27 [1] Bioconductor                             
+ GenomeInfoDbData       1.2.3    2020-05-18 [2] Bioconductor                             
+ GenomicRanges        * 1.40.0   2020-04-27 [1] Bioconductor                             
+ getopt               * 1.20.3   2019-03-22 [1] CRAN (R 4.0.0)                           
+ glue                   1.4.0    2020-04-03 [1] CRAN (R 4.0.0)                           
+ googledrive            1.0.1    2020-05-05 [1] CRAN (R 4.0.0)                           
+ here                 * 0.1      2017-05-28 [1] CRAN (R 4.0.0)                           
+ IRanges              * 2.22.1   2020-04-28 [1] Bioconductor                             
+ jaffelab             * 0.99.30  2020-05-09 [1] Github (LieberInstitute/jaffelab@42637ff)
+ lattice                0.20-41  2020-04-02 [3] CRAN (R 4.0.2)                           
+ lifecycle              0.2.0    2020-03-06 [1] CRAN (R 4.0.0)                           
+ limma                  3.44.1   2020-04-28 [1] Bioconductor                             
+ magrittr               1.5      2014-11-22 [1] CRAN (R 4.0.0)                           
+ Matrix                 1.2-18   2019-11-27 [3] CRAN (R 4.0.2)                           
+ matrixStats          * 0.56.0   2020-03-13 [1] CRAN (R 4.0.0)                           
+ pillar                 1.4.4    2020-05-05 [1] CRAN (R 4.0.0)                           
+ pkgconfig              2.0.3    2019-09-22 [1] CRAN (R 4.0.0)                           
+ purrr                  0.3.4    2020-04-17 [1] CRAN (R 4.0.0)                           
+ R6                     2.4.1    2019-11-12 [2] CRAN (R 4.0.0)                           
+ rafalib              * 1.0.0    2015-08-09 [1] CRAN (R 4.0.0)                           
+ RColorBrewer           1.1-2    2014-12-07 [2] CRAN (R 4.0.0)                           
+ Rcpp                   1.0.4.6  2020-04-09 [1] CRAN (R 4.0.0)                           
+ RCurl                  1.98-1.2 2020-04-18 [2] CRAN (R 4.0.0)                           
+ rlang                  0.4.6    2020-05-02 [1] CRAN (R 4.0.0)                           
+ rprojroot              1.3-2    2018-01-03 [2] CRAN (R 4.0.0)                           
+ S4Vectors            * 0.26.0   2020-04-27 [1] Bioconductor                             
+ segmented              1.1-0    2019-12-10 [2] CRAN (R 4.0.0)                           
+ sessioninfo          * 1.1.1    2018-11-05 [1] CRAN (R 4.0.0)                           
+ SummarizedExperiment * 1.18.1   2020-04-30 [1] Bioconductor                             
+ tibble                 3.0.1    2020-04-20 [1] CRAN (R 4.0.0)                           
+ tidyr                * 1.0.3    2020-05-07 [1] CRAN (R 4.0.0)                           
+ tidyselect             1.1.0    2020-05-11 [2] CRAN (R 4.0.0)                           
+ vctrs                  0.2.4    2020-03-10 [1] CRAN (R 4.0.0)                           
+ withr                  2.2.0    2020-04-20 [1] CRAN (R 4.0.0)                           
+ XVector                0.28.0   2020-04-27 [1] Bioconductor                             
+ zlibbioc               1.34.0   2020-04-27 [1] Bioconductor                             
+
+[1] /users/lcollado/R/4.0
+[2] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/site-library
+[3] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/library
+-- plink version information --
+PLINK v1.90b6.6 64-bit (10 Oct 2018)
+**** Job ends ****
+Fri Sep  4 18:17:51 EDT 2020
