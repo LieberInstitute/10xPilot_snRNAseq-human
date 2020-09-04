@@ -3,12 +3,12 @@
 # R
 
 ## Now run R code
-library('data.table')
-library('SummarizedExperiment')
+library("data.table")
+library("SummarizedExperiment")
 library("here")
 library("recount")
 library("sva")
-library('sessioninfo')
+library("sessioninfo")
 
 dir.create("rda", showWarnings = FALSE)
 
@@ -33,14 +33,15 @@ libd_bfile <- "/dcl01/lieber/ajaffe/Brain/Imputation/Subj_Cleaned/LIBD_merged_h6
 ## Read the LIBD fam data
 libd_fam <- fread(
     paste0(libd_bfile, ".fam"),
-    col.names = c('famid', 'w_famid', 'w_famid_fa', 'w_famid_mo', 'sex_code', 'phenotype'))
+    col.names = c("famid", "w_famid", "w_famid_fa", "w_famid_mo", "sex_code", "phenotype")
+)
 libd_fam$brnumerical <- brnumerical(libd_fam$famid)
-setkey(libd_fam, 'brnumerical')
+setkey(libd_fam, "brnumerical")
 
 ## Filter the LIBD data to the one specific to this project
 # region <- "NAc_Nicotine"
-message(paste(Sys.time(), 'processing', "NAc_Nicotine"))
-samp_file <- paste0('samples_to_extract_', "NAc_Nicotine", '.txt')
+message(paste(Sys.time(), "processing", "NAc_Nicotine"))
+samp_file <- paste0("samples_to_extract_", "NAc_Nicotine", ".txt")
 
 ## Which NAc samples have genotype data and MDS data?
 samples_in_all <- intersect(
@@ -67,14 +68,14 @@ assays(rse_gene)$RPKM <- getRPKM(rse_gene, "Length")
 ## Compute gene PCs
 message(Sys.time(), " computing gene PCs on log2(RPKM + 1)")
 pcaGene <- prcomp(t(log2(assays(rse_gene)$RPKM + 1)))
-save(pcaGene, file = 'rda/pcaGene.Rdata')
+save(pcaGene, file = "rda/pcaGene.Rdata")
 
 message(Sys.time(), " determine how many gene PCs to adjust for")
 mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5, data = colData(rse_gene))
 kGene <- num.sv(log2(assays(rse_gene)$RPKM + 1), mod)
 stopifnot(kGene > 0)
 genePCs <- pcaGene$x[, seq_len(kGene)]
-save(genePCs, file = 'rda/genePCs.Rdata')
+save(genePCs, file = "rda/genePCs.Rdata")
 
 ## Add gene PCs to rse_gene
 colData(rse_gene) <- cbind(colData(rse_gene), genePCs)
@@ -91,9 +92,9 @@ stopifnot(all(!is.na(filter_m)))
 fwrite(
     libd_fam[filter_m, 1:2], ## can be more involved
     file = samp_file,
-    sep = '\t', col.names = FALSE
+    sep = "\t", col.names = FALSE
 )
-newbfile_root <- 'LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine'
+newbfile_root <- "LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine"
 
 dir.create("duplicate_snps_bim", showWarnings = FALSE)
 newbfile <- here::here("twas", "filter_data", "duplicate_snps_bim", paste0(
@@ -102,10 +103,12 @@ newbfile <- here::here("twas", "filter_data", "duplicate_snps_bim", paste0(
 ))
 
 ## Extract
-message(paste(Sys.time(), 'running bfile extract for', newbfile))
-system(paste("plink --bfile", libd_bfile,
-	"--keep", samp_file, "--make-bed --out",
-	newbfile, " --memory 100000 --biallelic-only"))
+message(paste(Sys.time(), "running bfile extract for", newbfile))
+system(paste(
+    "plink --bfile", libd_bfile,
+    "--keep", samp_file, "--make-bed --out",
+    newbfile, " --memory 100000 --biallelic-only"
+))
 
 # PLINK v1.90b6.6 64-bit (10 Oct 2018)           www.cog-genomics.org/plink/1.9/
 # (C) 2005-2018 Shaun Purcell, Christopher Chang   GNU General Public License v3
@@ -156,10 +159,12 @@ newbfile_unique <- here::here("twas", "filter_data", "unique_snps_bim", paste0(
 ))
 
 ## Extract again (could also copy and rename, but it's fast this way)
-message(paste(Sys.time(), 'running bfile extract for', newbfile_unique))
-system(paste("plink --bfile", libd_bfile,
-             "--keep", samp_file, "--make-bed --out",
-             newbfile_unique, " --memory 100000 --biallelic-only"))
+message(paste(Sys.time(), "running bfile extract for", newbfile_unique))
+system(paste(
+    "plink --bfile", libd_bfile,
+    "--keep", samp_file, "--make-bed --out",
+    newbfile_unique, " --memory 100000 --biallelic-only"
+))
 
 
 message(paste(Sys.time(), "reading the bim file", newbfile_unique))
@@ -182,7 +187,7 @@ fwrite(bim, file = paste0(newbfile_unique, ".bim"), sep = " ", col.names = FALSE
 
 
 ## Reproducibility information
-print('Reproducibility information:')
+print("Reproducibility information:")
 Sys.time()
 proc.time()
 options(width = 120)
@@ -336,5 +341,5 @@ session_info()
 # [1] /users/lcollado/R/4.0
 # [2] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/site-library
 # [3] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/library
-system('plink --version')
+system("plink --version")
 # PLINK v1.90b6.6 64-bit (10 Oct 2018)

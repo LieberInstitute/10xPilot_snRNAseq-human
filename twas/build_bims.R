@@ -29,7 +29,7 @@ spec <- matrix(c(
 opt <- getopt(spec)
 
 ## For an interactive test
-if(FALSE) {
+if (FALSE) {
     opt <- list("cores" = 1, "test" = TRUE)
 }
 
@@ -64,27 +64,26 @@ print(opt)
 
 load_rse <- function(feat, reg) {
     message(paste(Sys.time(), "loading expression data"))
-    
+
     # expmnt data
     load(here("twas", "filter_data", "rda", "NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n205.Rdata"), verbose = TRUE)
     ## Could be more complicated later on for exon, jxn, tx
     rse <- rse_gene
     assays(rse)$raw_expr <- assays(rse_gene)$RPKM
-    
+
     ## Define the main model with effects to remove from the expression
     load(here("twas", "filter_data", "rda", "genePCs.Rdata"), verbose = TRUE)
-    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + genePCs, data = colData(rse)
-    )
-    
+    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + genePCs, data = colData(rse))
+
     ## Regress out effects. If we had a diagnosis variable (Dx), we would use it
     ## first, then use P = 2 in cleaningY()
     message(paste(Sys.time(), "cleaning expression"))
     assays(rse)$clean_expr <- cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 1)
-        
+
     message(paste(Sys.time(), "switch column names to BrNum"))
     stopifnot(!any(duplicated(colnames(rse))))
     colnames(rse) <- colData(rse)$BrNum
-    
+
     return(rse)
 }
 
@@ -146,7 +145,7 @@ print(dim(rse))
 
 rse_file_subset <- file.path("NAc_gene/subsetted_rse.Rdata")
 
-if (!file.exists(rse_file_subset)){
+if (!file.exists(rse_file_subset)) {
     message(paste(Sys.time(), "saving the subsetted rse file for later at", rse_file_subset))
     save(rse, file = rse_file_subset)
 } else {
@@ -213,29 +212,29 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
         message("*******************************************************************************")
         message(paste(Sys.time(), "building bim file for i =", i, "corresponding to feature", feat_id))
     }
-    
+
     base <- paste0(opt$region, "_", opt$feature, "_", i)
     filt_snp <- paste0("LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_", base, ".txt")
-    
+
     # change this file
     filt_bim <- gsub(".txt", "", filt_snp)
     filt_snp <- file.path("snp_files", filt_snp)
     dir.create(file.path("bim_files", base), showWarnings = FALSE)
     filt_bim <- file.path("bim_files", base, filt_bim)
-    
+
     ## Re-use the bim file if it exists already
     if (check_bim(filt_bim)) {
         return(TRUE)
     }
-    
+
     j <- subjectHits(findOverlaps(rse_window[i], bim_gr))
-    
+
     fwrite(
         bim[j, "snp"], # %>% unique()
         file = filt_snp,
         sep = "\t", col.names = FALSE
     )
-    
+
     system(paste(
         "plink --bfile", bim_file, "--extract", filt_snp,
         "--make-bed --out", filt_bim, "--memory 5000 --threads 1"
