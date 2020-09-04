@@ -9,9 +9,8 @@ library("data.table")
 library("sessioninfo")
 library("getopt")
 library("BiocParallel")
-library("sva")
-library("recount")
 library("tidyr")
+library("here")
 
 ## For styling this script
 # library("styler")
@@ -34,7 +33,7 @@ if(FALSE) {
     opt <- list("cores" = 1, "test" = TRUE)
 }
 
-opt$region <- "NAc" 
+opt$region <- "NAc"
 opt$feature <- "gene"
 
 # create the NAc_gene dir
@@ -67,63 +66,21 @@ load_rse <- function(feat, reg) {
     message(paste(Sys.time(), "loading expression data"))
     
     # expmnt data
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/count_data/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n239.rda", verbose = TRUE)
-    
+    load(here("twas", "filter_data", "rda", "NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n205.Rdata"), verbose = TRUE)
+    ## Could be more complicated later on for exon, jxn, tx
     rse <- rse_gene
-    assays(rse)$raw_expr <- getRPKM(rse_gene, "Length")
+    assays(rse)$raw_expr <- assays(rse_gene)$RPKM
     
-    # genotype file, contains mds object
-    load("/dcl01/lieber/ajaffe/lab/Nicotine/NAc/RNAseq/paired_end_n239/genotype_data/Nicotine_NAc_Genotypes_n206_mds.rda", verbose = TRUE)
-    
-    ## Drop Br1563 since it has no genotype data, although it shows up in the MDS
-    ## dropping it here, will then drop it also from the RSE once we make sure that they match
-    mds <- mds[-which(rownames(mds) == "Br1563"), ]
-    # > which(is.na(match(brnumerical(rownames(mds)), brnumerical(newbfile_fam$famid))))
-    # [1] 91
-    # > rownames(mds)[91]
-    # [1] "Br1563"
-    
-    # load("/dcl01/lieber/ajaffe/Brain/Imputation/Merged/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_Quads_maf005_hwe6_geno10_updatedMap.rda", verbose = TRUE)
-    
-    table(rse$BrNum %in% rownames(mds)) # matching samples == 195
-    # T = 195
-    
-    mds <- na.omit(mds) # omits nas, inits test var
-    
-    # subset rows in mds that are present as samples in rse
-    mds <- mds[rownames(mds) %in% rse$BrNum, ] %>%
-        na.omit()
-    
-    print(dim(mds))
-    
-    print(dim(rse))
-    
-    # only keep columns in rse that are present as rows in mds
-    rse <- rse[, rse$BrNum %in% rownames(mds)]
-    
-    stopifnot(identical(nrow(mds), ncol(rse)))
-    
-    mod <- model.matrix(~ Sex + as.matrix(mds [, 1:5]), data = colData(rse))
-    
-    pcaGene <- prcomp(t(log2(assays(rse)$raw_expr + 1)))
-    kGene <- num.sv(log2(assays(rse)$raw_expr + 1), mod)
-    
-    genePCs <- pcaGene$x[, 1:kGene]
-    
-    pcs <- genePCs
-    
-    colData(rse) <- cbind(colData(rse), pcs, mds) # cbind mds[,1:]
-    
-    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + pcs,
-                        data = colData(rse)
+    ## Define the main model with effects to remove from the expression
+    load(here("twas", "filter_data", "rda", "genePCs.Rdata"), verbose = TRUE)
+    mod <- model.matrix(~ Sex + snpPC1 + snpPC2 + snpPC3 + snpPC4 + snpPC5 + genePCs, data = colData(rse)
     )
     
+    ## Regress out effects. If we had a diagnosis variable (Dx), we would use it
+    ## first, then use P = 2 in cleaningY()
     message(paste(Sys.time(), "cleaning expression"))
-    assays(rse) <- List(
-        "raw_expr" = assays(rse)$raw_expr,
-        "clean_expr" = cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 2)
-    )
-    
+    assays(rse)$clean_expr <- cleaningY(log2(assays(rse)$raw_expr + 1), mod, P = 1)
+        
     message(paste(Sys.time(), "switch column names to BrNum"))
     stopifnot(!any(duplicated(colnames(rse))))
     colnames(rse) <- colData(rse)$BrNum
@@ -142,11 +99,13 @@ if (!file.exists(rse_file) == TRUE) {
     message(paste(Sys.time(), "loading previous rse file", rse_file))
     load(rse_file, verbose = TRUE)
 }
-message(paste(Sys.time(), "RSE dimensions"))
+message(Sys.time(), " working RSE dimensions")
 print(dim(rse))
 
-# using bim file with duplicate snp ids... make.names() doesn't work
-bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/duplicate_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_duplicateSNPs"
+## Using the files where the SNV names have been made unique
+## using make.names(unique = TRUE)
+## Details at filter_data/filter_snps.R
+bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))
 bim <- fread(
@@ -243,6 +202,11 @@ write.table(data.frame(i, i.names), file = "input_ids.txt", row.names = FALSE, c
 # setwd("NAc_gene/")
 # load("pre-bimFilesFxn.RData")
 # save.image(file = "testing_bim_files.RData")
+
+## Manual testing:
+# i <- 1
+# feat_id <- i.names[1]
+# clean <- TRUE
 
 bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
     if (i == 1 || i %% 1000 == 0) {
