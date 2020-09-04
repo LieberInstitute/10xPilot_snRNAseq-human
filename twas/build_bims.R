@@ -237,7 +237,7 @@ bim_files <- bpmapply(function(i, feat_id, clean = TRUE) {
 
     system(paste(
         "plink --bfile", bim_file, "--extract", filt_snp,
-        "--make-bed --out", filt_bim, "--memory 5000 --threads 1"
+        "--make-bed --out", filt_bim, "--memory 5000 --threads 1 --silent"
     ))
 
     ## Edit the "phenotype" column of the fam file
