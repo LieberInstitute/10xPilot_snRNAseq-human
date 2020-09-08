@@ -4,9 +4,9 @@
 #$ -N compute_weights_full_NAc_genes
 #$ -o logs/NAc_genes/compute_weights_indv_full_NAc_genes.txt
 #$ -e logs/NAc_genes/compute_weights_indv_full_NAc_genes.txt
-#$ -t 1-56888
+#$ -t 21818,31798
 #$ -tc 40
-#$ -m a
+#$ -m e
 
 ## Notes on the -t parameter
 # > load("NAc_gene/subsetted_rse.Rdata", verbose = TRUE)
@@ -43,8 +43,15 @@ FEATUREID=$(awk 'BEGIN {FS="\t"} {print $2}' ${FILELIST} | awk "NR==${SGE_TASK_I
 
 ## Change directories
 cd NAc_gene
+
+## These mkdir steps + ln -s + "mkdir -p logs" were typically done outside
+## the loop at
+## https://github.com/LieberInstitute/twas/blob/master/bsp2/compute_weights_indv.sh
 mkdir -p tmp_files
 mkdir -p out_files
+
+## For GEMMA
+ln -s /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/ NAc_gene/output
 
 ## Define files
 FILTBIM="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/bim_files/NAc_gene_${FEATURENUM}"
