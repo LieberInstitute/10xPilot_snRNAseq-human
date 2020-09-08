@@ -1,0 +1,175 @@
+Adding LIBD modules
+Loading git
+Loading LIBD module for git-status-size/github
+Loading LIBD module for git-lfs/2.8.0
+Loading LIBD module for rmate/1.5.9
+Loading LIBD module for ruby/2.6.4p104
+Loading conda_R/4.0
+**** Job starts ****
+Tue Sep  8 16:17:42 EDT 2020
+**** JHPCE info ****
+User: lcollado
+Job id: 2431816
+Job name: build_bims_NAc_genes
+Hostname: compute-093.cm.cluster
+Task id: undefined
+Loading LIBD module for plink/1.90b6.6
+Loading LIBD module for fusion_twas/github
+Loading LIBD module for plink/1.90b6.6
+Loading LIBD module for plink/1.90b6.6
+See /jhpce/shared/jhpce/libd/fusion_twas/github/README.md for installing the R
+dependencies 
+Run using the full path, for example: Rscript
+/jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.compute_weights.R
+--help 
+Unloading conda_R/4.0
+Loading conda_R/4.0
+
+Currently Loaded Modules:
+  1) matlab/R2019a                   9) git/2.23.0
+  2) stata/16                       10) git-lfs/2.8.0
+  3) JHPCE_tools/1.0                11) ruby/2.6.4p104
+  4) sge/8.1.9                      12) rmate/1.5.9
+  5) gcc/4.4.7                      13) plink/1.90b6.6
+  6) COMMUNITY_CENTOS7_DEFAULT_ENV  14) fusion_twas/github
+  7) JHPCE_CENTOS7_DEFAULT_ENV      15) conda/3-4.6.14
+  8) git-status-size/github         16) conda_R/4.0
+
+ 
+
+Loading required package: GenomicRanges
+Loading required package: stats4
+Loading required package: BiocGenerics
+Loading required package: parallel
+
+Attaching package: ‘BiocGenerics’
+
+The following objects are masked from ‘package:parallel’:
+
+    clusterApply, clusterApplyLB, clusterCall, clusterEvalQ,
+    clusterExport, clusterMap, parApply, parCapply, parLapply,
+    parLapplyLB, parRapply, parSapply, parSapplyLB
+
+The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colnames,
+    dirname, do.call, duplicated, eval, evalq, Filter, Find, get, grep,
+    grepl, intersect, is.unsorted, lapply, Map, mapply, match, mget,
+    order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank,
+    rbind, Reduce, rownames, sapply, setdiff, sort, table, tapply,
+    union, unique, unsplit, which, which.max, which.min
+
+Loading required package: S4Vectors
+
+Attaching package: ‘S4Vectors’
+
+The following object is masked from ‘package:base’:
+
+    expand.grid
+
+Loading required package: IRanges
+Loading required package: GenomeInfoDb
+Loading required package: Biobase
+Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation("Biobase")', and for packages 'citation("pkgname")'.
+
+Loading required package: DelayedArray
+Loading required package: matrixStats
+
+Attaching package: ‘matrixStats’
+
+The following objects are masked from ‘package:Biobase’:
+
+    anyMissing, rowMedians
+
+
+Attaching package: ‘DelayedArray’
+
+The following objects are masked from ‘package:matrixStats’:
+
+    colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges
+
+The following objects are masked from ‘package:base’:
+
+    aperm, apply, rowsum
+
+Loading required package: rafalib
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:SummarizedExperiment’:
+
+    shift
+
+The following object is masked from ‘package:GenomicRanges’:
+
+    shift
+
+The following object is masked from ‘package:IRanges’:
+
+    shift
+
+The following objects are masked from ‘package:S4Vectors’:
+
+    first, second
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:S4Vectors’:
+
+    expand
+
+here() starts at /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
+2020-09-08 16:17:53 options used
+$ARGS
+character(0)
+
+$cores
+[1] 10
+
+$test
+[1] FALSE
+
+$region
+[1] "NAc"
+
+$feature
+[1] "gene"
+
+2020-09-08 16:17:53 rse file does not already exist, generating now NAc_gene/working_rse.Rdata
+2020-09-08 16:17:53 loading expression data
+Loading objects:
+  rse_gene
+Loading objects:
+  genePCs
+2020-09-08 16:17:57 cleaning expression
+2020-09-08 16:18:01 switch column names to BrNum
+2020-09-08 16:18:01 saving the rse file for later at NAc_gene/working_rse.Rdata
+2020-09-08 16:18:31 working RSE dimensions
+[1] 58037   205
+2020-09-08 16:18:31 reading the bim file /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+2020-09-08 16:19:20 number of features kept: 56888
+2020-09-08 16:19:21 number of genes per chr
+
+ chr1  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9 chr10 chr11 chr12 chr13 
+ 5178  3971  2911  2505  2868  2660  2867  2353  2199  2204  3235  2940  1304 
+chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22  chrX  chrY  chrM 
+ 2223  2088  2511  2995  1170  2926  1372   795  1281  2332     0     0 
+[1] "Final RSE feature dimensions:"
+[1] 56888   205
+2020-09-08 16:19:21 saving the subsetted rse file for later at NAc_gene/subsetted_rse.Rdata
+2020-09-08 16:19:51 current files:
+[1] "bim_files"           "snp_files"           "subsetted_rse.Rdata"
+[4] "working_rse.Rdata"  
+2020-09-08 16:19:51 creating the i_info.Rdata file
+2020-09-08 16:19:51 length of i and i.names
+[1] 56888
+[1] 56888
