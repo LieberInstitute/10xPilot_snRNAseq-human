@@ -8,6 +8,14 @@
 #$ -tc 40
 #$ -m e
 
+# ## Required order for running this code:
+# # For GEMMA
+# ln -s /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/ NAc_gene/output
+# # For the logs
+# mkdir -p logs/NAc_genes
+# # For running this script
+# qsub compute_weights_indv_full_NAc_genes.sh
+
 ## Notes on the -t parameter
 # > load("NAc_gene/subsetted_rse.Rdata", verbose = TRUE)
 # > dim(rse)
@@ -50,9 +58,6 @@ cd NAc_gene
 mkdir -p tmp_files
 mkdir -p out_files
 
-## For GEMMA
-ln -s /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/ NAc_gene/output
-
 ## Define files
 FILTBIM="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/bim_files/NAc_gene_${FEATURENUM}"
 TMPFILES="tmp_files/genes_${FEATURENUM}"
@@ -65,3 +70,5 @@ Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.compute_w
     --PATH_gemma /dcl01/lieber/ajaffe/lab/twas/software/gemma-0.98.1-linux-static \
     --models top1,blup,lasso,enet --hsq_p 1.0001 --verbose 1 --save_hsq
 
+echo "**** Job ends ****"
+date
