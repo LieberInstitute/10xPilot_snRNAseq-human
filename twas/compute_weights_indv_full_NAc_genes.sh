@@ -2,8 +2,8 @@
 #$ -cwd
 #$ -l bluejay,mem_free=4G,h_vmem=4G,h_fsize=100G
 #$ -N compute_weights_full_NAc_genes
-#$ -o logs/NAc_genes/compute_weights_indv_full_NAc_genes.txt
-#$ -e logs/NAc_genes/compute_weights_indv_full_NAc_genes.txt
+#$ -o logs/NAc_genes/compute_weights_indv_full_NAc_genes.$TASK_ID.txt
+#$ -e logs/NAc_genes/compute_weights_indv_full_NAc_genes.$TASK_ID.txt
 #$ -t 21818,31798
 #$ -tc 40
 #$ -m e
