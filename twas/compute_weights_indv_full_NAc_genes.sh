@@ -44,8 +44,8 @@ FEATUREID=$(awk 'BEGIN {FS="\t"} {print $2}' ${FILELIST} | awk "NR==${SGE_TASK_I
 ## Change directories
 cd NAc_gene
 
-## These mkdir steps + ln -s + "mkdir -p logs" were typically done outside
-## the loop at
+## These mkdir steps + ln -s + "mkdir -p logs/NAc_genes" were typically done
+## outside the loop at
 ## https://github.com/LieberInstitute/twas/blob/master/bsp2/compute_weights_indv.sh
 mkdir -p tmp_files
 mkdir -p out_files
