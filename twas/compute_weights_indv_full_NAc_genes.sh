@@ -45,7 +45,7 @@ FEATUREID=$(awk 'BEGIN {FS="\t"} {print $2}' ${FILELIST} | awk "NR==${SGE_TASK_I
 cd NAc_gene
 
 ## Define files
-FILTBIM="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/bim_files/NAc_gene_${FEATURENUM}"
+FILTBIM="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/bim_files/NAc_gene_${FEATURENUM}/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_NAc_gene_${FEATURENUM}"
 TMPFILES="tmp_files/genes_${FEATURENUM}"
 OUTFILES="out_files/genes_${FEATURENUM}"
 
