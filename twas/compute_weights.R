@@ -11,7 +11,6 @@ library("BiocParallel")
 ## Flags that are supplied with RScript
 spec <- matrix(c(
     "cores", "c", 1, "integer", "Number of cores to use. Use a small number",
-    "pgconly", "p", 1, "logical", "Subset to only PGC loci?",
     "help", "h", 0, "logical", "Display help"
 ), byrow = TRUE, ncol = 5)
 opt <- getopt(spec)
@@ -25,23 +24,20 @@ if (!is.null(opt$help)) {
     cat(getopt(spec, usage = TRUE))
     q(status = 1)
 }
-## Not sure what if(FALSE) really does
-if (FALSE) {
-    # feat = opt$feature; reg = opt$reg
-    opt <- list(region = "NAc", feature = "gene", cores = 3, "pgconly" = FALSE)
+
+if (is.null(opt$cores)) {
+    opt$cores = 1
 }
 
 stopifnot(opt$region %in% c("NAc"))
 stopifnot(opt$feature %in% c("gene"))
 
 ## Use the rse file from build_bims.R
-rse_file <- file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", "")), "subsetted_rse.Rdata") # can't make .Rdata
+rse_file <- file.path("NAc_gene/subsetted_rse.Rdata") # can't make .Rdata
 stopifnot(file.exists(rse_file))
 
-
 ## Change to the wd
-setwd(file.path(opt$region, paste0(opt$feature, ifelse(opt$pgconly, "_pgconly", ""))))
-
+setwd(file.path("NAc_gene/"))
 
 ## Create the bim files with half the cores used for the later stage
 ## to reduce memory blow up
@@ -58,6 +54,7 @@ output_status <- bpmapply(function(i, feat_id, clean_bim = FALSE) {
 
     return(file.exists(paste0(out_file, ".wgt.RDat")))
 }, i, i.names, BPPARAM = MulticoreParam(workers = opt$cores), SIMPLIFY = FALSE)
+
 output_status <- unlist(output_status)
 
 message("*******************************************************************************")
@@ -83,22 +80,12 @@ system(paste0("Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/u
 system(paste0("mv wglist_summary.txt ", opt$region, "_", opt$feature, ".profile"))
 
 message(paste(Sys.time(), "creating the .pos file"))
-if (opt$feature %in% c("gene", "exon")) {
-    var <- "gencodeID"
-    # vars <- 'Symbol'
-} else if (opt$feature == "jxn") {
-    var <- "gencodeGeneID"
-    # vars <- 'Symbol'
-} else {
-    var <- "gene_id"
-    # vars <- 'gene_name'
-}
+var <- "gencodeID"
 
 pos_match <- match(gsub("out_files/|\\.wgt\\.RDat", "", rdat_files), names(output_status))
 stopifnot(all(!is.na(pos_match)))
 
 stopifnot(identical(gsub("out_files/|\\.wgt\\.RDat", "", rdat_files), names(output_status)[pos_match]))
-
 
 pos_info <- data.frame(
     "WGT" = rdat_files,
