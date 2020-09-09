@@ -4,9 +4,9 @@
 #$ -N compute_weights_full_NAc_genes
 #$ -o logs/NAc_genes/compute_weights_indv_full_NAc_genes.$TASK_ID.txt
 #$ -e logs/NAc_genes/compute_weights_indv_full_NAc_genes.$TASK_ID.txt
-#$ -t 21818,31798
+#$ -t 1-56888
 #$ -tc 40
-#$ -m e
+#$ -m a
 
 ## Notes on the -t parameter
 # > load("NAc_gene/subsetted_rse.Rdata", verbose = TRUE)
