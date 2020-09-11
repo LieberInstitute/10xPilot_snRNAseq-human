@@ -16,7 +16,7 @@ spec <- matrix(c(
 opt <- getopt(spec)
 
 opt$region <- "NAc"
-opt$feat <- "gene"
+opt$feature <- "gene"
 
 ## if help was asked for print a friendly message
 ## and exit with a non-zero error code
