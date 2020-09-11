@@ -7,6 +7,7 @@ library("SummarizedExperiment")
 library("sessioninfo")
 library("getopt")
 library("BiocParallel")
+library("data.table")
 
 ## Flags that are supplied with RScript
 spec <- matrix(c(
