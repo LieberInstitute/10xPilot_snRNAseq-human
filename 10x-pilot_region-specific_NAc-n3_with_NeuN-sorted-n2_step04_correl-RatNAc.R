@@ -835,3 +835,83 @@ dev.off()
 
 
 
+## Final small exploration: Rat Grm8-MSNs ~ MSN.D1.3? ================
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_findMarkers-SN-LEVEL_MNTMay2020.rda",
+     verbose=T)
+    # markers.rat.t.1vAll
+
+# Rat SCE for gene IDs
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
+    # sce.nac.rat, chosen.hvgs.nac.rat
+
+for(i in names(markers.rat.t.1vAll)){
+  rownames(markers.rat.t.1vAll[[i]]) <- rowData(sce.nac.rat)$Symbol[match(rownames(markers.rat.t.1vAll[[i]]),
+                                                                          rowData(sce.nac.rat)$ID)]
+}
+
+
+# Intersecting top 40?  Just use brute-force `toupper()`
+intersect(toupper(head(rownames(markers.rat.t.1vAll[["Grm8-MSN"]]), n=40)),
+          head(rownames(markers.nac.t.1vAll[["MSN.D1.3"]]), n=40))
+    # "FOXP2"   "NTNG1"   "CNTN5"   "SLC35F1"
+        # *More w/ MSN.D1.1: "EYA2"  "VWC2L" "FOXP2" "KCNJ3" "GNG4"  "SEZ6L" "PPM1E"
+        # Three with MSN.D1.2: "THSD7B" "KCNH5"  "LYPD1"
+
+# Plot it
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+plotExpression(sce.nac.all, x="cellType.final", colour_by="cellType.final",
+               exprs_values="logcounts", features="GRM8") +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               geom = "crossbar", width = 0.3,
+               colour=rep(tableau20[1:14], 1)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12))
+    ## D1.1 expresses the most, followed by D1.2
+  
+which(rownames(markers.nac.t.1vAll[["MSN.D1.3"]]) == "GRM8")
+    # 29084 - interesting     * for 'MSN.D1.1' it's the 157th-top marker
+
+
+
+# What does Grm8 look like in the rat data?
+rowData(sce.nac.rat[which(rowData(sce.nac.rat)$Symbol %in% c("Grm8","Drd1","Drd2","Drd3")), ])
+    # "ENSRNOG00000021468", "ENSRNOG00000023688", "ENSRNOG00000008428", "ENSRNOG00000060806"
+plotExpression(sce.nac.rat, x="Celltype", colour_by="Celltype",
+               exprs_values="logcounts", point_alpha=0.6, point_size=0.8,
+               features=c("ENSRNOG00000023688","ENSRNOG00000008428","ENSRNOG00000060806","ENSRNOG00000021468")) +
+  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               geom = "crossbar", width = 0.3,
+               colour=rep(tableau20[1:16], 4)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+  ggtitle("Drd1, Drd2, Drd3, and Grm8 expression, respectively (Savell et al. 2020 Rat NAc)")
+    # (screencapped this)
+
+# Shared genes b/tw Grm8-MSNs : 'MSN.D1.1' vs. 'MSN.D1.3' ? Taking top 100 for each
+shared.w.d1.1 <- intersect(toupper(head(rownames(markers.rat.t.1vAll[["Grm8-MSN"]]), n=100)),
+                           head(rownames(markers.nac.t.1vAll[["MSN.D1.1"]]), n=100))
+    # 20 genes
+shared.w.d1.3 <- intersect(toupper(head(rownames(markers.rat.t.1vAll[["Grm8-MSN"]]), n=100)),
+                           head(rownames(markers.nac.t.1vAll[["MSN.D1.3"]]), n=100))
+    # 19 genes
+
+intersect(shared.w.d1.1, shared.w.d1.3)
+    # only 9 of the above overlaps are the same
+
+
+# Correlation coefficients ===
+load("rdas/zTsMats_libd-NAc_and_DayLab-ratNAc_sharedGenes_29May2020.rda", verbose=T)
+    # ts.nac, ts.rat, Readme
+cor_t_nac <- cor(ts.nac, ts.rat)
+rownames(cor_t_nac) = paste0(rownames(cor_t_nac),"_H")
+colnames(cor_t_nac) = paste0(colnames(cor_t_nac),"_R")
+cor_t_nac[ ,"Grm8-MSN_R"]
+    #      Astro_H    Inhib.1_H    Inhib.2_H    Inhib.3_H    Inhib.4_H      Micro_H
+    #  0.005444515  0.037596773  0.025707518 -0.018774007 -0.035129239 -0.083253870
+    #   MSN.D1.1_H   MSN.D1.2_H   MSN.D1.3_H   MSN.D1.4_H   MSN.D2.1_H   MSN.D2.2_H
+    #  0.192243866  0.079574932  0.262900534  0.234844145  0.134149319  0.059178530
+    #      Oligo_H        OPC_H
+    # -0.345118419  0.149465693
+
