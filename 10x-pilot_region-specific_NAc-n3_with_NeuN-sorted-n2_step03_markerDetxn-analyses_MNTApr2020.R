@@ -735,9 +735,6 @@ for(i in names(genes.top40.t.1vAll)){
 
 
 
-
-
-
 ## How do these top 40 intersect? ===
 sapply(names(genes.top40.t), function(c){
   length(intersect(genes.top40.t[[c]],
@@ -747,7 +744,6 @@ sapply(names(genes.top40.t), function(c){
     #        35       30       16       26       22       40       17       24
     #  MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
     #         7        9       23       16       32       29
-
 
 
 ## Write these top 40 lists to a csv
@@ -763,7 +759,59 @@ write.csv(top40genes, file="tables/top40genesLists_NAc-n5_cellType.final_SN-LEVE
 
 
 
+## Make marker array for Supp figure (MNT suggested panel A) ===========
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+    #sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll
+
+# First make interneuron subset
+sce.nac.int <- sce.nac.all[ ,grep("Inhib.", sce.nac.all$cellType.final)]
+sce.nac.int$cellType.final <- droplevels(sce.nac.int$cellType.final)
 
 
+# Take top four for 4 inhib. interneuron pops
+topToPrint <- as.data.frame(sapply(markers.nac.t.1vAll, function(x) {head(rownames(x),n=4)}))
+topToPrint <- topToPrint[grep("Inhib.", names(topToPrint))]
 
+# Manual assignment, bc 'Inhib.2' is mostly driven by noise (but 0 median)
+topToPrint["Inhib.2"] <- c("KCNJ6", "SDK1", "LRFN2","NR2F1-AS1")
+
+table(unlist(topToPrint) %in% rownames(sce.nac.int)) # good
+
+# Print
+pdf("pdfs/pubFigures/suppFig_NAc_interneuron-marker-array_MNTSep2020.pdf", height=8, width=5.5)
+print(
+  plotExpression(sce.nac.int, exprs_values = "logcounts", features=c(t(topToPrint)),
+                 x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.5, ncol=4,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau10medium[1:4], length(unlist(topToPrint)))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
+    ggtitle(label="Inhib.1          Inhib.2           Inhib.3          Inhib.4") + xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
+          axis.title.y = element_text(angle = 90, size = 16),
+          plot.title = element_text(size = 15),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+
+## For MNT version panel B
+pdf("pdfs/pubFigures/suppFig_NAc_interneuron-experiment-panelB_MNTSep2020.pdf", height=3.2, width=4.5)
+print(
+  plotExpression(sce.nac.int, exprs_values = "logcounts", features=c("GAD1", "KIT", "PTHLH", "PVALB"),
+                 x="cellType.final", colour_by="cellType.final", point_alpha=0.7, point_size=1.2, ncol=2,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau10medium[1:4], 4)) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+          axis.title.y = element_text(angle = 90, size = 10),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
 
