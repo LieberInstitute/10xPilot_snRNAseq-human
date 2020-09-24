@@ -5,6 +5,6 @@ account: libd
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2875484
-bundleId: 3664470
+bundleId: 3666993
 url: https://libd.shinyapps.io/tran2020_Amyg/
-when: 1600922084.26224
+when: 1600967240.49971

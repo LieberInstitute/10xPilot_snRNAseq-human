@@ -4,6 +4,8 @@ library("iSEE")
 library("shiny")
 
 sce <- readRDS("sce_nac_small.rds")
+sce <- sce[, sce$cell_type != "ambig.lowNtrxts"]
+sce$cell_type <- factor(sce$cell_type)
 
 packageVersion("iSEE")
 
@@ -22,7 +24,7 @@ initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "PCA", 
     ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---",
     ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "nac.5161_AAACCCACATCGAACT-1",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
-    ShapeBy = "Column data", SizeBy = "None", SelectionEffect = "Transparent",
+    ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
     BrushData = list(), VisualBoxOpen = FALSE, VisualChoices = c("Color",
         "Shape"), ContourAdd = FALSE, ContourColor = "#0000FF", PointSize = 1,
@@ -57,15 +59,15 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     YAxisFeatureName = "MOBP", YAxisFeatureSource = "RowDataTable1",
     YAxisFeatureDynamicSource = TRUE, ColorByColumnData = "cell_type",
     ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000",
-    ShapeByColumnData = "donor", SizeByColumnData = "sum", FacetByRow = "donor",
+    ShapeByColumnData = "donor", SizeByColumnData = "sum", FacetByRow = "---",
     FacetByColumn = "---", ColorBy = "Column data", ColorByDefaultColor = "#000000",
     ColorByFeatureName = "MIR1302-2HG", ColorByFeatureSource = "---",
     ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "nac.5161_AAACCCACATCGAACT-1",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
-    BrushData = list(), VisualBoxOpen = FALSE, VisualChoices = c("Color",
-        "Facet"), ContourAdd = FALSE, ContourColor = "#0000FF", PointSize = 1,
+    BrushData = list(), VisualBoxOpen = FALSE, VisualChoices = "Color",
+    ContourAdd = FALSE, ContourColor = "#0000FF", PointSize = 1,
     PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200,
     FontSize = 1, LegendPosition = "Bottom", PanelId = c(FeatureAssayPlot = 1L),
     PanelHeight = 600L, PanelWidth = 5L, SelectionBoxOpen = FALSE,
@@ -83,17 +85,17 @@ initial[["ColumnDataPlot1"]] <- new("ColumnDataPlot", XAxis = "Column data", YAx
     XAxisColumnData = "cell_type", ColorByColumnData = "cell_type",
     ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000",
     ShapeByColumnData = "high.mito", SizeByColumnData = "sum",
-    FacetByRow = "donor", FacetByColumn = "---", ColorBy = "Column data",
+    FacetByRow = "---", FacetByColumn = "---", ColorBy = "Column data",
     ColorByDefaultColor = "#000000", ColorByFeatureName = "MIR1302-2HG",
     ColorByFeatureSource = "---", ColorByFeatureDynamicSource = FALSE,
     ColorBySampleName = "nac.5161_AAACCCACATCGAACT-1", ColorBySampleSource = "---",
     ColorBySampleDynamicSource = FALSE, ShapeBy = "None", SizeBy = "None",
     SelectionEffect = "Transparent", SelectionColor = "#FF0000",
     SelectionAlpha = 0.1, ZoomData = numeric(0), BrushData = list(),
-    VisualBoxOpen = FALSE, VisualChoices = c("Color", "Facet"
-    ), ContourAdd = FALSE, ContourColor = "#0000FF", PointSize = 1,
-    PointAlpha = 1, Downsample = FALSE, DownsampleResolution = 200,
-    FontSize = 1, LegendPosition = "Bottom", PanelId = c(ColumnDataPlot = 1L),
+    VisualBoxOpen = FALSE, VisualChoices = "Color", ContourAdd = FALSE,
+    ContourColor = "#0000FF", PointSize = 1, PointAlpha = 1,
+    Downsample = FALSE, DownsampleResolution = 200, FontSize = 1,
+    LegendPosition = "Bottom", PanelId = c(ColumnDataPlot = 1L),
     PanelHeight = 600L, PanelWidth = 5L, SelectionBoxOpen = FALSE,
     RowSelectionSource = "---", ColumnSelectionSource = "---",
     DataBoxOpen = FALSE, RowSelectionDynamicSource = FALSE, RowSelectionType = "Active",

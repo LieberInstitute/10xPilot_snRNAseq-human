@@ -1,9 +1,10 @@
 library("SingleCellExperiment")
 library("iSEE")
 library("pryr")
+library("here")
 library("sessioninfo")
 
-load("regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose = TRUE)
+load(here("rdas", "regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda"), verbose = TRUE)
 
 dim(sce.nac.all)
 # [1] 33538 13241
@@ -55,8 +56,8 @@ object_size(sce.nac.all)
 object_size(sce_nac_small)
 # 1.29 GB
 
-dir.create("tran2020_NAc", showWarnings = FALSE)
-saveRDS(sce_nac_small, file = "tran2020_NAc/sce_nac_small.rds")
+dir.create(here("shiny_apps", "tran2020_NAc"), showWarnings = FALSE)
+saveRDS(sce_nac_small, file = here("shiny_apps", "tran2020_NAc", "sce_nac_small.rds"))
 
 ## Reproducibility information
 print('Reproducibility information:')

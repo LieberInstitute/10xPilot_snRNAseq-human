@@ -1,5 +1,5 @@
 library('rsconnect')
-load('../.deploy_info.Rdata')
+load(here::here("shiny_apps", ".deploy_info.Rdata"))
 rsconnect::setAccountInfo(name=deploy_info$name, token=deploy_info$token,
     secret=deploy_info$secret)
 options(repos = BiocManager::repositories())

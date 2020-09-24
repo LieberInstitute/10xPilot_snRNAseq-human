@@ -1,9 +1,10 @@
 library("SingleCellExperiment")
 library("iSEE")
 library("pryr")
+library("here")
 library("sessioninfo")
 
-load("regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose = TRUE)
+load(here("rdas", "regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda"), verbose = TRUE)
 
 dim(sce.amy)
 # [1] 33538  6632
@@ -49,8 +50,8 @@ object_size(sce.amy)
 object_size(sce_amy_small)
 # 466 MB
 
-dir.create("tran2020_Amyg", showWarnings = FALSE)
-saveRDS(sce_amy_small, file = "tran2020_Amyg/sce_amy_small.rds")
+dir.create(here("shiny_apps", "tran2020_Amyg"), showWarnings = FALSE)
+saveRDS(sce_nac_small, file = here("shiny_apps", "tran2020_Amyg", "sce_amy_small.rds"))
 
 ## Reproducibility information
 print('Reproducibility information:')
