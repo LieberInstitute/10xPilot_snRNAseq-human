@@ -1,0 +1,4 @@
+.deploy_info.Rdata
+deploy_info.R
+regionSpecific*.rda
+*/*.rds
