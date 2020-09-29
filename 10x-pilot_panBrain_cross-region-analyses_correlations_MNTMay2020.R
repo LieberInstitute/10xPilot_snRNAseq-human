@@ -147,6 +147,7 @@ save(FMstats.list, sampleNumNuclei, readme.mnt, ref.sampleInfo,
 
 # (If needed)
 load("rdas/markers-stats_SN-LEVEL_1vAll_all-regions-combined_May2020.rda", verbose=T)
+    # FMstats.list, sampleNumNuclei, readme.mnt, ref.sampleInfo
 readme.mnt
 
 ## Create matrix of t's with region:subcluster identifiers
@@ -228,39 +229,61 @@ dev.off()
 
 
 
+## Non-neuronal set for supplement === === ===
+load("rdas/markers-stats_SN-LEVEL_1vAll_all-regions-combined_May2020.rda", verbose=T)
+    # FMstats.list, sampleNumNuclei, readme.mnt, ref.sampleInfo
+
+ts.list <- lapply(FMstats.list, function(x){
+  sapply(x, function(y){y$t.stat})
+  }
+)
+# Add back in row names and region suffix
+for(i in names(ts.list)){
+  rownames(ts.list[[i]]) <- rownames(FMstats.list[[1]][[1]])
+  colnames(ts.list[[i]]) <- paste0(colnames(ts.list[[i]]), "_", i)
+}
+# Cbind
+ts.fullMat <- do.call(cbind, ts.list)
 
 
-        # ## MNT added 14Apr2020: Reorder to diagonal & threshold at 0.4 for all-gene correlation === === ===
-        # # Start from descending - easier to manually order
-        # #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(1:ncol(cor_t_all_toPlot))]
-        # # This is useful:
-        # apply(cor_t_all_toPlot, 2, which.max)
-        # # If want to re-order human labels (but prefer re-ordering mm labels)
-        # #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
-        # cor_t_all_toPlot <- cor_t_all_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
-        # # Threshold at 0.4
-        # range(cor_t_all_toPlot)
-        # cor_t_all_toPlot <- ifelse(cor_t_all_toPlot >= 0.4, 0.4, cor_t_all_toPlot)
-        # 
-        # 
-        # #pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-mouse-MeA_with_LIBD-10x-Amyg_top100-or-all_Apr2020.pdf")
-        # # Most human-specific
-        # print(
-        #   levelplot(
-        #     cor_t_panBrain,
-        #     aspect = "fill",
-        #     at = theSeq.all,
-        #     col.regions = my.col.all,
-        #     ylab = "",
-        #     xlab = "",
-        #     scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
-        #     main="Correlation of cluster-specific t's from all regions \n (all shared expressed genes)"
-        #   )
-        # )
-        # #[...]
-        # #dev.off()
+## Subset OUT neuronal subcluster t's and check
+ts.fullMat.non <- ts.fullMat
+#keepThese <- c("Astro", "Micro", "Oligo", "OPC", "Tcell")
+ts.fullMat.non <- ts.fullMat.non[ ,-grep("Excit.", colnames(ts.fullMat.non))]
+ts.fullMat.non <- ts.fullMat.non[ ,-grep("Inhib.", colnames(ts.fullMat.non))]
+ts.fullMat.non <- ts.fullMat.non[ ,-grep("MSN.", colnames(ts.fullMat.non))]
+
+cor_t_panBrain.non <- cor(ts.fullMat.non)
+
+
+### Heatmap ===
+theSeq.all = seq(-1, 1, by = 0.025)
+my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
+
+# Add some cluster info for add'l heatmap annotations
+clusterInfo <- data.frame(class=ss(colnames(ts.fullMat.non), "\\_", 1),
+                          region=ss(colnames(ts.fullMat.non), "_",2))
+rownames(clusterInfo) <- colnames(ts.fullMat.non)
+
+annotColors <- list(class = tableau10medium[1:5][factor(unique(clusterInfo$class))],
+                    region = tableau10medium[6:10][factor(unique(clusterInfo$region))])
+
+names(annotColors[["class"]]) <- unique(clusterInfo$class)
+names(annotColors[["region"]]) <- unique(clusterInfo$region)
 
 
 
+# Print
+pdf("pdfs/pubFigures/pan-Brain_correlation_region-specific-NON-NeuronalSubcluster-ts_Sep2020.pdf",width=9)
+pheatmap(cor_t_panBrain.non,
+         annotation_col=clusterInfo,
+         annotation_colors=annotColors,
+         show_colnames=FALSE,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=10, #fontsize_col=6.5,
+         display_numbers=TRUE, fontsize_number=6,
+         main="Correlation of glia/other cluster-specific t's from all regions \n (all shared expressed genes)")
+dev.off()
 
 
