@@ -815,3 +815,44 @@ print(
 )
 dev.off()
 
+
+## Supp Fig 5: Other markers pointed out in text ===
+genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+pdf("pdfs/pubFigures/suppFig_NAc_other-MSN-markers_MNTSep2020.pdf", height=4.5, width=6.5)
+print(
+  plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes2print,
+                 x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=1.0, ncol=2,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:14], length(genes2print))) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+          axis.title.y = element_text(angle = 90, size = 10),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+
+
+## Top markers for D1.4 / D2.2 often co-expressed ===
+load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll
+
+cell.idx <- splitit(sce.nac.all$cellType.final)
+dat <- as.matrix(assay(sce.nac.all, "logcounts"))
+genes <- head(rownames(markers.nac.t.1vAll[["MSN.D1.4"]]), n=40)
+
+pdf('pdfs/pubFigures/suppFigure_heatmap-Exprs_NAc-n5_top40-D1.4markers-1vAlltest_MNTSep2020.pdf',
+    useDingbats=TRUE, height=6, width=10)
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 5, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 20, fontsize_col=15)
+dev.off()
+
