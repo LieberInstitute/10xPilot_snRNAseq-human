@@ -813,3 +813,68 @@ dev.off()
 
 
 
+## For supplement: Print top markers for 'Inhib.5' & corresponding in MeA 'N.8' === ===
+# (load AMY SCE - already done in session)
+
+# Prep mouse MeA
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mouse-MeA_downstream-processing_MNT.rda", verbose=T)
+    # sce.amy.mm, chosen.hvgs.amy.mm
+
+sce.amy.mm.sub <- sce.amy.mm[ ,grep("N.", sce.amy.mm$subCluster)]
+sce.amy.mm.sub$subCluster <- droplevels(sce.amy.mm.sub$subCluster)
+
+genes2print <- c("Npffr2", "Tll1", "Grm8", "Foxp2")
+
+pdf("pdfs/pubFigures/suppFig_AMY-vs-MeA_topInhib.5markers_MNTSep2020.pdf", height=2.5, width=5)
+# Human AMY
+print(
+  plotExpression(sce.amy, exprs_values = "logcounts", features=toupper(genes2print),
+                 x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=1.0, ncol=4,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:12], length(genes2print))) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+          axis.title.y = element_text(angle = 90, size = 10),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+
+# mouse MeA
+print(
+  plotExpression(sce.amy.mm.sub, exprs_values = "logcounts", features=genes2print,
+                 x="subCluster", colour_by="subCluster", point_alpha=0.5, point_size=1.0, ncol=4,
+                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:16], length(genes2print))) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+          axis.title.y = element_text(angle = 90, size = 10),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+
+## Heatmap version ===
+# Take more overlapping, from above exploration
+genes2print <- c("Npffr2", "Tll1", "Grm8", "Foxp2", "Sv2c", "Olfm3")
+
+pdf("pdfs/pubFigures/suppFig_AMY-vs-MeA_topInhib.5markers_heatmap_MNTSep2020.pdf", width=5, height=5)
+dat <- assay(sce.amy, "logcounts")
+cell.idx <- splitit(sce.amy$cellType.split)
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[toupper(genes2print), ii])))
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4.0, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
+         fontsize_row = 18, fontsize_col=16)
+
+dat <- assay(sce.amy.mm.sub, "logcounts")
+cell.idx <- splitit(sce.amy.mm.sub$subCluster)
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes2print, ii])))
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 1, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
+         fontsize_row = 16, fontsize_col=16)
+dev.off()
+
+
+
