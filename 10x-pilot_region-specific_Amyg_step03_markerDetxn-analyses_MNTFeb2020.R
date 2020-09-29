@@ -834,22 +834,23 @@ print(
 dev.off()
 
 # Neuronal markers only (highlighted in paper)
-topToPrint <- c("NPTX1", "SLC30A3", # Excit.1
-  "SLC17A6", "SOX4", "SOX11", #Excit.2
-  "MCHR2", "CDH22", # Excit.3
+topToPrint <- c("NRN1", "NPTX1", "SLC30A3", # Excit.1
+  "SLC17A6", "VCAN", #Excit.2
+  "MCHR2", "RBFOX3", # Excit.3
   "CCK", "CALB2", "KIT", # Inhib.1/2/4
-  "CNTNAP3", "CNTNAP3B", "CALB1", # Inhib.3
+  "CRH", "CALB1", # Inhib.3
   "NPFFR2", "TLL1")
 
 pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v2.pdf", height=11, width=4.5)
 print(
   plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
                  x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7, ncol=1,
-                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                 add_legend=F, scales="free_y") + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                               geom = "crossbar", width = 0.3,
                                               colour=rep(tableau20[1:12], length(topToPrint))) +
     xlab("") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
+          axis.text.y = element_text(size = 6.5),
           axis.title.y = element_text(angle = 90, size = 16),
           plot.title = element_text(size = 20),
           panel.grid.major=element_line(colour="grey95", size=0.8),
