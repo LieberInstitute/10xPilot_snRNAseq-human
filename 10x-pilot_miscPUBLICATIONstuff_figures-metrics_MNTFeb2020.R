@@ -322,8 +322,12 @@ for(i in c(2:14)){
 rownames(n14.metrics.collapsed) <- n14.samples
 
 # Write this out for future reference
-write.table(n14.metrics.collapsed, row.names=T, col.names=T, sep="\t",
+write.table(n14.metrics.collapsed, row.names=T, col.names=T, sep="\t", quote=F,
+            file="tables/METRICS-n14-analyzed_CellRanger-premRNA-output_MNT.tsv")
+# As semi-colon-SV
+write.table(n14.metrics.collapsed, row.names=T, col.names=T, sep=";", quote=F, 
             file="tables/METRICS-n14-analyzed_CellRanger-premRNA-output_MNT.csv")
+
 
 # Sequencing depth
 quantile(as.numeric(gsub(",","",n14.metrics.collapsed$Number.of.Reads)))
@@ -684,8 +688,25 @@ write.table(RSsubs.donorTab, file="tables/suppTable_68-RSsubclusters_donorStrati
             #   amy dlpfc   hpc   nac  sacc
             # 0.992 0.969 0.990 0.993 0.994
 
-        
-        
+## Similarly for pan-brain clustering/annotation ===
+
+# As for downstream analyses, remove the clusters that don't pursue:
+#     'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
+sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
+
+cellType.rgnTab <- as.data.frame.matrix(table(sce.all.n12$cellType, sce.all.n12$region))
+
+# Write into table
+cellType.rgnTab <- cbind(rownames(cellType.rgnTab), cellType.rgnTab)
+colnames(cellType.rgnTab)[1] <- "cellType.panBrain"
+write.table(cellType.rgnTab, file="tables/suppTable_17panBrain-subclusters_regionStratified_MNT.tsv",
+            sep="\t", quote=F, row.names=F,col.names=T)
+  
 ### RNAscope misc checks for NAc ===============================
 # MNT/AnJa 21Sep2020
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
@@ -782,6 +803,101 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("RXFP1"),
                                             geom = "crossbar", width = 0.3,
                                             colour=rep(tableau20[1:14], 1)) +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size=20), plot.title = element_text(size = 25))
+
+
+
+
+### Regionally-defined subcluster broad marker heatmaps =============
+  # (for supplement: AMY, HIPPO, DLPFC, sACC)
+library(pheatmap)
+
+load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
+    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+
+
+# First drop all "Ambig.lowNtrxts" & '_nac' because already have
+sce.rest <- sce.all.n12[ ,-grep("Ambig.lowNtrxts", sce.all.n12$cellType.RS.sub)]
+sce.rest <- sce.rest[ ,-grep("_nac", sce.rest$cellType.RS.sub)]
+sce.rest$cellType.RS.sub <- droplevels(sce.rest$cellType.RS.sub)
+
+table(sce.rest$cellType.RS.sub)
+
+        RSsubs.donorTab <- as.data.frame.matrix(table(sce.n14.noLNT$cellType.RS.sub, sce.n14.noLNT$donor))
+        # Trick some reordering by region
+        RSsubs.donorTab$Region <- ss(rownames(RSsubs.donorTab),"_",2)
+        RSsubs.donorTab$CellType <- paste0(RSsubs.donorTab$Region, "_", ss(rownames(RSsubs.donorTab),"_",1))
+        
+        # Now basically re-order alphabetically
+        RSsubs.donorTab <- RSsubs.donorTab[order(RSsubs.donorTab$CellType), ]
+
+
+cell.idx <- splitit(sce.rest$cellType.RS.sub)
+regionCell.idx <- list()
+
+for(i in c("_amy","_hpc","_dlpfc","_sacc")){
+  regionCell.idx[[i]] <- lapply(grep(i, names(cell.idx)), function(x){
+      y <- cell.idx[[x]]
+      y
+  })
+  
+  names(regionCell.idx[[i]]) <- names(cell.idx)[grep(i, names(cell.idx))]
+}
+
+
+dat <- as.matrix(assay(sce.rest, "logcounts"))
+
+
+# Print AMY first
+pdf('pdfs/pubFigures/heatmap-geneExprs_AMY_cellType.split_mean-broadMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
+genes <- c('SNAP25','SLC17A6','SLC17A7','GAD1','GAD2','AQP4','GFAP','C3','CD74','MBP','PDGFRA','VCAN','CLDN5','FLT1','SKAP1','TRAC')
+current_dat <- do.call(cbind, lapply(regionCell.idx[["_amy"]], function(ii) rowMeans(dat[genes, ii])))
+
+neuron.pos <- grep("\\.", names(regionCell.idx[["_amy"]]))
+current_dat <- current_dat[ ,c(neuron.pos, setdiff(1:length(names(regionCell.idx[["_amy"]])),
+                                                   neuron.pos))
+                            ]
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 17.5, fontsize_col = 17.5)
+dev.off()
+
+
+# Print rest
+pdf('pdfs/pubFigures/heatmap-geneExprs_HIPPO-DLPFC-sACC_cellType.split_mean-broadMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
+genes <- c('SNAP25','SLC17A6','SLC17A7','GAD1','GAD2','AQP4','GFAP','C3','CD74','MBP','PDGFRA','VCAN','CLDN5','FLT1','SKAP1','TRAC')
+
+for(i in c("_hpc","_dlpfc","_sacc")){
+current_dat <- do.call(cbind, lapply(regionCell.idx[[i]], function(ii) rowMeans(dat[genes, ii])))
+neuron.pos <- grep("\\.", names(regionCell.idx[[i]]))
+current_dat <- current_dat[ ,c(neuron.pos, setdiff(1:length(names(regionCell.idx[[i]])),
+                                                   neuron.pos))
+                            ]
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 17.5, fontsize_col = 17.5)
+}
+dev.off()
+
+
+
+
+### For LeCo/iSEE ==========================
+load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
+    #sce.amy.tsne.optb, Readme
+
+## Percentage of ALL nuclei expressing non-0 amount of each gene
+rowData(sce.amy.tsne.optb)$propNucleiExprs <- apply(assay(sce.amy.tsne.optb, "counts"), 1,
+                                                    function(x){round(mean(x != 0), 4)})
+
+# The above, by cell type ===
+cellType.idx <- splitit(sce.amy.tsne.optb$cellType.split)
+
+rowdat.sce <- rowData(sce.amy.tsne.optb)
+for(i in names(cellType.idx)){
+  rowdat.sce[ ,paste0("propExprsIn.",i)] <- apply(assay(sce.amy.tsne.optb, "counts")[ ,cellType.idx[[i]] ], 1,
+                        function(x){round(mean(x != 0), 4)})
+}
+rowData(sce.amy.tsne.optb) <- rowdat.sce
 
 
 
