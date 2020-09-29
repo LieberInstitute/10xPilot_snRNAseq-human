@@ -1,16 +1,31 @@
 # 10xPilot_snRNAseq-human
 
-JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
+## How to cite
+
+TODO
+
+## Study design
+
+TODO
 
 
-Study design
-------------
-[to be filled in]
+## Explore the data interactively
+
+We have provided 5 interactive websites that allow you to explore the data at single nucleus resolution for each of the brain regions. These interactive websites are powered by [`iSEE`](https://bioconductor.org/packages/iSEE) that allows you to add, hide, customize panels for visualizing the data. Please check the [`iSEE`](https://bioconductor.org/packages/iSEE) documentation for instructions on how to customize the panels. In particular, you might be interested in visualizing some of the marker genes from the lists provided below for the _region-specific analyses_.
+
+* https://libd.shinyapps.io/tran2020_Amyg/
+* https://libd.shinyapps.io/tran2020_DLPFC/
+* https://libd.shinyapps.io/tran2020_HPC/
+* https://libd.shinyapps.io/tran2020_NAc/
+* https://libd.shinyapps.io/tran2020_sACC/
+
+If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
 
 
-Marker lists and expression plots, top 40
------------------------------------------
-### Region-specific analyses:
+## Marker lists and expression plots, top 40
+
+### Region-specific analyses
+
 Here, nuclei are clustered and annotated within each brain region, separately, with markers defined at that level.
 -   **AMY**:
 
@@ -43,9 +58,15 @@ Here, nuclei are clustered and annotated within each brain region, separately, w
     https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/sACC
 
 
-### Pan-brain-level analysis:
+### Pan-brain-level analysis
+
 Here, nuclei are clustered across all brain regions, together, and then annotated, with markers defined at _this_ level.
 
    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv
 
    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/panBrainMarkers
+
+
+## LIBD internal
+
+JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
