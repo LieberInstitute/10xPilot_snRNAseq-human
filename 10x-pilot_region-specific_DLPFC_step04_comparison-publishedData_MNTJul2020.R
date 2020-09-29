@@ -316,7 +316,7 @@ for(i in names(markers.dlpfc.t.1vAll)){
     # fixTo <- intersect(rownames(markers.asdVelm.t.pfc[[1]]), rownames(markers.dlpfc.t.1vAll[[1]]))
 
 
-## Ccalculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
+## Calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
 #      and fix row order to the first entry "Astro"
 fixTo <- rownames(markers.dlpfc.t.1vAll[["Astro"]])
 for(s in names(markers.dlpfc.t.1vAll)){
@@ -400,8 +400,8 @@ ts.dlpfc <- ts.dlpfc[sharedGenes.all, ]
 ts.velmeshev.pfc <- ts.velmeshev.pfc[sharedGenes.all, ]
 ts.velmeshev.acc <- ts.velmeshev.acc[sharedGenes.all, ]
 
-colnames(ts.velmeshev.pfc) <- paste0(colnames(ts.velmeshev.pfc),"_asd.pfc")
-colnames(ts.velmeshev.acc) <- paste0(colnames(ts.velmeshev.acc),"_asd.acc")
+colnames(ts.velmeshev.pfc) <- paste0(colnames(ts.velmeshev.pfc),"_pfc")
+colnames(ts.velmeshev.acc) <- paste0(colnames(ts.velmeshev.acc),"_acc")
 
 ts.velmeshev.full <- cbind(ts.velmeshev.pfc, ts.velmeshev.acc)
 
@@ -410,12 +410,19 @@ range(cor_t_dlpfc.asd)
 
 
 ## Heatmap
+# Add some cluster info for add'l heatmap annotations
+regionInfo <- data.frame(region=ss(colnames(ts.velmeshev.full), "_",2))
+rownames(regionInfo) <- colnames(ts.velmeshev.full)
+
+
+# Print
 theSeq.all = seq(-.95, .95, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
 pdf("pdfs/exploration/Velmeshev-ASD_pfc-acc/overlap-velmeshev-ASD-bothRegions_with_LIBD-10x-DLPFC_Aug2020.pdf", width=10)
 pheatmap(cor_t_dlpfc.asd,
          color=my.col.all,
+         annotation_col=regionInfo,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
          fontsize=10, fontsize_row=11, fontsize_col=10,

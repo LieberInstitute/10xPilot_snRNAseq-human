@@ -141,8 +141,8 @@ ts.sacc <- ts.sacc[sharedGenes.all, ]
 ts.velmeshev.pfc <- ts.velmeshev.pfc[sharedGenes.all, ]
 ts.velmeshev.acc <- ts.velmeshev.acc[sharedGenes.all, ]
 
-colnames(ts.velmeshev.pfc) <- paste0(colnames(ts.velmeshev.pfc),"_asd.pfc")
-colnames(ts.velmeshev.acc) <- paste0(colnames(ts.velmeshev.acc),"_asd.acc")
+colnames(ts.velmeshev.pfc) <- paste0(colnames(ts.velmeshev.pfc),"_pfc")
+colnames(ts.velmeshev.acc) <- paste0(colnames(ts.velmeshev.acc),"_acc")
 
 ts.velmeshev.full <- cbind(ts.velmeshev.pfc, ts.velmeshev.acc)
 
@@ -151,15 +151,20 @@ range(cor_t_sacc.asd)
 
 
 ## Heatmap
+# Add some cluster info for add'l heatmap annotations
+regionInfo <- data.frame(region=ss(colnames(ts.velmeshev.full), "_",2))
+rownames(regionInfo) <- colnames(ts.velmeshev.full)
+
 theSeq.all = seq(-.95, .95, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
 pdf("pdfs/exploration/Velmeshev-ASD_pfc-acc/overlap-velmeshev-ASD-bothRegions_with_LIBD-10x-sACC_Aug2020.pdf", width=10)
 pheatmap(cor_t_sacc.asd,
          color=my.col.all,
+         annotation_col=regionInfo,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
-         fontsize=10, fontsize_row=11, fontsize_col=10,
+         fontsize=10.5, fontsize_row=11, fontsize_col=10,
          display_numbers=T, number_format="%.2f", fontsize_number=4.5,
          legend_breaks=c(seq(-0.95,0.95,by=0.475)),
          main="Correlation of cluster-specific t's between LIBD sACC to \n ACC & PFC from (Velmeshev et al. Science 2019)")
