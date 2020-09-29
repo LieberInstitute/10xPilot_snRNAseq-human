@@ -8,25 +8,25 @@ library("usethis")
 library("withr")
 library("sessioninfo")
 
-load(here("rdas", "ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda"), verbose = TRUE)
+load(here("rdas", "regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda"), verbose = TRUE)
 
 source(here("shiny_apps", "00_clean_functions.R"))
 
-explore_sce_original(sce.amy.tsne.optb)
+explore_sce_original(sce.sacc)
 # [1] "Dimensions:"
-# [1] 33538  6582
+# [1] 33538  7047
 # [1] "Number of unique cell names:"
-# [1] 6579
+# [1] 7043
 # [1] "Repeated cell names:"
 #
-# CAGTTCCTCTATTTCG-1 CGATCGGTCGGCATAT-1 GAAGCGATCGGTAGAG-1
-# 2                  2                  2
+# CACAGATAGAGCCCAA-1 CCTACGTCACCACATA-1 GTATTTCAGAGCAAGA-1 TGTAGACCAACCGTGC-1
+# 2                  2                  2                  2
 # [1] "Number of unique genes names:"
 # [1] 33538
 
-sce_small <- create_small_sce(sce.amy.tsne.optb, cell_var = "cellType.split")
-# 561 MB
-# 298 MB
+sce_small <- create_small_sce(sce.sacc, cell_var = "cellType")
+# 675 MB
+# 353 MB
 colData(sce_small)
 rowData(sce_small)
 
@@ -34,11 +34,11 @@ rowData(sce_small)
 ## Test and get the "initial" code
 # iSEE(sce_small)
 
-save_sce_small(sce_small, "Amyg")
+save_sce_small(sce_small, "sACC")
 
-create_app(sce_small, "Amyg")
+create_app(sce_small, "sACC")
 
-withr::with_dir(here("shiny_apps", "tran2020_Amyg"), source("deploy.R"))
+withr::with_dir(here("shiny_apps", "tran2020_sACC"), source("deploy.R"))
 
 ## Reproducibility information
 print('Reproducibility information:')

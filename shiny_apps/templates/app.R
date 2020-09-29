@@ -3,7 +3,7 @@ library("SingleCellExperiment")
 library("iSEE")
 library("shiny")
 
-sce <- readRDS("sce_amyg_small.rds")
+sce <- readRDS("sce_{{regionlower}}_small.rds")
 packageVersion("iSEE")
 
 
@@ -19,7 +19,7 @@ initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "PCA", 
     SizeByColumnData = "sum", FacetByRow = "---", FacetByColumn = "---",
     ColorBy = "Column data", ColorByDefaultColor = "#000000",
     ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
-    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "amy.5161_AAACCCAAGCACGATG-1",
+    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "{{cellone}}",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
@@ -39,9 +39,7 @@ initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "PCA", 
 ################################################################################
 
 initial[["ComplexHeatmapPlot1"]] <- new("ComplexHeatmapPlot", Assay = "logcounts", CustomRows = TRUE,
-    CustomRowsText = "SNAP25
-MBP
-PCP4", ClusterRows = FALSE,
+    CustomRowsText = "{{cellmarkers}}", ClusterRows = FALSE,
     ClusterRowsDistance = "spearman", ClusterRowsMethod = "ward.D2",
     DataBoxOpen = FALSE, VisualChoices = "Annotations",
     ColumnData = c("cell_type", "donor"),
@@ -83,7 +81,7 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ShapeByColumnData = "donor", SizeByColumnData = "sum", FacetByRow = "---",
     FacetByColumn = "---", ColorBy = "Column data", ColorByDefaultColor = "#000000",
     ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
-    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "amy.5161_AAACCCAAGCACGATG-1",
+    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "{{cellone}}",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
@@ -98,4 +96,4 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ColumnSelectionType = "Active", ColumnSelectionSaved = 0L,
     SelectionHistory = list())
 
-iSEE(sce, appTitle = "M.N. Tran et al 2020, Amyg region https://bit.ly/LIBD10xHuman", initial = initial)
+iSEE(sce, appTitle = "M.N. Tran et al 2020, {{region}} region https://bit.ly/LIBD10xHuman", initial = initial)

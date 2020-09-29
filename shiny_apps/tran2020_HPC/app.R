@@ -3,7 +3,7 @@ library("SingleCellExperiment")
 library("iSEE")
 library("shiny")
 
-sce <- readRDS("sce_amyg_small.rds")
+sce <- readRDS("sce_hpc_small.rds")
 packageVersion("iSEE")
 
 
@@ -19,7 +19,7 @@ initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "PCA", 
     SizeByColumnData = "sum", FacetByRow = "---", FacetByColumn = "---",
     ColorBy = "Column data", ColorByDefaultColor = "#000000",
     ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
-    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "amy.5161_AAACCCAAGCACGATG-1",
+    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "hpc.5161_AAACCCATCTGTCAGA-1",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
@@ -83,7 +83,7 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ShapeByColumnData = "donor", SizeByColumnData = "sum", FacetByRow = "---",
     FacetByColumn = "---", ColorBy = "Column data", ColorByDefaultColor = "#000000",
     ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
-    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "amy.5161_AAACCCAAGCACGATG-1",
+    ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "hpc.5161_AAACCCATCTGTCAGA-1",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionEffect = "Transparent",
     SelectionColor = "#FF0000", SelectionAlpha = 0.1, ZoomData = numeric(0),
@@ -98,4 +98,4 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ColumnSelectionType = "Active", ColumnSelectionSaved = 0L,
     SelectionHistory = list())
 
-iSEE(sce, appTitle = "M.N. Tran et al 2020, Amyg region https://bit.ly/LIBD10xHuman", initial = initial)
+iSEE(sce, appTitle = "M.N. Tran et al 2020, HPC region https://bit.ly/LIBD10xHuman", initial = initial)

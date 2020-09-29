@@ -1,18 +1,24 @@
 library("SingleCellExperiment")
+library("rafalib")
 library("iSEE")
 library("pryr")
 library("here")
+library("whisker")
+library("usethis")
+library("withr")
 library("sessioninfo")
 
-load(here("rdas", "regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda"), verbose = TRUE)
+load(here("rdas", "ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda"), verbose = TRUE)
 
-dim(sce.nac.all)
-# [1] 33538 13241
-length(unique(colnames(sce.nac.all)))
-# [1] 13224
+source(here("shiny_apps", "00_clean_functions.R"))
 
-col_tab <- table(colnames(sce.nac.all))
-col_tab[col_tab > 1]
+explore_sce_original(sce.all.tsne.15pcs)
+# [1] "Dimensions:"
+# [1] 33538 13148
+# [1] "Number of unique cell names:"
+# [1] 13131
+# [1] "Repeated cell names:"
+#
 # AGAAATGCACTTCCTG-1 AGGACTTTCTAGCAAC-1 ATGAGTCTCGACATCA-1 CACGGGTGTGAGCAGT-1 CATTCATGTCCTACGG-1
 # 2                  2                  2                  2                  2
 # CCGTTCAGTCCATAGT-1 CTATAGGTCACTGCTC-1 CTCTCGACAGTTAAAG-1 GACCGTGGTTGTCTAG-1 GACTGATGTCCGATCG-1
@@ -21,43 +27,24 @@ col_tab[col_tab > 1]
 # 2                  2                  2                  2                  2
 # TGATCAGGTAGGATAT-1 TGGGATTGTGATGAAT-1
 # 2                  2
-
-length(unique(rownames(sce.nac.all)))
+# [1] "Number of unique genes names:"
 # [1] 33538
 
-sce_nac_small <- sce.nac.all
-assays(sce_nac_small) <- assays(sce_nac_small)["logcounts"]
-rowData(sce_nac_small)
-# sce_nac_small$Sample <- factor(gsub(".*premRNA/|/outs/.*", "", sce_nac_small$Sample))
-sce_nac_small$sample <- factor(sce_nac_small$sample)
-sce_nac_small$region <- factor(sce_nac_small$region)
-sce_nac_small$donor <- factor(sce_nac_small$donor)
-sce_nac_small$processDate <- factor(sce_nac_small$processDate)
-sce_nac_small$protocol <- factor(sce_nac_small$protocol)
-colData(sce_nac_small) <- colData(sce_nac_small)[, !colnames(colData(sce_nac_small)) %in% c("Sample", "prelimCluster", "collapsedCluster", "lessCollapsed", "cellType", "cellType.split", "prelimCluster.split", "cellType.moreSplit", "cellType.final")]
-sce_nac_small$cell_type <- factor(sce.nac.all$cellType.final)
-colData(sce_nac_small)
+sce_small <- create_small_sce(sce.all.tsne.15pcs)
+# 1.55 GB
+# 801 MB
+colData(sce_small)
+rowData(sce_small)
 
-## Make the rows more browsable
-colnames(sce_nac_small) <- paste0(sce_nac_small$sample, '_', sce_nac_small$Barcode)
-sce_nac_small$Barcode <- make.names(sce_nac_small$Barcode, unique = TRUE)
-metadata(sce_nac_small) <- list()
-sce_nac_small
-
-## It's all "Gene Expression", so we can remove it
-rowData(sce_nac_small)$Type <- NULL
 
 ## Test and get the "initial" code
-# iSEE(sce_nac_small)
+# iSEE(sce_small)
 
+save_sce_small(sce_small, "NAc")
 
-object_size(sce.nac.all)
-# 2.04 GB
-object_size(sce_nac_small)
-# 1.29 GB
+create_app(sce_small, "NAc")
 
-dir.create(here("shiny_apps", "tran2020_NAc"), showWarnings = FALSE)
-saveRDS(sce_nac_small, file = here("shiny_apps", "tran2020_NAc", "sce_nac_small.rds"))
+withr::with_dir(here("shiny_apps", "tran2020_NAc"), source("deploy.R"))
 
 ## Reproducibility information
 print('Reproducibility information:')
@@ -76,14 +63,14 @@ session_info()
 # collate  English_United States.1252
 # ctype    English_United States.1252
 # tz       America/New_York
-# date     2020-09-23
+# date     2020-09-28
 #
 # - Packages -----------------------------------------------------------------------------------------------------------
 #     package              * version  date       lib source
 # assertthat             0.2.1    2019-03-21 [1] CRAN (R 4.0.2)
+# backports              1.1.10   2020-09-15 [1] CRAN (R 4.0.2)
 # Biobase              * 2.48.0   2020-04-27 [1] Bioconductor
 # BiocGenerics         * 0.34.0   2020-04-27 [1] Bioconductor
-# BiocManager            1.30.10  2019-11-16 [1] CRAN (R 4.0.2)
 # bitops                 1.0-6    2013-08-17 [1] CRAN (R 4.0.0)
 # circlize               0.4.10   2020-06-15 [1] CRAN (R 4.0.2)
 # cli                    2.0.2    2020-02-28 [1] CRAN (R 4.0.2)
@@ -101,6 +88,7 @@ session_info()
 # ellipsis               0.3.1    2020-05-15 [1] CRAN (R 4.0.2)
 # fansi                  0.4.1    2020-01-08 [1] CRAN (R 4.0.2)
 # fastmap                1.0.1    2019-10-08 [1] CRAN (R 4.0.2)
+# fs                     1.5.0    2020-07-31 [1] CRAN (R 4.0.2)
 # generics               0.0.2    2018-11-29 [1] CRAN (R 4.0.2)
 # GenomeInfoDb         * 1.24.2   2020-06-15 [1] Bioconductor
 # GenomeInfoDbData       1.2.3    2020-06-30 [1] Bioconductor
@@ -110,6 +98,7 @@ session_info()
 # GlobalOptions          0.1.2    2020-06-10 [1] CRAN (R 4.0.2)
 # glue                   1.4.2    2020-08-27 [1] CRAN (R 4.0.2)
 # gtable                 0.3.0    2019-03-25 [1] CRAN (R 4.0.2)
+# here                 * 0.1      2017-05-28 [1] CRAN (R 4.0.2)
 # htmltools              0.5.0    2020-06-16 [1] CRAN (R 4.0.2)
 # htmlwidgets            1.5.1    2019-10-08 [1] CRAN (R 4.0.2)
 # httpuv                 1.5.4    2020-06-06 [1] CRAN (R 4.0.2)
@@ -135,12 +124,14 @@ session_info()
 # pryr                 * 0.1.4    2018-02-18 [1] CRAN (R 4.0.2)
 # purrr                  0.3.4    2020-04-17 [1] CRAN (R 4.0.2)
 # R6                     2.4.1    2019-11-12 [1] CRAN (R 4.0.2)
+# rafalib              * 1.0.0    2015-08-09 [1] CRAN (R 4.0.0)
 # RColorBrewer           1.1-2    2014-12-07 [1] CRAN (R 4.0.0)
 # Rcpp                   1.0.5    2020-07-06 [1] CRAN (R 4.0.2)
 # RCurl                  1.98-1.2 2020-04-18 [1] CRAN (R 4.0.0)
 # rintrojs               0.2.2    2019-05-29 [1] CRAN (R 4.0.2)
 # rjson                  0.2.20   2018-06-08 [1] CRAN (R 4.0.0)
 # rlang                  0.4.7    2020-07-09 [1] CRAN (R 4.0.2)
+# rprojroot              1.3-2    2018-01-03 [1] CRAN (R 4.0.2)
 # rstudioapi             0.11     2020-02-07 [1] CRAN (R 4.0.2)
 # S4Vectors            * 0.26.1   2020-05-16 [1] Bioconductor
 # scales                 1.1.1    2020-05-11 [1] CRAN (R 4.0.2)
@@ -157,9 +148,11 @@ session_info()
 # SummarizedExperiment * 1.18.2   2020-07-09 [1] Bioconductor
 # tibble                 3.0.3    2020-07-10 [1] CRAN (R 4.0.2)
 # tidyselect             1.1.0    2020-05-11 [1] CRAN (R 4.0.2)
+# usethis              * 1.6.3    2020-09-17 [1] CRAN (R 4.0.2)
 # vctrs                  0.3.4    2020-08-29 [1] CRAN (R 4.0.2)
 # vipor                  0.4.5    2017-03-22 [1] CRAN (R 4.0.2)
 # viridisLite            0.3.0    2018-02-01 [1] CRAN (R 4.0.2)
+# whisker              * 0.4      2019-08-28 [1] CRAN (R 4.0.2)
 # withr                  2.3.0    2020-09-22 [1] CRAN (R 4.0.2)
 # xtable                 1.8-4    2019-04-21 [1] CRAN (R 4.0.2)
 # XVector                0.28.0   2020-04-27 [1] Bioconductor
