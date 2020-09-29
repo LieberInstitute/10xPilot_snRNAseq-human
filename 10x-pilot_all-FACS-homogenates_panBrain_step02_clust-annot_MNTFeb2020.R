@@ -800,10 +800,40 @@ dev.off()
     dev.off()
 
 
+        
+## Print broad marker heatmap of pan-brain-defined clusters === === ===
+load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
+    #sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+
+# As decided for marker detection, remove the clusters that won't focus on:
+#     'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
+sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
+
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
+sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
+sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
+
+cell.idx <- splitit(sce.all.n12$cellType)
+dat <- as.matrix(assay(sce.all.n12, "logcounts"))
+
+
+genes <- c('SNAP25','SLC17A6','SLC17A7','GAD1','GAD2','AQP4','GFAP','C3','CD74','MBP','PDGFRA','VCAN','CLDN5','FLT1','SKAP1','TRAC')
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+
+current_dat <- current_dat[ ,c(3:14, 1,2, 15:17)]
+
+pdf("pdfs/pubFigures/heatmap-geneExprs_panBrain-annot_mean-broadMarkers_MNT.pdf")
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 17.5, fontsize_col = 17.5,
+         main="Broad cell type marker expression (pan-brain annot.)", fontsize=11)
+dev.off()
 
 
 
-## 26 PCs tSNE ======
+
+## 26 PCs tSNE (ignore) ================
 set.seed(109)
 sce.all.tsne.26pcs <- runTSNE(sce.all.n12, dimred="PCA_26")
 
