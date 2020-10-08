@@ -977,17 +977,19 @@ sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
 cell.idx <- splitit(sce.nac.all$cellType.final)
 dat <- as.matrix(assay(sce.nac.all, "logcounts"))
 
-#pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_mean-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
-pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_median-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
+pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_mean-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
+#pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_median-broadMarkers_MNT21May2020.pdf', height=6, width=6)
 genes <- c('DRD1','TAC1','DRD2','PENK','PPP1R1B','GAD1','SNAP25','CAMK2A','MBP','PDGFRA','AQP4','CD74')
-#current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
-# or medians:
-current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
-    # for some reason `rowMedians()` doesn't keep row names...
-    rownames(current_dat) <- genes
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+# # or medians:
+# current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
+    # # for some reason `rowMedians()` doesn't keep row names...
+    # rownames(current_dat) <- genes
 current_dat <- current_dat[ ,c(7:12, 2:5, 13:14,1,6)]
 pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
-         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100), fontsize = 20)
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100), fontsize = 19,
+         legend=T)
+grid::grid.text(label="Expression \n (log2)",x=0.93,y=0.60)
 dev.off()
 
 
