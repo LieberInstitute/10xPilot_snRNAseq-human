@@ -2,7 +2,7 @@
 
 ## How to cite
 
-TODO
+* https://doi.org/10.1101/2020.10.07.329839
 
 ## Study design
 
@@ -20,6 +20,17 @@ We have provided 5 interactive websites that allow you to explore the data at si
 * https://libd.shinyapps.io/tran2020_sACC/
 
 If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
+
+
+## Work with the data
+
+The corresponding `SingleCellExperiment` objects (with `reducedDims`, annotations, etc.) for each of the five regions are publicly hosted at:
+
+* https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_AMY_tran-etal.rda
+* https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_DLPFC_tran-etal.rda
+* https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_HPC_tran-etal.rda
+* https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_NAc_tran-etal.rda
+* https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_sACC_tran-etal.rda
 
 
 ## Marker lists and expression plots, top 40
