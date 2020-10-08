@@ -881,6 +881,73 @@ dev.off()
 
 
 
+## Supplementary Table 1 === ===
+sheet1 <- as.data.frame(readxl::read_excel("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10xpilot_Subject_Info.xlsx", sheet=1))
+sheet2 <- as.data.frame(readxl::read_excel("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10xpilot_Subject_Info.xlsx", sheet=2))
+sheet2 <- sheet2[ ,c("brnum", "sex", "race", "agedeath", "primarydx", "pmi")]
+colnames(sheet2) <- c("BrNum", "Sex", "Race", "AgeDeath", "PrimaryDx", "PMI")
+
+sheet1 <- sheet1[!duplicated(sheet1$BrNum), 1:3]
+sheet2$BrNum == sheet1$BrNum # order good
+
+suppTab1 <- cbind(sheet2, sheet1[ ,"BestRIN PFC"])
+colnames(suppTab1)[7] <- "PFC_RIN"
+
+write.table(suppTab1, row.names=F, col.names=T, sep="\t", quote=F,
+            file="tables/suppTab1_SampleInformation.tsv")
+
+
+
+
+
+## Brief exploration of AnJa's LDSC (ignore for first submission) ==========
+dat.ldsc <- read.table("LDSC/suppTable_ldsc.tsv", sep="\t")
+colnames(dat.ldsc) <- dat.ldsc[1, ]
+dat.ldsc <- dat.ldsc[-1, ]
+
+for(i in colnames(dat.ldsc)[3:11]){
+  dat.ldsc[ ,i] <- signif(as.numeric(dat.ldsc[ ,i],2))
+}
+
+unique(dat.ldsc$Trait)
+    # [1] "ADHD"                            "Alzheimers_disease"
+    # [3] "Anorexia_nervosa"                "Anxiety_disorder"
+    # [5] "Autism_spectrum_disorder"        "Bipolar_disorder"
+    # [7] "BMI"                             "Childhood_cognitive_performance"
+    # [9] "Cigarettes_per_day"              "College_attainment"
+    # [11] "Conscientiousness"               "Coronary_artery_disease"
+    # [13] "Crohns_disease"                  "Depressive_symptoms"
+    # [15] "Epilepsy"                        "Ever_smoked"
+    # [17] "Extraversion"                    "Focal_epilepsy"
+    # [19] "Generalized_epilepsy"            "Height"
+    # [21] "Intracarebral_hemorrhage"        "IQ"
+    # [23] "Ischemic_stroke"                 "Major_depressive_disorder"
+    # [25] "Neuroticism"                     "Openness"
+    # [27] "PTSD"                            "Schizophrenia"
+    # [29] "Subjective_well-being"           "Years_of_education"
+
+# Bonferroni-significant
+dat.ldsc[dat.ldsc$Trait=="Schizophrenia" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
+dat.ldsc[dat.ldsc$Trait=="Bipolar_disorder" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
+    # (a lot, but for AMY/NAc:)
+        # [1] "amy:Excit.1"          "amy:Excit.2"          "amy:Excit.3"          "amy:Inhib.1"
+        # [5] "amy:Inhib.2"          "amy:Inhib.3"          "amy:Inhib.5"          "amy:OPC"
+        # [30] "nac:MSN.D1.3"
+dat.ldsc[dat.ldsc$Trait=="Major_depressive_disorder" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
+    # [1] "amy:Inhib.1"      "amy:Inhib.2"      "dlpfc:Excit.L3:4" "dlpfc:Inhib.5"    "dlpfc:Inhib.6"
+    # [6] "hpc:Inhib.2"      "hpc:Inhib.3"      "hpc:Inhib.4"      "hpc:Inhib.5"      "sacc:Inhib.1"
+
+# None for PTSD, Depressive_symptoms, Autism_spectrum_disorder at Bonferroni
+dat.ldsc[dat.ldsc$Trait=="PTSD" & dat.ldsc$Enrichment_holm < .05, ]$Category
+    # still none
+dat.ldsc[dat.ldsc$Trait=="Autism_spectrum_disorder" & dat.ldsc$Enrichment_holm < .05, ]$Category
+    # [1] "hpc:OPC"      "sacc:Inhib.1"
+
+
+
+
+
+
 ### For LeCo/iSEE ==========================
 load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
     #sce.amy.tsne.optb, Readme
@@ -898,6 +965,117 @@ for(i in names(cellType.idx)){
                         function(x){round(mean(x != 0), 4)})
 }
 rowData(sce.amy.tsne.optb) <- rowdat.sce
+
+
+### Clean region-specific SCEs Amazon hosting ====================
+keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate","protocol","prelimCluster")
+
+## Adapted from Leo's `create_small_sce`:
+    create_small_sce <- function(sce_original, cell_var = "cellType.final") {
+
+          sce_original <- sce_original[, tolower(colData(sce_original)[[cell_var]]) != tolower("ambig.lowNtrxts")]
+          colData(sce_original)[[cell_var]] <- factor(colData(sce_original)[[cell_var]])
+          colData(sce_original)[[cell_var]] <- factor(colData(sce_original)[[cell_var]])
+          
+          message(Sys.time(), " reducing the sce object")
+          sce_small <- sce_original
+          # Just provide raw counts, as opposed to logcounts used for shiny app
+          assays(sce_small) <- assays(sce_small)["counts"]
+          
+          sce_small$sample <- factor(sce_small$sample)
+          sce_small$region <- factor(sce_small$region)
+          sce_small$donor <- factor(sce_small$donor)
+          sce_small$processDate <- factor(paste0(sce_small$processDate,".2019"))
+          sce_small$protocol <- factor(sce_small$protocol)
+          colData(sce_small) <- colData(sce_small)[ ,colnames(colData(sce_small)) %in% keepCols]
+          # Add back in standardized 'cell_type' naming:
+          sce_small$cell_type <- factor(colData(sce_original)[[cell_var]])
+          
+          ## Make the rows more browsable
+          colnames(sce_small) <- paste0(sce_small$sample, '_', sce_small$Barcode)
+          sce_small$Barcode <- make.names(sce_small$Barcode, unique = TRUE)
+          ## Can remove bc just points to location of raw count matrices:
+          metadata(sce_small) <- list()
+          
+          ## It's all "Gene Expression", so we can remove it
+          rowData(sce_small)$Type <- NULL
+          
+          message(Sys.time(), " computing propNucleiExprs")
+          
+          rowData(sce_small)$propNucleiExprs <- apply(
+            assay(sce_original, "counts"),
+            1,
+            function(x) {
+              mean(x != 0)
+            }
+          )
+          # The above, by cell type ===
+          cellType.idx <- splitit(colData(sce_original)[[cell_var]])
+          rowdat.sce <- rowData(sce_small)
+          for(i in names(cellType.idx)){
+            message(Sys.time(), " computing propNucleiExprs for ", i)
+            rowdat.sce[, paste0("propExprsIn.", i)] <- apply(
+              assay(sce_original, "counts")[, cellType.idx[[i]]],
+              1,
+              function(x){
+                mean(x != 0)
+              }
+            )
+          }
+          rowData(sce_small) <- rowdat.sce
+          
+          print(pryr::object_size(sce_original))
+          print(pryr::object_size(sce_small))
+          
+          return(sce_small)
+        }
+
+## NAc === ===
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+# Publication tSNE
+load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
+    rm(sce.all.tsne.10pcs)
+
+# Already has 'ambig.lowNtrxts' removed, so remove these and just assign to $cellType
+sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType.final=="ambig.lowNtrxts"]
+
+reducedDim(sce.nac, "TSNE") <- reducedDim(sce.all.tsne.15pcs, "TSNE")
+
+# Reduce
+sce.nac.red <- create_small_sce(sce.nac)
+# Check
+head(colData(sce.nac.red))
+head(rowData(sce.nac.red))
+plotTSNE(sce.nac.red, colour_by="cell_type")
+
+sce.nac <- sce.nac.red
+
+#dir.create("rdas/forAmazonS3/")
+save(sce.nac, file="rdas/forAmazonS3/SCE_NAc_tran-etal.rda")
+
+
+## AMY === ===
+load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+# Publication tSNE
+load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
+
+# Already has 'Ambig.lowNtrxts' removed, so remove these and just assign to $cellType
+sce.amy <- sce.amy[ ,!sce.amy$cellType.split=="Ambig.lowNtrxts"]
+
+reducedDim(sce.amy, "TSNE") <- reducedDim(sce.amy.tsne.optb, "TSNE")
+
+# Reduce
+sce.amy.red <- create_small_sce(sce.amy, cell_var="cellType.split")
+# Check
+head(colData(sce.amy.red))
+head(rowData(sce.amy.red))
+plotTSNE(sce.amy.red, colour_by="cell_type")
+
+
+
+
+
+
 
 
 
