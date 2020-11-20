@@ -40,7 +40,7 @@ The corresponding `SingleCellExperiment` objects (with `reducedDims`, annotation
 Here, nuclei are clustered and annotated within each brain region, separately, with markers defined at that level.
 -   **AMY**:
 
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_Amyg-n2_cellType.split_SN-LEVEL-tests_May2020.csv
+    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_Amyg-n2_cellType.split_Nov2020.csv
 
     https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/Amyg
 
@@ -52,19 +52,19 @@ Here, nuclei are clustered and annotated within each brain region, separately, w
 
 -   **HPC**:
     
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_HPC-n3_cellType.split_SN-LEVEL-tests_May2020.csv
+    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_HPC-n3_cellType.split_Nov2020.csv
     
     https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/HPC
 
 -   **NAc**:
 
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_NAc-n5_cellType.final_SN-LEVEL-tests_May2020.csv
+    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv
 
     https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/NAc-n5-markers
 
 -   **sACC**:
 
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_sACC-n2_cellType_SN-LEVEL-tests_May2020.csv
+    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_sACC-n2_cellType.split_Nov2020.csv
 
     https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/sACC
 
