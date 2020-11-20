@@ -856,3 +856,150 @@ pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = se
          fontsize_row = 20, fontsize_col=15)
 dev.off()
 
+
+
+
+
+
+### MNT add 18Nov2020 =================================
+# -> What if add param/requirement that for any given subcluster, median expression has to > 0?
+load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll
+
+## Load SCE 
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+     verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+table(sce.nac.all$cellType.final)
+
+# First drop "ambig.lowNtrxts" (93 nuclei)
+sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
+sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+
+# Remove 0 genes across all nuclei
+sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]
+
+
+## Make list of Boolean param / cell subtype ===
+cellSubtype.idx <- splitit(sce.nac.all$cellType.final)
+medianNon0.idx <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.nac.all, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+lengths(medianNon0.idx)
+sapply(medianNon0.idx, head)
+
+# Add these to the stats for each set of markers
+for(i in names(markers.nac.t.1vAll)){
+  markers.nac.t.1vAll[[i]] <- cbind(markers.nac.t.1vAll[[i]],
+                                    medianNon0.idx[[i]][match(rownames(markers.nac.t.1vAll[[i]]),
+                                                              names(medianNon0.idx[[i]]))])
+  colnames(markers.nac.t.1vAll[[i]])[5] <- "non0median"
+}
+
+
+## Use these restrictions to print (to png) a refined top 40, as before ===
+markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
+  rownames(x)[x$log.FDR < log10(0.000001) & x$non0median==TRUE]
+  }
+)
+    # lengths(markerList.t.1vAll)     # ( **without $non0median==TRUE restriction )
+        #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+        #     4956     1295     1589     4917     4719     3656     1474     2468
+        # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+        #     2434     5893     2027     3106     2248     3259
+
+lengths(markerList.t.1vAll)
+    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+    #     1214      690      561     1953     1716      763      700      989
+    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+    #     1173     3054     1069     1912      700     1086
+
+genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_1vALL_top40markers-REFINED-",gsub(":",".",i),"_logExprs_Nov2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+  )
+  dev.off()
+}
+
+
+
+## Do the same with the pairwise result ('markers.nac.t.design') === === ===
+# Add these to the stats for each set of markers
+for(i in names(markers.nac.t.design)){
+  markers.nac.t.design[[i]] <- cbind(markers.nac.t.design[[i]],
+                                     medianNon0.idx[[i]][match(rownames(markers.nac.t.design[[i]]),
+                                                               names(medianNon0.idx[[i]]))])
+  colnames(markers.nac.t.design[[i]])[16] <- "non0median"
+}
+
+markerList.t <- lapply(markers.nac.t.design, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
+  }
+)
+    # lengths(markerList.t)     # ( **without $non0median==TRUE restriction )
+        #   Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+        #     831      340      179      256      283     1417       82      295
+        #MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+        #      87       61      230       66      493      372
+
+lengths(markerList.t)
+    #   Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
+    #     378      110        9      145      105      402       45      201
+    #MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
+    #      64       54      143       57      333      187
+
+
+genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+
+for(i in names(genes.top40.t)){
+  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_pairwise_top40markers-REFINED-", i, "_logExprs_Nov2020.png"), height=1900, width=1200)
+  print(
+    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
+                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                                geom = "crossbar", width = 0.3,
+                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
+      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests"))
+  )
+  dev.off()
+}
+
+## Then write a new CSV of these refined top 40 genes ===
+names(markerList.t) <- paste0(names(markerList.t),"_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
+
+# Many of the PW results don't have at least 40 markers:
+extend.idx <- names(which(lengths(markerList.t) < 40))
+for(i in extend.idx){
+  markerList.t[[i]] <- c(markerList.t[[i]], rep("", 40-length(markerList.t[[i]])))
+}
+
+top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
+                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
+top40genes <- top40genes[ ,sort(colnames(top40genes))]
+
+write.csv(top40genes, file="tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv",
+          row.names=FALSE)
+
+
+
+
+
+
+
+
+
