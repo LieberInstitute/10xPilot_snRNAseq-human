@@ -41,7 +41,7 @@ echo "Task id: \${TASK_ID}"
 
 ## Load dependencies
 module load fusion_twas/github
-module load conda_R/4.0.x
+module load conda_R/4.0
 
 ## List current modules
 module list
@@ -81,8 +81,8 @@ do
 ## Create summarized analysis
 Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.assoc_test.R \
     --sumstats \${summstatsfile} \
-    --weights /dcl01/lieber/ajaffe/lab/zandiHyde_bipolar_rnaseq/dev_twas/${region}_${feature}/${region}_${feature}.pos \
-    --weights_dir /dcl01/lieber/ajaffe/lab/zandiHyde_bipolar_rnaseq/dev_twas/${region}_${feature}/ \
+    --weights ${region}_${feature}/${region}_${feature}.pos \
+    --weights_dir ${region}_${feature}/ \
     --ref_ld_chr /dcl01/lieber/ajaffe/lab/brainseq_phase2/twas/reference_hg38/LDREF_hg38/1000G.EUR. \
     --chr \${chr} \
     --out ${region}_${feature}/${summstats}/${summstats}.\${chr}.dat
