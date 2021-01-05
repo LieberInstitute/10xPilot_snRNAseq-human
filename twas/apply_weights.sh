@@ -13,13 +13,13 @@ do
     do
 
         # set of summary stats
-        for summstats in pgc
+        for summstats in si sc dpw cpd aoi
         do
 
             SHORT="apply_weights_full_${region}_${feature}_${summstats}"
 
             # Construct shell file
-            echo "Creating script for chromosome ${region} at the ${feature} level for ${summstats}"
+            echo "Creating script for ${region} at the ${feature} level for ${summstats}"
             cat > .${SHORT}.sh <<EOF
 
 #!/bin/bash
@@ -41,15 +41,27 @@ echo "Task id: \${TASK_ID}"
 
 ## Load dependencies
 module load fusion_twas/github
-module load conda_R/4.0
+module load conda_R/4.0.x
 
 ## List current modules
 module list
 
 ## Choose the correct GWAS summary statistics file
-if [ "${summstats}" == "pgc" ]
+if [ "${summstats}" == "si" ]
 then
-    summstatsfile="/dcl01/lieber/ajaffe/lab/zandiHyde_bipolar_rnaseq/dev_twas/PGC_BIP_hg38_clean.txt"
+    summstatsfile="clean_gwas/SmokingInitiation_Clean.txt"
+elif [ "${summstats}" == "sc" ]
+then
+    summstatsfile="clean_gwas/SmokingCessation_Clean.txt"
+elif [ "${summstats}" == "dpw" ]
+then
+    summstatsfile="clean_gwas/DrinksPerWeek_Clean.txt"
+elif [ "${summstats}" == "cpd" ]
+then
+    summstatsfile="clean_gwas/CigarettesPerDay_Clean.txt"
+elif [ "${summstats}" == "aoi" ]
+then
+    summstatsfile="clean_gwas/AgeofInitiation_Clean.txt"
 else
     echo "Unexpected ${summstats} input"
 fi
