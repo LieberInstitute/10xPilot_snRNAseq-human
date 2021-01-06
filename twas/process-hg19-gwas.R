@@ -210,6 +210,7 @@ hg38_gwas_dpw <- hg38_gwas_dpw[, ..col_order]
 hg38_gwas_cpd <- hg38_gwas_cpd[, ..col_order]
 hg38_gwas_aoi <- hg38_gwas_aoi[, ..col_order]
 
+
 # hg38_gwas_si$effect <- log(hg38_gwas_si$OR)
 # hg38_gwas_sc$effect <- log(hg38_gwas_sc$OR)
 # hg38_gwas_dpw$effect <- log(hg38_gwas_dpw$OR)
@@ -225,9 +226,25 @@ hg38_gwas_aoi <- hg38_gwas_aoi[, ..col_order]
 #
 # dev.off()
 
-# hg38_gwas_clean <-
-#     hg38_gwas[, c("SNP", "A1", "A2", "Neff", "P", "Z")]
-# colnames(hg38_gwas_clean)[4] <- "N"
+hg38_gwas_si <-
+    hg38_gwas_si[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+colnames(hg38_gwas_si) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+
+hg38_gwas_sc <-
+    hg38_gwas_sc[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+colnames(hg38_gwas_sc) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+
+hg38_gwas_dpw <-
+    hg38_gwas_dpw[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+colnames(hg38_gwas_dpw) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+
+hg38_gwas_cpd <-
+    hg38_gwas_cpd[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+colnames(hg38_gwas_cpd) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+
+hg38_gwas_aoi <-
+    hg38_gwas_aoi[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+colnames(hg38_gwas_aoi) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
 
 dir.create("clean_gwas/", showWarnings = FALSE)
 
