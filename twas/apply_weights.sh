@@ -3,6 +3,8 @@
 ## Usage:
 # sh apply_weights.sh
 
+umask u=rwx,g=rwx,o=
+
 mkdir -p logs
 
 for region in NAc
