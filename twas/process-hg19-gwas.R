@@ -63,6 +63,13 @@ hg38_gwas_dpw <- hg38_gwas_dpw[, -c("hg19_key", "CHROM", "POS")]
 hg38_gwas_cpd <- hg38_gwas_cpd[, -c("hg19_key", "CHROM", "POS")]
 hg38_gwas_aoi <- hg38_gwas_aoi[, -c("hg19_key", "CHROM", "POS")]
 
+# Calculate Odds Ratio
+hg38_gwas_si[, OR:= exp(BETA)]
+hg38_gwas_sc[, OR:= exp(BETA)]
+hg38_gwas_dpw[, OR := exp(BETA)]
+hg38_gwas_cpd[, OR := exp(BETA)]
+hg38_gwas_aoi[, OR := exp(BETA)]
+
 # reorder columns
 col_order <- c(
     "chr_hg38",

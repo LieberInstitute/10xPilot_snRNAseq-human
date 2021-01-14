@@ -12,7 +12,7 @@ umask u=rwx,g=rwx,o= ## equivalent to umask 007
 ## Required order for running this code:
 
 # For the logs
-mkdir -p logs/NAc_genes
+mkdir -p logs/NAc_gene
 
 ## For output files
 mkdir -p NAc_gene/tmp_files
