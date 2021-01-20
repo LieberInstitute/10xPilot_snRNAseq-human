@@ -63,13 +63,6 @@ hg38_gwas_dpw <- hg38_gwas_dpw[, -c("hg19_key", "CHROM", "POS")]
 hg38_gwas_cpd <- hg38_gwas_cpd[, -c("hg19_key", "CHROM", "POS")]
 hg38_gwas_aoi <- hg38_gwas_aoi[, -c("hg19_key", "CHROM", "POS")]
 
-# Calculate Odds Ratio
-hg38_gwas_si[, OR:= exp(BETA)]
-hg38_gwas_sc[, OR:= exp(BETA)]
-hg38_gwas_dpw[, OR := exp(BETA)]
-hg38_gwas_cpd[, OR := exp(BETA)]
-hg38_gwas_aoi[, OR := exp(BETA)]
-
 # reorder columns
 col_order <- c(
     "chr_hg38",
@@ -217,47 +210,31 @@ hg38_gwas_dpw <- hg38_gwas_dpw[, ..col_order]
 hg38_gwas_cpd <- hg38_gwas_cpd[, ..col_order]
 hg38_gwas_aoi <- hg38_gwas_aoi[, ..col_order]
 
-
-# hg38_gwas_si$effect <- log(hg38_gwas_si$OR)
-# hg38_gwas_sc$effect <- log(hg38_gwas_sc$OR)
-# hg38_gwas_dpw$effect <- log(hg38_gwas_dpw$OR)
-# hg38_gwas_cpd$effect <- log(hg38_gwas_cpd$OR)
-# hg38_gwas_aoi$effect <- log(hg38_gwas_aoi$OR)
-#
-# hg38_gwas$Z <- hg38_gwas$effect / hg38_gwas$SE
-
-# pdf(file = "PGC_BIP_hg38_hist.png.pdf", useDingbats = FALSE)
-#
-# hist(hg38_gwas$effect, color = "gold")
-# hist(hg38_gwas$Z, color = "darkorange")
-#
-# dev.off()
-
-hg38_gwas_si <-
-    hg38_gwas_si[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
-colnames(hg38_gwas_si) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
-
-hg38_gwas_sc <-
-    hg38_gwas_sc[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
-colnames(hg38_gwas_sc) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
-
-hg38_gwas_dpw <-
-    hg38_gwas_dpw[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
-colnames(hg38_gwas_dpw) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
-
-hg38_gwas_cpd <-
-    hg38_gwas_cpd[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
-colnames(hg38_gwas_cpd) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
-
-hg38_gwas_aoi <-
-    hg38_gwas_aoi[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
-colnames(hg38_gwas_aoi) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+# hg38_gwas_si <-
+#     hg38_gwas_si[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+# colnames(hg38_gwas_si) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+# 
+# hg38_gwas_sc <-
+#     hg38_gwas_sc[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+# colnames(hg38_gwas_sc) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+# 
+# hg38_gwas_dpw <-
+#     hg38_gwas_dpw[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+# colnames(hg38_gwas_dpw) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+# 
+# hg38_gwas_cpd <-
+#     hg38_gwas_cpd[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+# colnames(hg38_gwas_cpd) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
+# 
+# hg38_gwas_aoi <-
+#     hg38_gwas_aoi[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
+# colnames(hg38_gwas_aoi) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
 
 dir.create("clean_gwas/", showWarnings = FALSE)
 
 write.table(
     hg38_gwas_si,
-    file = "clean_gwas/SmokingInitiation_Clean.txt",
+    file = "clean_gwas/SmokingInitiation_Clean_hg38.txt",
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE
@@ -265,7 +242,7 @@ write.table(
 
 write.table(
     hg38_gwas_sc,
-    file = "clean_gwas/SmokingCessation_Clean.txt",
+    file = "clean_gwas/SmokingCessation_Clean_hg38.txt",
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE
@@ -273,7 +250,7 @@ write.table(
 
 write.table(
     hg38_gwas_dpw,
-    file = "clean_gwas/DrinksPerWeek_Clean.txt",
+    file = "clean_gwas/DrinksPerWeek_Clean_hg38.txt",
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE
@@ -281,7 +258,7 @@ write.table(
 
 write.table(
     hg38_gwas_cpd,
-    file = "clean_gwas/CigarettesPerDay_Clean.txt",
+    file = "clean_gwas/CigarettesPerDay_Clean_hg38.txt",
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE
@@ -289,7 +266,7 @@ write.table(
 
 write.table(
     hg38_gwas_aoi,
-    file = "clean_gwas/AgeofInitiation_Clean.txt",
+    file = "clean_gwas/AgeofInitiation_Clean_hg38.txt",
     quote = FALSE,
     row.names = FALSE,
     col.names = TRUE
