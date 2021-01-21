@@ -1,4 +1,4 @@
-#!/bin/bash
+t#!/bin/bash
 
 ## Usage:
 # sh apply_weights.sh
@@ -51,19 +51,19 @@ module list
 ## Choose the correct GWAS summary statistics file
 if [ "${summstats}" == "si" ]
 then
-    summstatsfile="clean_gwas/SmokingInitiation_Clean.txt"
+    summstatsfile="clean_gwas/munge_gwas/SmokingInitiation_hg19_munge.txt.sumstats.gz"
 elif [ "${summstats}" == "sc" ]
 then
-    summstatsfile="clean_gwas/SmokingCessation_Clean.txt"
+    summstatsfile="clean_gwas/munge_gwas/SmokingCessation_hg19_munge.txt.sumstats.gz"
 elif [ "${summstats}" == "dpw" ]
 then
-    summstatsfile="clean_gwas/DrinksPerWeek_Clean.txt"
+    summstatsfile="clean_gwas/munge_gwas/DrinksPerWeek_hg19_munge.txt.sumstats.gz"
 elif [ "${summstats}" == "cpd" ]
 then
-    summstatsfile="clean_gwas/CigarettesPerDay_Clean.txt"
+    summstatsfile="clean_gwas/munge_gwas/CigarettesPerDay_hg19_munge.txt.sumstats.gz "
 elif [ "${summstats}" == "aoi" ]
 then
-    summstatsfile="clean_gwas/AgeofInitiation_Clean.txt"
+    summstatsfile="clean_gwas/munge_gwas/AgeofInitiation_hg19_munge.txt.sumstats.gz"
 else
     echo "Unexpected ${summstats} input"
 fi
@@ -80,23 +80,21 @@ do
     date
     echo ""
 
-## Create summarized analysis
-Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.assoc_test.R \
-    --sumstats \${summstatsfile} \
-    --weights ${region}_${feature}/${region}_${feature}.pos \
-    --weights_dir ${region}_${feature}/ \
-    --ref_ld_chr /dcl01/lieber/ajaffe/lab/brainseq_phase2/twas/reference_hg38/LDREF_hg38/1000G.EUR. \
-    --chr \${chr} \
-    --out ${region}_${feature}/${summstats}/${summstats}.\${chr}.dat
+    ## Create summarized analysis
+    Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.assoc_test.R \
+        --sumstats \${summstatsfile} \
+        --weights ${region}_${feature}/${region}_${feature}.pos \
+        --weights_dir ${region}_${feature}/ \
+        --ref_ld_chr /dcl01/lieber/ajaffe/lab/brainseq_phase2/twas/reference_hg38/LDREF_hg38/1000G.EUR. \
+        --chr \${chr} \
+        --out ${region}_${feature}/${summstats}/${summstats}.\${chr}.dat
 
-    echo ""
-    echo "making plots for chromosome \${chr}"
-    date
-    echo ""
+        echo ""
+        echo "making plots for chromosome \${chr}"
+        date
+        echo ""
 
-## companion post-processing step (plots only for genes)
-if [ "$feature" == "gene" ]
-then
+    ## companion post-processing step (plots only for genes)
     Rscript /jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/FUSION.post_process.R \
         --sumstats \${summstatsfile} \
         --input ${region}_${feature}/${summstats}/${summstats}.\${chr}.dat \
@@ -105,8 +103,6 @@ then
         --chr \${chr} \
         --plot --locus_win 100000 --verbose 2 --plot_individual --plot_eqtl --plot_corr \
         --glist_path "/jhpce/shared/jhpce/libd/fusion_twas/github/fusion_twas/glist-hg38"
-fi
-
 done
 
 echo "**** Job ends ****"

@@ -230,7 +230,7 @@ hg38_gwas_aoi <- hg38_gwas_aoi[, ..col_order]
 #     hg38_gwas_aoi[, c("SNP", "REF", "ALT", "EFFECTIVE_N", "PVALUE")]
 # colnames(hg38_gwas_aoi) <- c("SNP", "A1", "A2", "Neff", "PVALUE")
 
-dir.create("clean_gwas/", showWarnings = FALSE)
+# dir.create("clean_gwas/", showWarnings = FALSE)
 
 write.table(
     hg38_gwas_si,
