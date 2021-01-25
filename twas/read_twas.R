@@ -133,11 +133,11 @@ map_dfr(twas, dim)
 load_rse <- function(type) {
     # expmnt data
     load_file <-
-        Sys.glob(here(
+     here(
             "twas",
             "filter_data",
-            paste0(opt$region, "_rda"),
-            "NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n205.Rdata")
+            "rda",
+            "NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n205.Rdata"
         )
 
     stopifnot(file.exists(load_file))
@@ -228,85 +228,88 @@ proc.time()
 options(width = 120)
 session_info()
 
-# ??? Session info ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-#  setting  value
-#  version  R version 4.0.2 Patched (2020-06-24 r78746)
-#  os       CentOS Linux 7 (Core)
-#  system   x86_64, linux-gnu
-#  ui       X11
-#  language (EN)
-#  collate  en_US.UTF-8
-#  ctype    en_US.UTF-8
-#  tz       US/Eastern
-#  date     2020-10-26
-#
-# ??? Packages ?????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
-#  package              * version  date       lib source
-#  assertthat             0.2.1    2019-03-21 [2] CRAN (R 4.0.0)
-#  backports              1.1.10   2020-09-15 [2] CRAN (R 4.0.2)
-#  Biobase              * 2.48.0   2020-04-27 [2] Bioconductor
-#  BiocGenerics         * 0.34.0   2020-04-27 [2] Bioconductor
-#  bitops                 1.0-6    2013-08-17 [2] CRAN (R 4.0.0)
-#  caTools                1.18.0   2020-01-17 [2] CRAN (R 4.0.0)
-#  cli                    2.1.0    2020-10-12 [2] CRAN (R 4.0.2)
-#  colorout             * 1.2-2    2020-09-24 [1] Github (jalvesaq/colorout@726d681)
-#  colorspace             1.4-1    2019-03-18 [2] CRAN (R 4.0.0)
-#  crayon                 1.3.4    2017-09-16 [2] CRAN (R 4.0.0)
-#  data.table           * 1.13.2   2020-10-19 [2] CRAN (R 4.0.2)
-#  DelayedArray         * 0.14.1   2020-07-14 [2] Bioconductor
-#  dplyr                * 1.0.2    2020-08-18 [2] CRAN (R 4.0.2)
-#  ellipsis               0.3.1    2020-05-15 [2] CRAN (R 4.0.0)
-#  fansi                  0.4.1    2020-01-08 [2] CRAN (R 4.0.0)
-#  formatR                1.7      2019-06-11 [2] CRAN (R 4.0.0)
-#  futile.logger        * 1.4.3    2016-07-10 [2] CRAN (R 4.0.0)
-#  futile.options         1.0.1    2018-04-20 [2] CRAN (R 4.0.0)
-#  generics               0.0.2    2018-11-29 [2] CRAN (R 4.0.0)
-#  GenomeInfoDb         * 1.24.2   2020-06-15 [2] Bioconductor
-#  GenomeInfoDbData       1.2.3    2020-05-18 [2] Bioconductor
-#  GenomicRanges        * 1.40.0   2020-04-27 [2] Bioconductor
-#  getopt               * 1.20.3   2019-03-22 [2] CRAN (R 4.0.0)
-#  ggplot2              * 3.3.2    2020-06-19 [1] CRAN (R 4.0.2)
-#  glue                   1.4.2    2020-08-27 [2] CRAN (R 4.0.2)
-#  gplots               * 3.1.0    2020-09-18 [2] CRAN (R 4.0.2)
-#  gtable                 0.3.0    2019-03-25 [2] CRAN (R 4.0.0)
-#  gtools                 3.8.2    2020-03-31 [2] CRAN (R 4.0.0)
-#  here                 * 0.1      2017-05-28 [1] CRAN (R 4.0.2)
-#  hms                    0.5.3    2020-01-08 [2] CRAN (R 4.0.0)
-#  IRanges              * 2.22.2   2020-05-21 [2] Bioconductor
-#  KernSmooth             2.23-17  2020-04-26 [3] CRAN (R 4.0.2)
-#  lambda.r               1.2.4    2019-09-18 [2] CRAN (R 4.0.0)
-#  lattice                0.20-41  2020-04-02 [3] CRAN (R 4.0.2)
-#  lifecycle              0.2.0    2020-03-06 [2] CRAN (R 4.0.0)
-#  magrittr               1.5      2014-11-22 [2] CRAN (R 4.0.0)
-#  Matrix                 1.2-18   2019-11-27 [3] CRAN (R 4.0.2)
-#  matrixStats          * 0.57.0   2020-09-25 [2] CRAN (R 4.0.2)
-#  munsell                0.5.0    2018-06-12 [2] CRAN (R 4.0.0)
-#  pillar                 1.4.6    2020-07-10 [2] CRAN (R 4.0.2)
-#  pkgconfig              2.0.3    2019-09-22 [2] CRAN (R 4.0.0)
-#  ps                     1.4.0    2020-10-07 [2] CRAN (R 4.0.2)
-#  purrr                * 0.3.4    2020-04-17 [2] CRAN (R 4.0.0)
-#  R6                     2.4.1    2019-11-12 [2] CRAN (R 4.0.0)
-#  RColorBrewer         * 1.1-2    2014-12-07 [1] CRAN (R 4.0.2)
-#  RCurl                  1.98-1.2 2020-04-18 [2] CRAN (R 4.0.0)
-#  readr                * 1.4.0    2020-10-05 [2] CRAN (R 4.0.2)
-#  rlang                  0.4.8    2020-10-08 [1] CRAN (R 4.0.2)
-#  rprojroot              1.3-2    2018-01-03 [2] CRAN (R 4.0.0)
-#  rstudioapi             0.11     2020-02-07 [2] CRAN (R 4.0.0)
-#  S4Vectors            * 0.26.1   2020-05-16 [2] Bioconductor
-#  scales                 1.1.1    2020-05-11 [2] CRAN (R 4.0.0)
-#  sessioninfo          * 1.1.1    2018-11-05 [2] CRAN (R 4.0.0)
-#  stringi                1.5.3    2020-09-09 [2] CRAN (R 4.0.2)
-#  stringr              * 1.4.0    2019-02-10 [1] CRAN (R 4.0.2)
-#  SummarizedExperiment * 1.18.2   2020-07-09 [2] Bioconductor
-#  tibble                 3.0.4    2020-10-12 [2] CRAN (R 4.0.2)
-#  tidyselect             1.1.0    2020-05-11 [2] CRAN (R 4.0.0)
-#  utf8                   1.1.4    2018-05-24 [2] CRAN (R 4.0.0)
-#  vctrs                  0.3.4    2020-08-29 [2] CRAN (R 4.0.2)
-#  VennDiagram          * 1.6.20   2018-03-28 [2] CRAN (R 4.0.0)
-#  withr                  2.3.0    2020-09-22 [2] CRAN (R 4.0.2)
-#  XVector                0.28.0   2020-04-27 [2] Bioconductor
-#  zlibbioc               1.34.0   2020-04-27 [2] Bioconductor
-#
-# [1] /users/aseyedia/R/4.0
-# [2] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/site-library
-# [3] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0/R/4.0/lib64/R/library
+# ─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────
+# setting  value                                      
+# version  R version 4.0.3 Patched (2020-11-29 r79529)
+# os       CentOS Linux 7 (Core)                      
+# system   x86_64, linux-gnu                          
+# ui       X11                                        
+# language (EN)                                       
+# collate  en_US.UTF-8                                
+# ctype    en_US.UTF-8                                
+# tz       US/Eastern                                 
+# date     2021-01-22                                 
+# 
+# ─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+# package              * version  date       lib source        
+# assertthat             0.2.1    2019-03-21 [2] CRAN (R 4.0.3)
+# Biobase              * 2.50.0   2020-10-27 [2] Bioconductor  
+# BiocGenerics         * 0.36.0   2020-10-27 [2] Bioconductor  
+# bitops                 1.0-6    2013-08-17 [2] CRAN (R 4.0.3)
+# caTools                1.18.1   2021-01-11 [2] CRAN (R 4.0.3)
+# cli                    2.2.0    2020-11-20 [2] CRAN (R 4.0.3)
+# colorspace             2.0-0    2020-11-11 [2] CRAN (R 4.0.3)
+# crayon                 1.3.4    2017-09-16 [2] CRAN (R 4.0.3)
+# data.table           * 1.13.6   2020-12-30 [2] CRAN (R 4.0.3)
+# DBI                    1.1.1    2021-01-15 [2] CRAN (R 4.0.3)
+# DelayedArray           0.16.0   2020-10-27 [2] Bioconductor  
+# DelayedMatrixStats     1.12.2   2021-01-12 [2] Bioconductor  
+# dplyr                * 1.0.3    2021-01-15 [2] CRAN (R 4.0.3)
+# ellipsis               0.3.1    2020-05-15 [2] CRAN (R 4.0.3)
+# fansi                  0.4.2    2021-01-15 [2] CRAN (R 4.0.3)
+# formatR                1.7      2019-06-11 [2] CRAN (R 4.0.3)
+# futile.logger        * 1.4.3    2016-07-10 [2] CRAN (R 4.0.3)
+# futile.options         1.0.1    2018-04-20 [2] CRAN (R 4.0.3)
+# generics               0.1.0    2020-10-31 [2] CRAN (R 4.0.3)
+# GenomeInfoDb         * 1.26.2   2020-12-08 [2] Bioconductor  
+# GenomeInfoDbData       1.2.4    2020-11-30 [2] Bioconductor  
+# GenomicRanges        * 1.42.0   2020-10-27 [2] Bioconductor  
+# getopt               * 1.20.3   2019-03-22 [2] CRAN (R 4.0.3)
+# ggplot2              * 3.3.3    2020-12-30 [2] CRAN (R 4.0.3)
+# glue                   1.4.2    2020-08-27 [2] CRAN (R 4.0.3)
+# gplots               * 3.1.1    2020-11-28 [2] CRAN (R 4.0.3)
+# gtable                 0.3.0    2019-03-25 [2] CRAN (R 4.0.3)
+# gtools                 3.8.2    2020-03-31 [2] CRAN (R 4.0.3)
+# here                 * 1.0.0    2020-11-15 [1] CRAN (R 4.0.3)
+# hms                    1.0.0    2021-01-13 [2] CRAN (R 4.0.3)
+# IRanges              * 2.24.1   2020-12-12 [2] Bioconductor  
+# KernSmooth             2.23-18  2020-10-29 [3] CRAN (R 4.0.3)
+# lambda.r               1.2.4    2019-09-18 [2] CRAN (R 4.0.3)
+# lattice                0.20-41  2020-04-02 [3] CRAN (R 4.0.3)
+# lifecycle              0.2.0    2020-03-06 [2] CRAN (R 4.0.3)
+# magrittr               2.0.1    2020-11-17 [2] CRAN (R 4.0.3)
+# Matrix                 1.3-2    2021-01-06 [3] CRAN (R 4.0.3)
+# MatrixGenerics       * 1.2.0    2020-10-27 [2] Bioconductor  
+# matrixStats          * 0.57.0   2020-09-25 [2] CRAN (R 4.0.3)
+# munsell                0.5.0    2018-06-12 [2] CRAN (R 4.0.3)
+# pillar                 1.4.7    2020-11-20 [2] CRAN (R 4.0.3)
+# pkgconfig              2.0.3    2019-09-22 [2] CRAN (R 4.0.3)
+# ps                     1.5.0    2020-12-05 [2] CRAN (R 4.0.3)
+# purrr                * 0.3.4    2020-04-17 [2] CRAN (R 4.0.3)
+# R6                     2.5.0    2020-10-28 [2] CRAN (R 4.0.3)
+# RColorBrewer         * 1.1-2    2014-12-07 [2] CRAN (R 4.0.3)
+# Rcpp                   1.0.6    2021-01-15 [2] CRAN (R 4.0.3)
+# RCurl                  1.98-1.2 2020-04-18 [2] CRAN (R 4.0.3)
+# readr                * 1.4.0    2020-10-05 [2] CRAN (R 4.0.3)
+# rlang                  0.4.10   2020-12-30 [2] CRAN (R 4.0.3)
+# rprojroot              2.0.2    2020-11-15 [2] CRAN (R 4.0.3)
+# rstudioapi             0.13     2020-11-12 [2] CRAN (R 4.0.3)
+# S4Vectors            * 0.28.1   2020-12-09 [2] Bioconductor  
+# scales                 1.1.1    2020-05-11 [2] CRAN (R 4.0.3)
+# sessioninfo          * 1.1.1    2018-11-05 [2] CRAN (R 4.0.3)
+# sparseMatrixStats      1.2.0    2020-10-27 [2] Bioconductor  
+# stringi                1.5.3    2020-09-09 [2] CRAN (R 4.0.3)
+# stringr              * 1.4.0    2019-02-10 [2] CRAN (R 4.0.3)
+# SummarizedExperiment * 1.20.0   2020-10-27 [2] Bioconductor  
+# tibble                 3.0.5    2021-01-15 [2] CRAN (R 4.0.3)
+# tidyselect             1.1.0    2020-05-11 [2] CRAN (R 4.0.3)
+# utf8                   1.1.4    2018-05-24 [2] CRAN (R 4.0.3)
+# vctrs                  0.3.6    2020-12-17 [2] CRAN (R 4.0.3)
+# VennDiagram          * 1.6.20   2018-03-28 [2] CRAN (R 4.0.3)
+# withr                  2.4.0    2021-01-16 [2] CRAN (R 4.0.3)
+# XVector                0.30.0   2020-10-27 [2] Bioconductor  
+# zlibbioc               1.36.0   2020-10-27 [2] Bioconductor  
+# 
+# [1] /users/aseyedia/R/4.0.x
+# [2] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/site-library
+# [3] /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/library
