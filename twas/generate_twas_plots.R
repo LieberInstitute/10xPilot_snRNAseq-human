@@ -244,6 +244,11 @@ ggcorr(final_wide %>% select(-c(geneid, genesymbol)), method = c("pairwise", "pe
 dev.off()
 dev.off()
 
+# final_2[type == "cpd",][TWAS.Z > 5 | TWAS.Z < -5]
+
+fwrite(final_2, "analysis/tables/10x_NAc_TWAS_allGWAS.csv")
+fwrite(final_wide, "analysis/tables/10x_NAc_TWAS.Z_allGWAS_WIDE.csv")
+
 # # Scatter plots ####
 # pdf(
 #     'analysis/plots/NAc_TWAS_ScatterPlots.pdf',
