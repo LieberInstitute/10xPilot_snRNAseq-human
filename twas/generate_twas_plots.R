@@ -8,6 +8,8 @@ library(sessioninfo)
 library(ggpubr)
 library(tools)
 library(GGally)
+library(tidyverse)
+library(patchwork)
 
 data.table::setDTthreads(threads = 1)
 
@@ -25,7 +27,7 @@ dir.create(file.path("analysis/tables"),
 # Filter N/A Z scores
 twas_z <- twas_exp_fin %>% filter(!is.na(TWAS.Z))
 
-twas_z_NAc <- twas_z[twas_z$region == "NAc",]
+# twas_z_NAc <- twas_z[twas_z$region == "NAc",]
 
 don <- list()
 
@@ -42,15 +44,15 @@ fin_plot <- list()
 for (i in 1:5) {
     # Preprocessing Data ####
     if (i == 1) {
-        twas_var <- twas_z_NAc[type == "aoi"]
+        twas_var <- twas_z[type == "aoi"]
     } else if (i == 2) {
-        twas_var <- twas_z_NAc[type == "cpd"]
+        twas_var <- twas_z[type == "cpd"]
     } else if (i == 3) {
-        twas_var <- twas_z_NAc[type == "dpw"]
+        twas_var <- twas_z[type == "dpw"]
     } else if (i == 4) {
-        twas_var <- twas_z_NAc[type == "sc"]
+        twas_var <- twas_z[type == "sc"]
     } else if (i == 5) {
-        twas_var <- twas_z_NAc[type == "si"]
+        twas_var <- twas_z[type == "si"]
     }
     
     don[[i]] <-
@@ -153,7 +155,7 @@ twas_z_NAc_threshold <- list()
 
 for (i in 1:5) {
     twas_z_NAc_threshold[[i]] <-
-        rbind(twas_z_NAc[TWAS.Z > sig[[i]],], twas_z_NAc[TWAS.Z < -sig[[i]],])
+        rbind(twas_z[TWAS.Z > sig[[i]],], twas_z[TWAS.Z < -sig[[i]],])
 }
 
 # Interactive TWAS Z Manhattan Plots ####
@@ -185,6 +187,63 @@ for (i in 1:5) {
 # Plotly cannot save directly to relative path for whatever reason
 system("mv *_ManhattanPlotly.html analysis/plots/")
 
+## Correlations of TWAS Z scores across different GWAS sets ####
+pdf(file = "analysis/plots/10x_NAc_TWAS_GWAS_Correlations.pdf")
+
+final_2 <- bind_rows(don) %>%
+    select(-c(FILE, text)) %>% 
+    select(geneid, BPcum, genesymbol, type, TWAS.Z, TWAS.P) %>%
+    as.data.table()
+
+final_wide <-
+    dcast(final_2,
+          geneid + genesymbol ~ type,
+          value.var = c("TWAS.Z"))
+
+# sample_test <- sample_n(final_2, 10000)
+
+make_plot <- function(df, var1, var2) {
+    df$var1 <- var1
+    df$var2 <- var2
+    xlabel <- if (var2 == "si") var1 else NULL
+    ylabel <- if (var1 == "aoi") var2 else NULL
+    color_label <- if (var1 == "aoi") "type" else NULL
+    xaxis <- if (var2 != "si") theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) else NULL
+    yaxis <- if (var1 != "aoi") theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) else NULL
+    ggplot(df, aes(x = .data[[var1]], y = .data[[var2]], color = var1)) +
+        geom_point(alpha = 0.15) +
+        scale_color_manual(values = cols, labels = var1) +
+        labs(x = xlabel, y = ylabel, color = color_label) +
+        xaxis +
+        yaxis
+}
+
+var1 <- names(final_wide)[-c(1:2)]
+var2 <- lapply(1:4, function(x) var1[(x + 1):5])
+
+cols <- scales::hue_pal()(5)
+cols <- setNames(cols, var1)
+labs <- setNames(var1, var1)
+
+plot_list <- map2(var1[1:4], var2, function(var1, var2) {
+    blank <- rep(list(plot_spacer()), 4 - length(var2))
+    map(var2, ~ make_plot(final_wide, var1, .x)) %>% c(blank, .)
+})
+plot_list <- reduce(plot_list, c)
+
+wrap_plots(plot_list, nrow = 4, byrow = FALSE) +
+    plot_layout(guides = "collect") &
+    theme(legend.spacing.y = unit(0, "pt"),
+          legend.margin = margin(1, 1, 1, 1 , "pt"),
+          legend.title = element_text(margin = margin(0, 0, 3, 0, "pt")))
+
+ggpairs(final_wide %>% select(-c(geneid, genesymbol)))
+
+ggcorr(final_wide %>% select(-c(geneid, genesymbol)), method = c("pairwise", "pearson"))
+
+dev.off()
+dev.off()
+
 # # Scatter plots ####
 # pdf(
 #     'analysis/plots/NAc_TWAS_ScatterPlots.pdf',
@@ -193,9 +252,7 @@ system("mv *_ManhattanPlotly.html analysis/plots/")
 #     height = 10
 # )
 # 
-# twas_z_select <-
-#     select(twas_z, geneid, genesymbol, type, TWAS.Z, TWAS.P, region) %>%
-#     as.data.table()
+
 # 
 # # Render Z scores and P values horizontally by region
 # twas_z_wide <-
