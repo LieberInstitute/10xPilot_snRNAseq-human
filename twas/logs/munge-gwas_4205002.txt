@@ -1,0 +1,253 @@
+Adding LIBD modules
+Loading git
+**** Job starts ****
+Wed Jan 20 11:32:34 EST 2021
+**** JHPCE info ****
+User: aseyedia
+Job id: 4205002
+Job name: munge_gwas
+Hostname: compute-097.cm.cluster
+Task id: 
+LDSC exists. Reformatting GWAS...
+*********************************************************************
+* LD Score Regression (LDSC)
+* Version 1.0.1
+* (C) 2014-2019 Brendan Bulik-Sullivan and Hilary Finucane
+* Broad Institute of MIT and Harvard / MIT Department of Mathematics
+* GNU General Public License v3
+*********************************************************************
+Call: 
+./munge_sumstats.py \
+--out ../clean_gwas/munge_gwas/AgeofInitiation_hg19_munge.txt \
+--a1 REF \
+--a2 ALT \
+--snp RSID \
+--sumstats ../clean_gwas/AgeofInitiation_Clean_hg38.txt \
+--nstudy Number_of_Studies \
+--p PVALUE 
+
+Interpreting column names as follows:
+Number_of_Studies:	Number of studies in which the SNP was genotyped.
+N:	Sample size
+BETA:	[linear/logistic] regression coefficient (0 --> no effect; above 0 --> A1 is trait/risk increasing)
+SNP:	Variant ID (e.g., rs number)
+ALT:	Allele 2, interpreted as non-ref allele for signed sumstat.
+REF:	Allele 1, interpreted as ref allele for signed sumstat.
+PVALUE:	p-Value
+
+Reading sumstats from ../clean_gwas/AgeofInitiation_Clean_hg38.txt into memory 5000000 SNPs at a time.
+.. done
+Read 6954004 SNPs from --sumstats file.
+Removed 0 SNPs with missing values.
+Removed 0 SNPs with INFO <= 0.9.
+Removed 0 SNPs with MAF <= 0.01.
+Removed 0 SNPs with out-of-bounds p-values.
+Removed 1021567 variants that were not SNPs or were strand-ambiguous.
+5932437 SNPs remain.
+Removed 8 SNPs with duplicated rs numbers (5932429 SNPs remain).
+Removed 1164 SNPs with N < 175326.666667 (5931265 SNPs remain).
+Median value of BETA was 5.88580896973e-06, which seems sensible.
+Writing summary statistics for 5931265 SNPs (5931265 with nonmissing beta) to ../clean_gwas/munge_gwas/AgeofInitiation_hg19_munge.txt.sumstats.gz.
+
+Metadata:
+Mean chi^2 = 1.175
+Lambda GC = 1.147
+Max chi^2 = 51.097
+409 Genome-wide significant SNPs (some may have been removed by filtering).
+
+Conversion finished at Wed Jan 20 11:35:59 2021
+Total time elapsed: 3.0m:18.55s
+*********************************************************************
+* LD Score Regression (LDSC)
+* Version 1.0.1
+* (C) 2014-2019 Brendan Bulik-Sullivan and Hilary Finucane
+* Broad Institute of MIT and Harvard / MIT Department of Mathematics
+* GNU General Public License v3
+*********************************************************************
+Call: 
+./munge_sumstats.py \
+--out ../clean_gwas/munge_gwas/CigarettesPerDay_hg19_munge.txt \
+--a1 REF \
+--a2 ALT \
+--snp RSID \
+--sumstats ../clean_gwas/CigarettesPerDay_Clean_hg38.txt \
+--nstudy Number_of_Studies \
+--p PVALUE 
+
+Interpreting column names as follows:
+Number_of_Studies:	Number of studies in which the SNP was genotyped.
+N:	Sample size
+BETA:	[linear/logistic] regression coefficient (0 --> no effect; above 0 --> A1 is trait/risk increasing)
+SNP:	Variant ID (e.g., rs number)
+ALT:	Allele 2, interpreted as non-ref allele for signed sumstat.
+REF:	Allele 1, interpreted as ref allele for signed sumstat.
+PVALUE:	p-Value
+
+Reading sumstats from ../clean_gwas/CigarettesPerDay_Clean_hg38.txt into memory 5000000 SNPs at a time.
+.. done
+Read 6961230 SNPs from --sumstats file.
+Removed 0 SNPs with missing values.
+Removed 0 SNPs with INFO <= 0.9.
+Removed 0 SNPs with MAF <= 0.01.
+Removed 0 SNPs with out-of-bounds p-values.
+Removed 1022611 variants that were not SNPs or were strand-ambiguous.
+5938619 SNPs remain.
+Removed 8 SNPs with duplicated rs numbers (5938611 SNPs remain).
+Removed 2315 SNPs with N < 175969.333333 (5936296 SNPs remain).
+Median value of BETA was 4.9605462201e-05, which seems sensible.
+Writing summary statistics for 5936296 SNPs (5936296 with nonmissing beta) to ../clean_gwas/munge_gwas/CigarettesPerDay_hg19_munge.txt.sumstats.gz.
+
+Metadata:
+Mean chi^2 = 1.26
+Lambda GC = 1.179
+Max chi^2 = 961.232
+1642 Genome-wide significant SNPs (some may have been removed by filtering).
+
+Conversion finished at Wed Jan 20 11:39:18 2021
+Total time elapsed: 3.0m:17.94s
+*********************************************************************
+* LD Score Regression (LDSC)
+* Version 1.0.1
+* (C) 2014-2019 Brendan Bulik-Sullivan and Hilary Finucane
+* Broad Institute of MIT and Harvard / MIT Department of Mathematics
+* GNU General Public License v3
+*********************************************************************
+Call: 
+./munge_sumstats.py \
+--out ../clean_gwas/munge_gwas/DrinksPerWeek_hg19_munge.txt \
+--a1 REF \
+--a2 ALT \
+--snp RSID \
+--sumstats ../clean_gwas/DrinksPerWeek_Clean_hg38.txt \
+--nstudy Number_of_Studies \
+--p PVALUE 
+
+Interpreting column names as follows:
+Number_of_Studies:	Number of studies in which the SNP was genotyped.
+N:	Sample size
+BETA:	[linear/logistic] regression coefficient (0 --> no effect; above 0 --> A1 is trait/risk increasing)
+SNP:	Variant ID (e.g., rs number)
+ALT:	Allele 2, interpreted as non-ref allele for signed sumstat.
+REF:	Allele 1, interpreted as ref allele for signed sumstat.
+PVALUE:	p-Value
+
+Reading sumstats from ../clean_gwas/DrinksPerWeek_Clean_hg38.txt into memory 5000000 SNPs at a time.
+.. done
+Read 6892009 SNPs from --sumstats file.
+Removed 0 SNPs with missing values.
+Removed 0 SNPs with INFO <= 0.9.
+Removed 0 SNPs with MAF <= 0.01.
+Removed 0 SNPs with out-of-bounds p-values.
+Removed 1010971 variants that were not SNPs or were strand-ambiguous.
+5881038 SNPs remain.
+Removed 8 SNPs with duplicated rs numbers (5881030 SNPs remain).
+Removed 323 SNPs with N < 358232.666667 (5880707 SNPs remain).
+Median value of BETA was -4.693817709e-06, which seems sensible.
+Writing summary statistics for 5880707 SNPs (5880707 with nonmissing beta) to ../clean_gwas/munge_gwas/DrinksPerWeek_hg19_munge.txt.sumstats.gz.
+
+Metadata:
+Mean chi^2 = 1.362
+Lambda GC = 1.238
+Max chi^2 = 410.756
+4080 Genome-wide significant SNPs (some may have been removed by filtering).
+
+Conversion finished at Wed Jan 20 11:42:38 2021
+Total time elapsed: 3.0m:17.58s
+*********************************************************************
+* LD Score Regression (LDSC)
+* Version 1.0.1
+* (C) 2014-2019 Brendan Bulik-Sullivan and Hilary Finucane
+* Broad Institute of MIT and Harvard / MIT Department of Mathematics
+* GNU General Public License v3
+*********************************************************************
+Call: 
+./munge_sumstats.py \
+--out ../clean_gwas/munge_gwas/SmokingCessation_hg19_munge.txt \
+--a1 REF \
+--a2 ALT \
+--snp RSID \
+--sumstats ../clean_gwas/SmokingCessation_Clean_hg38.txt \
+--nstudy Number_of_Studies \
+--p PVALUE 
+
+Interpreting column names as follows:
+Number_of_Studies:	Number of studies in which the SNP was genotyped.
+N:	Sample size
+BETA:	[linear/logistic] regression coefficient (0 --> no effect; above 0 --> A1 is trait/risk increasing)
+SNP:	Variant ID (e.g., rs number)
+ALT:	Allele 2, interpreted as non-ref allele for signed sumstat.
+REF:	Allele 1, interpreted as ref allele for signed sumstat.
+PVALUE:	p-Value
+
+Reading sumstats from ../clean_gwas/SmokingCessation_Clean_hg38.txt into memory 5000000 SNPs at a time.
+.. done
+Read 7071680 SNPs from --sumstats file.
+Removed 0 SNPs with missing values.
+Removed 0 SNPs with INFO <= 0.9.
+Removed 0 SNPs with MAF <= 0.01.
+Removed 0 SNPs with out-of-bounds p-values.
+Removed 1047578 variants that were not SNPs or were strand-ambiguous.
+6024102 SNPs remain.
+Removed 6474 SNPs with duplicated rs numbers (6017628 SNPs remain).
+Removed 2332 SNPs with N < 208547.333333 (6015296 SNPs remain).
+Median value of BETA was 8.35386670241e-05, which seems sensible.
+Writing summary statistics for 6015296 SNPs (6015296 with nonmissing beta) to ../clean_gwas/munge_gwas/SmokingCessation_hg19_munge.txt.sumstats.gz.
+
+Metadata:
+Mean chi^2 = 1.136
+Lambda GC = 1.112
+Max chi^2 = 103.898
+164 Genome-wide significant SNPs (some may have been removed by filtering).
+
+Conversion finished at Wed Jan 20 11:45:59 2021
+Total time elapsed: 3.0m:18.7s
+*********************************************************************
+* LD Score Regression (LDSC)
+* Version 1.0.1
+* (C) 2014-2019 Brendan Bulik-Sullivan and Hilary Finucane
+* Broad Institute of MIT and Harvard / MIT Department of Mathematics
+* GNU General Public License v3
+*********************************************************************
+Call: 
+./munge_sumstats.py \
+--out ../clean_gwas/munge_gwas/SmokingInitiation_hg19_munge.txt \
+--a1 REF \
+--a2 ALT \
+--snp RSID \
+--sumstats ../clean_gwas/SmokingInitiation_Clean_hg38.txt \
+--nstudy Number_of_Studies \
+--p PVALUE 
+
+Interpreting column names as follows:
+Number_of_Studies:	Number of studies in which the SNP was genotyped.
+N:	Sample size
+BETA:	[linear/logistic] regression coefficient (0 --> no effect; above 0 --> A1 is trait/risk increasing)
+SNP:	Variant ID (e.g., rs number)
+ALT:	Allele 2, interpreted as non-ref allele for signed sumstat.
+REF:	Allele 1, interpreted as ref allele for signed sumstat.
+PVALUE:	p-Value
+
+Reading sumstats from ../clean_gwas/SmokingInitiation_Clean_hg38.txt into memory 5000000 SNPs at a time.
+.. done
+Read 6832839 SNPs from --sumstats file.
+Removed 0 SNPs with missing values.
+Removed 0 SNPs with INFO <= 0.9.
+Removed 0 SNPs with MAF <= 0.01.
+Removed 0 SNPs with out-of-bounds p-values.
+Removed 999908 variants that were not SNPs or were strand-ambiguous.
+5832931 SNPs remain.
+Removed 10 SNPs with duplicated rs numbers (5832921 SNPs remain).
+Removed 80 SNPs with N < 421868.0 (5832841 SNPs remain).
+Median value of BETA was 7.51015444713e-05, which seems sensible.
+Writing summary statistics for 5832841 SNPs (5832841 with nonmissing beta) to ../clean_gwas/munge_gwas/SmokingInitiation_hg19_munge.txt.sumstats.gz.
+
+Metadata:
+Mean chi^2 = 1.586
+Lambda GC = 1.381
+Max chi^2 = 144.538
+6185 Genome-wide significant SNPs (some may have been removed by filtering).
+
+Conversion finished at Wed Jan 20 11:49:14 2021
+Total time elapsed: 3.0m:12.78s
+**** Job ends ****
+Wed Jan 20 11:49:15 EST 2021

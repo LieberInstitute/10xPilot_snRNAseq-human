@@ -83,9 +83,6 @@ colData(rse_gene) <- cbind(colData(rse_gene), genePCs)
 ## Save for later
 save(rse_gene, file = paste0("rda/NAc_Nicotine_hg38_rseGene_rawCounts_allSamples_n", ncol(rse_gene), ".Rdata"))
 
-
-
-
 ## Now extract the genotype data too
 filter_m <- match(brnumerical(rse_gene$BrNum), libd_fam$brnumerical)
 stopifnot(all(!is.na(filter_m)))
