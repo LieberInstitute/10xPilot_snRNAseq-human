@@ -1,0 +1,3 @@
+[submodule "twas/ldsc"]
+	path = twas/ldsc
+	url = https://github.com/bulik/ldsc.git
