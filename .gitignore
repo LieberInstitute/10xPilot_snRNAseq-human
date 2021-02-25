@@ -20,6 +20,7 @@ pdfs/exploration/DayLab-ratNAc/10xCounts/
 ## Logs and Rdata files
 logs/*
 rdas
+rnascope/*.rda
 
 
 ## Misc
