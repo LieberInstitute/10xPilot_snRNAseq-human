@@ -952,7 +952,6 @@ sce.sacc <- sce.sacc[!rowSums(assay(sce.sacc, "counts"))==0, ]
 
 
 ## Make list of Boolean param / cell subtype ===
-#medianNon0.idx <- list()
 cellSubtype.idx <- splitit(sce.sacc$cellType)
 medianNon0.idx <- lapply(cellSubtype.idx, function(x){
   apply(as.matrix(assay(sce.sacc, "logcounts")), 1, function(y){
@@ -1060,5 +1059,12 @@ write.csv(top40genes, file="tables/top40genesLists-REFINED_sACC-n2_cellType.spli
 
 
 
+## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
+for(s in names(markers.sacc.t.1vAll)){
+  markers.sacc.t.1vAll[[s]]$t.stat <- markers.sacc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.sacc))
+}
+
+save(markers.sacc.t.1vAll, markers.sacc.t.design, sce.sacc,
+     file="rdas/markerStats-and-SCE_sACC-n2_sn-level_cleaned_MNTNov2020.rda")
 
 

@@ -847,7 +847,6 @@ sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]
 
 
 ## Make list of Boolean param / cell subtype ===
-#medianNon0.idx <- list()
 cellSubtype.idx <- splitit(sce.hpc$cellType.split)
 medianNon0.idx <- lapply(cellSubtype.idx, function(x){
   apply(as.matrix(assay(sce.hpc, "logcounts")), 1, function(y){
@@ -962,6 +961,15 @@ write.csv(top40genes, file="tables/top40genesLists-REFINED_HPC-n3_cellType.split
           row.names=FALSE)
 
 
+
+
+## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
+for(s in names(markers.hpc.t.1vAll)){
+  markers.hpc.t.1vAll[[s]]$t.stat <- markers.hpc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.hpc))
+}
+
+save(markers.hpc.t.1vAll, markers.hpc.t.design, sce.hpc,
+     file="rdas/markerStats-and-SCE_HPC-n3_sn-level_cleaned_MNTNov2020.rda")
 
 
 

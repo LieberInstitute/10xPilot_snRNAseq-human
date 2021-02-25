@@ -863,11 +863,11 @@ dev.off()
 
 ### MNT add 18Nov2020 =================================
 # -> What if add param/requirement that for any given subcluster, median expression has to > 0?
-load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
     # markers.nac.t.design, markers.nac.t.1vAll
 
 ## Load SCE 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
     # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
 
@@ -996,6 +996,15 @@ write.csv(top40genes, file="tables/top40genesLists-REFINED_NAc-n5_cellType.final
           row.names=FALSE)
 
 
+
+
+## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
+for(s in names(markers.nac.t.1vAll)){
+  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac.all))
+}
+
+save(markers.nac.t.1vAll, markers.nac.t.design, sce.nac.all,
+     file="rdas/markerStats-and-SCE_NAc-n5_sn-level_cleaned_MNTNov2020.rda")
 
 
 

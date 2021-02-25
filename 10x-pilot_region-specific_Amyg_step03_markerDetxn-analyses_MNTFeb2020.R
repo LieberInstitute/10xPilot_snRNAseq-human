@@ -1001,6 +1001,14 @@ write.csv(top40genes, file="tables/top40genesLists-REFINED_Amyg-n2_cellType.spli
 
 
 
+## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
+for(s in names(markers.amy.t.1vAll)){
+  markers.amy.t.1vAll[[s]]$t.stat <- markers.amy.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.amy))
+}
+
+save(markers.amy.t.1vAll, markers.amy.t.design, sce.amy,
+     file="rdas/markerStats-and-SCE_AMY-n2_sn-level_cleaned_MNTNov2020.rda")
+
 
 
 
