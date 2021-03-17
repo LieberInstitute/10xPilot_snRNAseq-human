@@ -224,7 +224,7 @@ names(stats) <- names(pilot.data.2)
 ## Lapply: MAD approach for mito rate thresholding
 high.mito <- lapply(stats, function(x) isOutlier(x$subsets_Mito_percent, nmads=3, type="higher"))
 high.mito.table <- lapply(high.mito, table)
-# Percept dropped
+# Percent dropped
 sapply(high.mito.table, function(x) round(x[2]/sum(x), 3))  # ~15-20% across all
   # br5276.sacc.neun.TRUE       br5400.nac.TRUE       br5276.nac.TRUE 
   #                 0.091                 0.126                 0.124 
@@ -247,8 +247,13 @@ sapply(high.mito, function(x){round(attributes(x)[["thresholds"]]["higher"], 4)}
     #                  0.1798
 
 
-## Test: add a pseudo-count==1 for a 'MT transcript'
+## Trick: Add a pseudo-count==1 for a 'MT transcript' ===
+# First check computation of mito percent:
+table(stats[[8]]$subsets_Mito_percent == (stats[[8]]$subsets_Mito_sum/stats[[8]]$sum)*100)
+    # All TRUE
+
     test.stats <- stats
+    
     for(i in 1:length(test.stats)){
       test.stats[[i]]$pseudo_subsets_Mito_sum <- test.stats[[i]]$subsets_Mito_sum + 1
       test.stats[[i]]$pseudo_subsets_Mito_percent <- test.stats[[i]]$pseudo_subsets_Mito_sum / (test.stats[[i]]$sum+1) * 100
@@ -284,45 +289,49 @@ sapply(high.mito, function(x){round(attributes(x)[["thresholds"]]["higher"], 4)}
     
 ## Bind stats to colData
 for(i in 1:length(pilot.data.2)){
-  colData(pilot.data.2[[i]]) <- cbind(colData(pilot.data.2[[i]]), stats[[i]])
-}
-for(i in 1:length(pilot.data.2)){
-  colData(pilot.data.2[[i]]) <- cbind(colData(pilot.data.2[[i]]), high.mito[[i]])
-}
-for(i in 1:length(pilot.data.2)){
-  colnames(colData(pilot.data.2[[i]]))[13] <- "high.mito"
+  colData(pilot.data.2[[i]]) <- cbind(colData(pilot.data.2[[i]]), stats[[i]],
+                                      high.mito[[i]]
+                                      #pseudo.high.mito[[i]]
+                                      )
+  colnames(colData(pilot.data.2[[i]]))[9] <- "high.mito"
 }
 
 # $sum vs. $total ??
 for(i in 1:length(pilot.data.2)){
   print(table(pilot.data.2[[i]]$sum == pilot.data.2[[i]]$total))
 }
-    ## all TRUE so can remove this second column:
-for(i in 1:length(pilot.data.2)){
-  pilot.data.2[[i]]$total <- NULL
-}
-
+    ## all TRUE so can remove this 'duplicate' column:
+    for(i in 1:length(pilot.data.2)){
+      pilot.data.2[[i]]$total <- NULL
+    }
 
 # Store original for comparison/plotting
 pilot.data.2.unfiltered <- pilot.data.2
 
 ## Subset - remove those indexed as high.mito
 for(i in 1:length(pilot.data.2)){
-  pilot.data.2[[i]] <- pilot.data.2[[i]][ ,!high.mito[[i]]]
+  pilot.data.2[[i]] <- pilot.data.2[[i]][ ,!pilot.data.2[[i]]$high.mito]
 }
 sapply(pilot.data.2, dim)
 
-## Plot metrics
+
+## Plot metrics === ===
 
 mitoCutoffs <- unlist(lapply(high.mito, function(x){attributes(x)$thresholds["higher"]}))
+#mitoCutoffs <- unlist(lapply(pseudo.high.mito, function(x){attributes(x)$thresholds["higher"]}))
 mean(mitoCutoffs)
     # [1] 1.453033;;     0.3903217 for first batch (n=12)
+    ## with pseudo-MT count:
+    # [1] 1.696016
 median(mitoCutoffs)
     # [1] 0.1657229;;    0.138046 for first batch (n=12)
+    ## with pseudo-MT count:
+    # [1] 0.4182892
 mitoCutoffs <- round(mitoCutoffs, 3)
 
 #dir.create("pdfs/revision")
-pdf("pdfs/revision/all-FACS-n10_2021rev_QCmetrics_high-mitoColored_MNT.pdf", height=5)
+pdf("pdfs/revision/all-FACS-n10_2021rev_QCmetrics_high-mitoColored_MNT.pdf", height=4)
+#pdf("pdfs/revision/all-FACS-n10_2021rev_QCmetrics_high-mitoColored_wPseudoMTcount_MNT.pdf", height=4)
 for(i in 1:length(pilot.data.2.unfiltered)){
   grid.arrange(
     plotColData(pilot.data.2.unfiltered[[i]], y="sum", colour_by="high.mito") +
@@ -333,21 +342,32 @@ for(i in 1:length(pilot.data.2.unfiltered)){
                 colour_by="high.mito") + ggtitle(paste0("Mito % (cutoff = ", mitoCutoffs[i],")")),
     ncol=3
   )
-  # Total count vs mito rate
+  # Mito rate vs n detected features
   print(
-    plotColData(pilot.data.2.unfiltered[[i]], x="sum", y="subsets_Mito_percent",
-              colour_by="high.mito", point_size=2.5, point_alpha=0.5) +
-    ggtitle(paste0("Sample: ", names(pilot.data.2.unfiltered)[[i]],
-                   ";    nNuclei (pre-QC): ", ncol(pilot.data.2.unfiltered[[i]]),";    ",
-                   "Mito % (cutoff = ", mitoCutoffs[i],")"
-                   ))
+    plotColData(pilot.data.2.unfiltered[[i]], x="detected", y="subsets_Mito_percent",
+                colour_by="high.mito", point_size=2.5, point_alpha=0.5) +
+      ggtitle(paste0("Sample: ", names(pilot.data.2.unfiltered)[[i]],
+                     ";   pre-QC nNuclei: ", ncol(pilot.data.2.unfiltered[[i]]),";    ",
+                     "nNuclei kept: ", ncol(pilot.data.2[[i]])," (",
+                     round(ncol(pilot.data.2[[i]]) / ncol(pilot.data.2.unfiltered[[i]]), 2), "%)"
+      ))
+  )
+  # Detected features vs total count
+  print(
+    plotColData(pilot.data.2.unfiltered[[i]], x="sum", y="detected",
+                colour_by="high.mito", point_size=2.5, point_alpha=0.5) +
+      ggtitle(paste0("Sample: ", names(pilot.data.2.unfiltered)[[i]],
+                     ";   pre-QC nNuclei: ", ncol(pilot.data.2.unfiltered[[i]]),";    ",
+                     "nNuclei kept: ", ncol(pilot.data.2[[i]])," (",
+                     round(ncol(pilot.data.2[[i]]) / ncol(pilot.data.2.unfiltered[[i]]), 2), "%)"
+      ))
   )
 }
 dev.off()
 
 
 ## Save!
-save(pilot.data.2, pilot.data.2.unfiltered, e.out.2, file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
+#save(pilot.data.2, pilot.data.2.unfiltered, e.out.2, file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
 
 
         # === === === === === === === === === === ===
