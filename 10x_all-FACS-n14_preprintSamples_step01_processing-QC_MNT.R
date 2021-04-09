@@ -370,60 +370,12 @@ save(pilot.data, pilot.data.unfiltered, e.out,
 #BiocManager::install("scDblFinder")
 library(scDblFinder)
 
-## No subset.row iteration:
-set.seed(109)
-dbl.dens <- lapply(pilot.data, computeDoubletDensity)
-sapply(dbl.dens, function(x) round(quantile(x, probs=seq(0,1,by=0.05)),3))
-    #     br5161.amy br5161.dlpfc br5161.hpc br5161.nac br5161.sacc br5207.nac.neun br5212.amy
-    # 0%        0.000        0.000      0.000      0.000       0.000           0.000      0.000
-    # 5%        0.000        0.000      0.000      0.016       0.000           0.009      0.000
-    # 10%       0.000        0.008      0.009      0.025       0.000           0.018      0.007
-    # 15%       0.007        0.017      0.009      0.033       0.006           0.027      0.007
-    # 20%       0.007        0.017      0.018      0.045       0.013           0.035      0.013
-    # 25%       0.013        0.025      0.027      0.058       0.019           0.044      0.020
-    # 30%       0.020        0.042      0.035      0.074       0.025           0.062      0.026
-    # 35%       0.026        0.051      0.044      0.086       0.038           0.080      0.033
-    # 40%       0.033        0.067      0.053      0.103       0.051           0.097      0.046
-    # 45%       0.040        0.084      0.071      0.120       0.070           0.115      0.065
-    # 50%       0.053        0.110      0.088      0.140       0.102           0.142      0.085
-    # 55%       0.079        0.135      0.115      0.164       0.140           0.177      0.104
-    # 60%       0.112        0.169      0.141      0.197       0.197           0.212      0.130
-    # 65%       0.145        0.211      0.186      0.226       0.279           0.257      0.163
-    # 70%       0.204        0.278      0.239      0.291       0.382           0.319      0.196
-    # 75%       0.288        0.362      0.318      0.349       0.495           0.398      0.248
-    # 80%       0.435        0.489      0.451      0.452       0.641           0.504      0.319
-    # 85%       0.626        0.632      0.699      0.604       0.819           0.637      0.463
-    # 90%       1.015        0.902      1.070      0.898       1.073           0.938      0.763
-    # 95%       1.660        1.669      1.671      1.434       1.596           1.673      1.323
-    # 100%     13.295       13.657     18.551      7.793      19.723          25.010     13.570
-
-    #      br5212.dlpfc br5212.hpc br5212.nac br5212.sacc br5287.hpc br5287.nac br5182.nac.neun
-    # 0%          0.000      0.000      0.004       0.000      0.000      0.014           0.000
-    # 5%          0.003      0.000      0.027       0.000      0.007      0.065           0.009
-    # 10%         0.010      0.008      0.035       0.000      0.015      0.091           0.017
-    # 15%         0.014      0.008      0.043       0.000      0.022      0.123           0.034
-    # 20%         0.020      0.016      0.050       0.000      0.030      0.136           0.043
-    # 25%         0.027      0.024      0.064       0.008      0.045      0.148           0.060
-    # 30%         0.037      0.024      0.077       0.008      0.056      0.170           0.068
-    # 35%         0.058      0.032      0.096       0.016      0.067      0.210           0.085
-    # 40%         0.081      0.048      0.113       0.031      0.079      0.262           0.102
-    # 45%         0.108      0.056      0.131       0.039      0.090      0.320           0.128
-    # 50%         0.135      0.080      0.156       0.062      0.108      0.394           0.145
-    # 55%         0.179      0.095      0.181       0.085      0.134      0.471           0.179
-    # 60%         0.240      0.119      0.213       0.109      0.168      0.605           0.205
-    # 65%         0.297      0.151      0.248       0.147      0.217      0.722           0.247
-    # 70%         0.352      0.199      0.285       0.202      0.280      0.913           0.290
-    # 75%         0.413      0.262      0.330       0.264      0.363      1.034           0.367
-    # 80%         0.500      0.382      0.379       0.357      0.480      1.293           0.462
-    # 85%         0.609      0.549      0.465       0.489      0.718      1.547           0.606
-    # 90%         0.835      0.902      0.662       0.768      1.260      2.072           0.862
-    # 95%         1.366      1.433      0.994       1.312      1.661      3.310           1.544
-    # 100%        6.765     14.596      7.844      11.756      5.965      4.349          21.376
-
-## What about on sample-level top-HVGs?  Just take top 1000 === ===
+## To speed up, run on sample-level top-HVGs - just take top 1000 ===
 pilot.data.normd <- lapply(pilot.data, logNormCounts)
 geneVar.samples <- lapply(pilot.data.normd, modelGeneVar)
 topHVGs <- lapply(geneVar.samples, function(x) {getTopHVGs(x, n=1000)})
+
+# Generate doublet density scores
 set.seed(109)
 dbl.dens.focused <- lapply(names(pilot.data.normd), function(x) {
   computeDoubletDensity(pilot.data.normd[[x]], subset.row=topHVGs[[x]])})
@@ -476,22 +428,7 @@ sapply(dbl.dens.focused, function(x) round(quantile(x, probs=seq(0,1,by=0.05)),3
     # 95%         1.312      2.416      1.450       1.428      2.057      2.296           1.868
     # 100%        6.454     16.043      7.886       9.584      7.749      4.154          21.564
 
-# How do they correlate?
-round(sapply(names(dbl.dens), function(x){cor(dbl.dens[[x]], dbl.dens.focused[[x]])}), 3)
-    #      br5161.amy    br5161.dlpfc      br5161.hpc      br5161.nac     br5161.sacc 
-    #           0.892           0.834           0.918           0.722           0.794 
-    # br5207.nac.neun      br5212.amy    br5212.dlpfc      br5212.hpc      br5212.nac 
-    #           0.878           0.850           0.912           0.922           0.834 
-    #     br5212.sacc      br5287.hpc      br5287.nac br5182.nac.neun 
-    #           0.896           0.710           0.747           0.933 
-
-sapply(dbl.dens, function(x) table(x >= 10))
-sapply(dbl.dens.focused, function(x) table(x >= 10))
-sapply(dbl.dens, function(x) table(x >= 5))
 sapply(dbl.dens.focused, function(x) table(x >= 5))
-
-    # Observation: seems that more NeuN-selected-sample nuclei are flagged with higher max scores,
-    #              (and slightly more) which is unsurprising since they are more 'homogeneous'
 
 # Percent that would be dropped at density score >= 5
 round(sapply(names(dbl.dens.focused), function(x) {
@@ -510,71 +447,50 @@ round(sapply(names(dbl.dens.focused), function(x) {
     #     there is no clear cut answer and some true doublets may remain in the dataset.
     #     -> see http://bioconductor.org/books/release/OSCA/doublet-detection.html#doublet-simulation
 
+    #     Additionally: Will be good to just check downstream if higher scores are still associated
+    #                   with any particular subcluster
+
 
 # Add the doublet density scores to the colData
 for(i in names(pilot.data)){
   pilot.data[[i]]$doubletScore <- dbl.dens.focused[[i]]
 }
+    # -> Will leave the thresholding at the region-specific level for flexibility
+    #    since will save separate .rda for each of those
 
-## Post-hoc: that there aren't any potential cell types associated with high scores === ===
-new.hpc <- cbind(pilot.data[["br5161.hpc"]], pilot.data[["br5212.hpc"]], pilot.data[["br5287.hpc"]])
+### Make/add some sample metadata ===
+ref.sampleInfo <- data.frame(sampleID = names(pilot.data))
+ref.sampleInfo$region <- ss(names(pilot.data),"\\.", 2)
+ref.sampleInfo$donor <- ss(names(pilot.data),"\\.", 1)
 
+ref.sampleInfo$processBatch <- ifelse(ref.sampleInfo$sampleID %in% c("br5212.dlpfc", "br5287.hpc", "br5161.nac", "br5212.nac"),
+                                   "R2.23Jul2019", "R1.08May2019")
+ref.sampleInfo$processBatch <- ifelse(ref.sampleInfo$sampleID %in% c("br5161.dlpfc", "br5212.hpc", "br5287.nac", "br5161.amy"),
+                                   "R3.04Sep2019", ref.sampleInfo$processBatch)
+ref.sampleInfo$processBatch <- ifelse(ref.sampleInfo$sampleID %in% c("br5212.amy", "br5161.sacc", "br5212.sacc", "br5182.nac.neun", "br5207.nac.neun"),
+                                   "R4.25Sep2019", ref.sampleInfo$processBatch)
 
-# Bring in preprint SCE for HPC:
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
+ref.sampleInfo$protocol <- ifelse(ref.sampleInfo$processBatch=="R2.23Jul2019", "pseudoSort", "Frankenstein")
+ref.sampleInfo$protocol <- ifelse(ref.sampleInfo$sampleID %in% c("br5182.nac.neun", "br5207.nac.neun"),
+                                  "Frank.NeuN.enriched", ref.sampleInfo$protocol)
 
+ref.sampleInfo$sequencer <- "NextSeq"
 
-# set a sampleID; make match style of that SCE:
-new.hpc$sampleID <- c(rep("hpc.5161", ncol(pilot.data[["br5161.hpc"]])),
-                    rep("hpc.5212", ncol(pilot.data[["br5212.hpc"]])),
-                    rep("hpc.5287", ncol(pilot.data[["br5287.hpc"]])))
+rownames(ref.sampleInfo) <- ref.sampleInfo$sampleID
 
-new.hpc$sampleBC <- paste0(new.hpc$sampleID, ".", new.hpc$Barcode)
+## Add those to the colData:
+for(i in names(pilot.data)){
+  pilot.data[[i]]$sampleID <- i
+  pilot.data[[i]]$region <- ref.sampleInfo[i, "region"]
+  pilot.data[[i]]$donor <- ref.sampleInfo[i, "donor"]
+  pilot.data[[i]]$processBatch <- ref.sampleInfo[i, "processBatch"]
+  pilot.data[[i]]$protocol <- ref.sampleInfo[i, "protocol"]
+  pilot.data[[i]]$sequencer <- ref.sampleInfo[i, "sequencer"]
+}
 
-# Do same for preprint SCE
-sce.hpc$sampleBC <- paste0(sce.hpc$sample, ".", sce.hpc$Barcode)
-
-length(intersect(sce.hpc$sampleBC, new.hpc$sampleBC))
-    # 10213 out of 10268 for the 'new' iteration and 10444 for the preprint
-
-intersectingBCs <- intersect(sce.hpc$sampleBC, new.hpc$sampleBC)
-sce.hpc.sub <- sce.hpc[ ,sce.hpc$sampleBC %in% intersectingBCs]
-new.hpc.sub <- new.hpc[ ,new.hpc$sampleBC %in% intersectingBCs]
-table(colnames(sce.hpc.sub) == colnames(new.hpc.sub)) # all TRUE
-sce.hpc.sub$doubletScore <- new.hpc.sub$doubletScore
-
-table(sce.hpc$cellType.split)
-table(sce.hpc.sub$cellType.split)
-    ## Looks likes cell populations are mostly preserved--esp in the smaller subpops (Tcell, Inhib.1, etc.)
-
-cellType.idx <- splitit(sce.hpc.sub$cellType.split)
-sapply(cellType.idx, function(x){round(quantile(sce.hpc.sub[ ,x]$doubletScore), 3)})
-    #     Ambig.lowNtrxts  Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1
-    # 0%             0.032  0.000   0.026   0.018   0.016   0.414   0.477   1.167
-    # 25%            0.043  0.062   0.052   0.071   0.087   0.479   0.813   1.441
-    # 50%            0.057  0.120   0.097   0.124   0.151   0.497   0.920   1.490
-    # 75%            0.692  0.231   0.608   0.760   0.207   0.678   0.981   1.539
-    # 100%           1.361 16.043   4.080   3.210   7.739   2.087   6.499   2.962
-    #      Inhib.2 Inhib.3 Inhib.4 Inhib.5  Micro Oligo    OPC Tcell
-    # 0%     0.663   0.027   0.274   0.592  0.000 0.000  0.000 0.048
-    # 25%    1.177   0.115   0.924   0.935  0.032 0.199  0.041 0.064
-    # 50%    1.291   0.705   1.017   1.241  0.072 0.509  0.120 0.097
-    # 75%    1.415   1.362   1.122   1.386  0.159 1.100  0.230 0.112
-    # 100%   6.984   6.928   1.848   1.795 15.580 8.037 12.034 0.124
-sapply(cellType.idx, function(x){table(sce.hpc.sub[ ,x]$doubletScore >= 5)["TRUE"]})
-    # Ambig.lowNtrxts.NA         Astro.TRUE         Excit.1.NA         Excit.2.NA 
-    #                 NA                 35                 NA                 NA 
-    #       Excit.3.TRUE         Excit.4.NA       Excit.5.TRUE         Inhib.1.NA 
-    #                 10                 NA                  1                 NA 
-    #       Inhib.2.TRUE       Inhib.3.TRUE         Inhib.4.NA         Inhib.5.NA 
-    #                  1                  1                 NA                 NA 
-    #         Micro.TRUE         Oligo.TRUE           OPC.TRUE           Tcell.NA 
-    #                 51                 22                 25                 NA 
-
-    ### Conclusion: thresholding at 5 seems appropriate (e.g. = 10 doesn't flag any Oligos, here)
-      #             and will be good to just check downstream if higher scores are still associated
-      #             with any particular subcluster
+## Save:
+save(pilot.data, pilot.data.unfiltered, e.out,
+     file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
 
     # === === === === === === === === === === ===
     # And end here -> proceed to 'step02' scripts
