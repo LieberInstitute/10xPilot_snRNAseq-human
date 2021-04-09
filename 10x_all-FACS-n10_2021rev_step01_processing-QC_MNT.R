@@ -205,7 +205,7 @@ save(pilot.data.2, e.out.2, file="rdas/revision/all-FACS-n10_2021rev_SCEs_proces
 
 
 
-### Mito rate QC ===
+### Mito rate QC ==================
 table(rownames(pilot.data.2[[7]])==rownames(pilot.data.2[[10]]))  # and checked various other pairs
 
 location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(pilot.data.2[[1]])$gene_id, 
@@ -221,38 +221,16 @@ for(i in 1:length(pilot.data.2)){
 names(stats) <- names(pilot.data.2)
 
 
-## Lapply: MAD approach for mito rate thresholding
-high.mito <- lapply(stats, function(x) isOutlier(x$subsets_Mito_percent, nmads=3, type="higher"))
-high.mito.table <- lapply(high.mito, table)
-# Percent dropped
-sapply(high.mito.table, function(x) round(x[2]/sum(x), 3))  # ~15-20% across all
-  # br5276.sacc.neun.TRUE       br5400.nac.TRUE       br5276.nac.TRUE 
-  #                 0.091                 0.126                 0.124 
-  #  br5701.nac.neun.TRUE br5701.sacc.neun.TRUE     br5207.dlpfc.TRUE 
-  #                 0.264                 0.153                 0.438 
-  #  br5276.amy.neun.TRUE  br5400.amy.neun.TRUE      br5400.sacc.TRUE 
-  #                 0.098                 0.257                 0.328 
-  #       br5701.amy.TRUE 
-  #                 0.159
+### Trick: Add a pseudo-count==1 for a 'MT transcript' ===
+  # Note: This was implemented because we realized samples with mito rate distributions that
+  #       were 'clean' and tightly distributed about 0 would yield a 3x MAD = 0, thus over-penalizing
+  #       nuclei even if they had a single MT transcript (throwing out upwards of 50% of the sample)
 
-# Variable thresholds
-sapply(high.mito, function(x){round(attributes(x)[["thresholds"]]["higher"], 4)})
-    # br5276.sacc.neun.higher       br5400.nac.higher       br5276.nac.higher 
-    #                  5.1915                  0.0816                  1.2914 
-    #  br5701.nac.neun.higher br5701.sacc.neun.higher     br5207.dlpfc.higher 
-    #                  2.2890                  0.0863                  0.0000 
-    #  br5276.amy.neun.higher  br5400.amy.neun.higher      br5400.sacc.higher 
-    #                  5.2586                  0.1519                  0.0000 
-    #       br5701.amy.higher 
-    #                  0.1798
-
-
-## Trick: Add a pseudo-count==1 for a 'MT transcript' ===
 # First check computation of mito percent:
 table(stats[[8]]$subsets_Mito_percent == (stats[[8]]$subsets_Mito_sum/stats[[8]]$sum)*100)
     # All TRUE
 
-    test.stats <- stats
+test.stats <- stats
     
     for(i in 1:length(test.stats)){
       test.stats[[i]]$pseudo_subsets_Mito_sum <- test.stats[[i]]$subsets_Mito_sum + 1
@@ -272,6 +250,7 @@ table(stats[[8]]$subsets_Mito_percent == (stats[[8]]$subsets_Mito_sum/stats[[8]]
         #                0.100                 0.173                 0.093 
         #      br5701.amy.TRUE 
         #                0.161
+    
     # Thresholds
     sapply(pseudo.high.mito, function(x){round(attributes(x)[["thresholds"]]["higher"], 4)})
         #br5276.sacc.neun.higher       br5400.nac.higher       br5276.nac.higher 
@@ -284,14 +263,11 @@ table(stats[[8]]$subsets_Mito_percent == (stats[[8]]$subsets_Mito_sum/stats[[8]]
         #                 0.2177 
 
     
-    
-    
-    
-## Bind stats to colData
+## Bind [true] stats to colData
 for(i in 1:length(pilot.data.2)){
   colData(pilot.data.2[[i]]) <- cbind(colData(pilot.data.2[[i]]), stats[[i]],
-                                      high.mito[[i]]
-                                      #pseudo.high.mito[[i]]
+                                      #high.mito[[i]]
+                                      pseudo.high.mito[[i]]
                                       )
   colnames(colData(pilot.data.2[[i]]))[9] <- "high.mito"
 }
@@ -367,7 +343,135 @@ dev.off()
 
 
 ## Save!
-#save(pilot.data.2, pilot.data.2.unfiltered, e.out.2, file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
+save(pilot.data.2, pilot.data.2.unfiltered, e.out.2, file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
+
+
+
+### Doublet detection / removal ==============================
+  # Use default params, because this is at the single-sample-level
+  # (within-region normalization, PCA, etc. will be performed with corresponding samples)
+
+library(scDblFinder)
+
+## To speed up, run on sample-level top-HVGs - just take top 1000 ===
+pilot.data.normd <- lapply(pilot.data.2, logNormCounts)
+geneVar.samples <- lapply(pilot.data.normd, modelGeneVar)
+topHVGs <- lapply(geneVar.samples, function(x) {getTopHVGs(x, n=1000)})
+
+# Generate doublet density scores
+set.seed(109)
+dbl.dens.focused <- lapply(names(pilot.data.normd), function(x) {
+  computeDoubletDensity(pilot.data.normd[[x]], subset.row=topHVGs[[x]])})
+names(dbl.dens.focused) <- names(pilot.data.normd)
+
+sapply(dbl.dens.focused, function(x) round(quantile(x, probs=seq(0,1,by=0.05)),3))
+    #      br5276.sacc.neun br5400.nac br5276.nac br5701.nac.neun br5701.sacc.neun
+    # 0%              0.015      0.000      0.005           0.041            0.000
+    # 5%              0.043      0.016      0.032           0.092            0.023
+    # 10%             0.071      0.025      0.053           0.135            0.046
+    # 15%             0.124      0.033      0.074           0.185            0.053
+    # 20%             0.204      0.049      0.095           0.239            0.068
+    # 25%             0.397      0.066      0.116           0.313            0.076
+    # 30%             0.645      0.090      0.142           0.399            0.084
+    # 35%             0.810      0.115      0.173           0.479            0.099
+    # 40%             0.899      0.131      0.200           0.565            0.107
+    # 45%             0.998      0.156      0.236           0.673            0.122
+    # 50%             1.091      0.181      0.268           0.735            0.137
+    # 55%             1.164      0.222      0.305           0.863            0.152
+    # 60%             1.224      0.263      0.347           1.194            0.175
+    # 65%             1.283      0.320      0.389           1.262            0.198
+    # 70%             1.336      0.394      0.441           1.351            0.228
+    # 75%             1.396      0.493      0.488           1.420            0.266
+    # 80%             1.530      0.662      0.557           1.631            0.312
+    # 85%             1.646      0.928      0.651           1.706            0.365
+    # 90%             1.777      1.364      0.817           1.799            0.479
+    # 95%             2.018      2.158      1.134           2.964            0.825
+    # 100%            3.166     17.377     25.141           4.215           23.051
+    
+    #      br5207.dlpfc br5276.amy.neun br5400.amy.neun br5400.sacc br5701.amy
+    # 0%          0.000           0.000           0.000       0.000      0.000
+    # 5%          0.000           0.035           0.011       0.000      0.021
+    # 10%         0.011           0.118           0.021       0.008      0.042
+    # 15%         0.011           0.163           0.053       0.008      0.063
+    # 20%         0.021           0.186           0.116       0.016      0.085
+    # 25%         0.021           0.207           0.206       0.032      0.106
+    # 30%         0.032           0.227           0.306       0.048      0.134
+    # 35%         0.042           0.242           0.411       0.063      0.169
+    # 40%         0.053           0.261           0.525       0.079      0.204
+    # 45%         0.064           0.281           0.617       0.103      0.254
+    # 50%         0.085           0.301           0.701       0.127      0.303
+    # 55%         0.106           0.320           0.764       0.158      0.352
+    # 60%         0.127           0.345           0.817       0.198      0.423
+    # 65%         0.159           0.385           0.870       0.238      0.507
+    # 70%         0.191           0.429           0.922       0.277      0.600
+    # 75%         0.244           0.493           0.980       0.325      0.726
+    # 80%         0.307           0.562           1.043       0.396      0.881
+    # 85%         0.402           0.663           1.138       0.507      1.163
+    # 90%         0.635           0.816           1.296       0.728      1.593
+    # 95%         1.539           1.241           1.544       1.211      2.515
+    # 100%       26.671           7.863           4.943       7.483     13.109
+
+sapply(dbl.dens.focused, function(x) table(x >= 5))
+
+# Percent that would be dropped at density score >= 5
+round(sapply(names(dbl.dens.focused), function(x) {
+  table(dbl.dens.focused[[x]] >= 5)["TRUE"] / ncol(pilot.data.2[[x]]) * 100
+}), 3)
+    #  br5276.sacc.neun.NA       br5400.nac.TRUE       br5276.nac.TRUE 
+    #                   NA                 2.191                 1.028 
+    #   br5701.nac.neun.NA br5701.sacc.neun.TRUE     br5207.dlpfc.TRUE 
+    #                   NA                 1.367                 1.360 
+    # br5276.amy.neun.TRUE    br5400.amy.neun.NA      br5400.sacc.TRUE 
+    #                0.243                    NA                 0.177 
+    #      br5701.amy.TRUE 
+    #               2.043
+
+
+    # --> Thresholding (this is arbitrary!) at a score >= 5 should be fair, but acknowledging
+    #     there is no clear cut answer and some true doublets may remain in the dataset.
+    #     -> see http://bioconductor.org/books/release/OSCA/doublet-detection.html#doublet-simulation
+    
+    #     Additionally: Will be good to just check downstream if higher scores are still associated
+    #                   with any particular subcluster
+
+
+# Add the doublet density scores to the colData
+for(i in names(pilot.data.2)){
+  pilot.data.2[[i]]$doubletScore <- dbl.dens.focused[[i]]
+}
+    # -> Will leave the thresholding at the region-specific level for flexibility
+    #    since will save separate .rda for each of those
+
+### Make/add some sample metadata ===
+ref.sampleInfo <- data.frame(sampleID = names(pilot.data.2))
+ref.sampleInfo$region <- ss(names(pilot.data.2),"\\.", 2)
+ref.sampleInfo$donor <- ss(names(pilot.data.2),"\\.", 1)
+
+ref.sampleInfo$processBatch <- ifelse(ref.sampleInfo$sampleID %in% c("br5276.nac", "br5400.nac", "br5701.nac.neun",
+                                                                     "br5276.sacc.neun", "br5701.sacc.neun"),
+                                      "R6.10Feb2021", "R5.03Feb2021")
+
+
+ref.sampleInfo$protocol <- "Frankenstein"
+ref.sampleInfo$protocol[grep("neun", ref.sampleInfo$sampleID)] <- "Frank.NeuN.enriched"
+
+ref.sampleInfo$sequencer <- "NovaSeq"
+
+rownames(ref.sampleInfo) <- ref.sampleInfo$sampleID
+
+## Add those to the colData:
+for(i in names(pilot.data.2)){
+  pilot.data.2[[i]]$sampleID <- i
+  pilot.data.2[[i]]$region <- ref.sampleInfo[i, "region"]
+  pilot.data.2[[i]]$donor <- ref.sampleInfo[i, "donor"]
+  pilot.data.2[[i]]$processBatch <- ref.sampleInfo[i, "processBatch"]
+  pilot.data.2[[i]]$protocol <- ref.sampleInfo[i, "protocol"]
+  pilot.data.2[[i]]$sequencer <- ref.sampleInfo[i, "sequencer"]
+}
+
+## Save:
+save(pilot.data.2, pilot.data.2.unfiltered, e.out.2,
+     file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
 
 
         # === === === === === === === === === === ===
