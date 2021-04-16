@@ -446,6 +446,7 @@ for(i in names(pilot.data.2)){
 ref.sampleInfo <- data.frame(sampleID = names(pilot.data.2))
 ref.sampleInfo$region <- ss(names(pilot.data.2),"\\.", 2)
 ref.sampleInfo$donor <- ss(names(pilot.data.2),"\\.", 1)
+ref.sampleInfo$sex <- ifelse(ref.sampleInfo$donor %in% c("br5400", "br5701"), "F", "M")
 
 ref.sampleInfo$processBatch <- ifelse(ref.sampleInfo$sampleID %in% c("br5276.nac", "br5400.nac", "br5701.nac.neun",
                                                                      "br5276.sacc.neun", "br5701.sacc.neun"),
@@ -464,13 +465,15 @@ for(i in names(pilot.data.2)){
   pilot.data.2[[i]]$sampleID <- i
   pilot.data.2[[i]]$region <- ref.sampleInfo[i, "region"]
   pilot.data.2[[i]]$donor <- ref.sampleInfo[i, "donor"]
+  pilot.data.2[[i]]$sex <- ref.sampleInfo[i, "sex"]
   pilot.data.2[[i]]$processBatch <- ref.sampleInfo[i, "processBatch"]
   pilot.data.2[[i]]$protocol <- ref.sampleInfo[i, "protocol"]
   pilot.data.2[[i]]$sequencer <- ref.sampleInfo[i, "sequencer"]
 }
 
 ## Save:
-save(pilot.data.2, pilot.data.2.unfiltered, e.out.2,
+ref.sampleInfo.rev <- ref.sampleInfo
+save(pilot.data.2, pilot.data.2.unfiltered, e.out.2, ref.sampleInfo.rev,
      file="rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda")
 
 
@@ -479,5 +482,99 @@ save(pilot.data.2, pilot.data.2.unfiltered, e.out.2,
         # === === === === === === === === === === ===
 
 
-
+sessionInfo()
+### session info ====================================
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+# [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+# [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils    
+# [8] methods   base     
+# 
+# other attached packages:
+#   [1] gridExtra_2.3               Rtsne_0.15                 
+# [3] jaffelab_0.99.30            rafalib_1.0.0              
+# [5] DropletUtils_1.10.3         uwot_0.1.10                
+# [7] Matrix_1.3-2                scran_1.18.5               
+# [9] scater_1.18.6               ggplot2_3.3.3              
+# [11] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.0           
+# [13] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
+# [15] AnnotationDbi_1.52.0        batchelor_1.6.2            
+# [17] scRNAseq_2.4.0              SingleCellExperiment_1.12.0
+# [19] SummarizedExperiment_1.20.0 Biobase_2.50.0             
+# [21] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
+# [23] IRanges_2.24.1              S4Vectors_0.28.1           
+# [25] BiocGenerics_0.36.0         MatrixGenerics_1.2.1       
+# [27] matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] AnnotationHub_2.22.0          BiocFileCache_1.14.0         
+# [3] igraph_1.2.6                  lazyeval_0.2.2               
+# [5] splines_4.0.4                 BiocParallel_1.24.1          
+# [7] digest_0.6.27                 htmltools_0.5.1.1            
+# [9] viridis_0.6.0                 fansi_0.4.2                  
+# [11] magrittr_2.0.1                memoise_2.0.0                
+# [13] limma_3.46.0                  Biostrings_2.58.0            
+# [15] R.utils_2.10.1                askpass_1.1                  
+# [17] prettyunits_1.1.1             colorspace_2.0-0             
+# [19] blob_1.2.1                    rappdirs_0.3.3               
+# [21] dplyr_1.0.5                   crayon_1.4.1                 
+# [23] RCurl_1.98-1.3                glue_1.4.2                   
+# [25] gtable_0.3.0                  zlibbioc_1.36.0              
+# [27] XVector_0.30.0                DelayedArray_0.16.3          
+# [29] BiocSingular_1.6.0            Rhdf5lib_1.12.1              
+# [31] HDF5Array_1.18.1              scales_1.1.1                 
+# [33] DBI_1.1.1                     edgeR_3.32.1                 
+# [35] Rcpp_1.0.6                    viridisLite_0.4.0            
+# [37] xtable_1.8-4                  progress_1.2.2               
+# [39] dqrng_0.2.1                   bit_4.0.4                    
+# [41] rsvd_1.0.3                    ResidualMatrix_1.0.0         
+# [43] httr_1.4.2                    RColorBrewer_1.1-2           
+# [45] ellipsis_0.3.1                pkgconfig_2.0.3              
+# [47] XML_3.99-0.6                  R.methodsS3_1.8.1            
+# [49] scuttle_1.0.4                 dbplyr_2.1.1                 
+# [51] locfit_1.5-9.4                utf8_1.2.1                   
+# [53] tidyselect_1.1.0              rlang_0.4.10                 
+# [55] later_1.1.0.1                 munsell_0.5.0                
+# [57] BiocVersion_3.12.0            tools_4.0.4                  
+# [59] cachem_1.0.4                  generics_0.1.0               
+# [61] RSQLite_2.2.6                 ExperimentHub_1.16.0         
+# [63] stringr_1.4.0                 fastmap_1.1.0                
+# [65] yaml_2.2.1                    bit64_4.0.5                  
+# [67] purrr_0.3.4                   sparseMatrixStats_1.2.1      
+# [69] mime_0.10                     R.oo_1.24.0                  
+# [71] xml2_1.3.2                    biomaRt_2.46.3               
+# [73] compiler_4.0.4                rstudioapi_0.13              
+# [75] beeswarm_0.3.1                curl_4.3                     
+# [77] interactiveDisplayBase_1.28.0 tibble_3.1.0                 
+# [79] statmod_1.4.35                stringi_1.5.3                
+# [81] lattice_0.20-41               bluster_1.0.0                
+# [83] ProtGenerics_1.22.0           vctrs_0.3.6                  
+# [85] pillar_1.6.0                  lifecycle_1.0.0              
+# [87] rhdf5filters_1.2.0            BiocManager_1.30.12          
+# [89] BiocNeighbors_1.8.2           bitops_1.0-6                 
+# [91] irlba_2.3.3                   httpuv_1.5.5                 
+# [93] rtracklayer_1.50.0            R6_2.5.0                     
+# [95] promises_1.2.0.1              vipor_0.4.5                  
+# [97] assertthat_0.2.1              rhdf5_2.34.0                 
+# [99] openssl_1.4.3                 withr_2.4.1                  
+# [101] GenomicAlignments_1.26.0      Rsamtools_2.6.0              
+# [103] GenomeInfoDbData_1.2.4        hms_1.0.0                    
+# [105] grid_4.0.4                    beachmat_2.6.4               
+# [107] DelayedMatrixStats_1.12.3     googledrive_1.0.1            
+# [109] segmented_1.3-3               shiny_1.6.0                  
+# [111] ggbeeswarm_0.6.0
 
