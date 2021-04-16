@@ -25,6 +25,7 @@ rnascope/*.rda
 
 ## Misc
 R_batchsub.sh
+R_batchsub2.sh
 .RData
 .Rhistory
 
