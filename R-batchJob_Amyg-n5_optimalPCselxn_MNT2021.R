@@ -2,9 +2,9 @@
 ### LIBD pilot 10x snRNA-seq: Amygdala samples
 ###   **Region-specific analyses**
 ###   - R-batch job for detxn of optimal PC space with 'sce.amy' object
-###         -> see '10x-pilot_region-specific_Amyg_step02_clust-annot_MNTJan2020.R'
+###         -> see '10x_Amyg-n5_step02_clust-annot_MNT.R'
 ###            for setup of the SCE
-### MNT 07Feb2020                ~29-30Jan2020~ (for iteration with MBNormalization)
+### MNT 21Apr2021
 ################################################################################
 
 library(SingleCellExperiment)
@@ -16,35 +16,34 @@ library(scran)
 library(uwot)
 library(DropletUtils)
 library(jaffelab)
-library(Rtsne)
 
 # ===
 
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
-    # sce.amy, chosen.hvgs.amy
+    # sce.amy, chosen.hvgs.amy, ref.sampleInfo, ref.sampleInfo.rev
 
-## PCA already done (interactively) - took top 100 PCs
+## ** [corrected] PCA already done (interactively, using `fastMNN`) - took top 100 PCs **
 
-## getClusteredPCs() to identify working PC space
-pc.choice.amy <- getClusteredPCs(reducedDim(sce.amy))
+# getClusteredPCs() to identify working PC space
+pc.choice.amy <- getClusteredPCs(reducedDim(sce.amy, "PCA_corrected"))
 
 # How many PCs should use in this space?
 metadata(pc.choice.amy)$chosen
 
 
     ## Plot n Clusters vs. d PCs
-    pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/regionSpecific_Amyg-n2_getClusteredPCs-results-w100pcs_MNTFeb2020.pdf")
+    pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_Amyg-n5_getClusteredPCs_MNT2021.pdf")
     plot(pc.choice.amy$n.pcs, pc.choice.amy$n.clusters,
-         main=paste0("Combined Amygdala (n=2, Br5161-5212) samples (d PCs choice = ", metadata(pc.choice.amy)$chosen, ")"))
+         main=paste0("Combined Amygdala (n=5) samples (d PCs choice = ", metadata(pc.choice.amy)$chosen, ")"))
     abline(v=metadata(pc.choice.amy)$chosen, col="red", lty="dashed", lwd=0.8)  
     dev.off()
 
 
 # Save
-save(sce.amy, chosen.hvgs.amy, pc.choice.amy,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+save(sce.amy, chosen.hvgs.amy, ref.sampleInfo, ref.sampleInfo.rev, pc.choice.amy,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 rm(list=ls())
 sessionInfo()
