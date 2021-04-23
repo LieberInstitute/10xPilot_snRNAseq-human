@@ -104,22 +104,21 @@ save(sce.amy, chosen.hvgs.amy, ref.sampleInfo, ref.sampleInfo.rev,
 
 
 ### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
-    # sce.amy, chosen.hvgs.amy, pc.choice.amy
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo, ref.sampleInfo.rev
 
 # How many PCs is optimal?:
 metadata(pc.choice.amy)$chosen
-    # [1] 45
+    # [1] 87
 
-## Assign this chosen (40 PCs) to 'PCA_opt'
-reducedDim(sce.amy, "PCA_opt") <- reducedDim(sce.amy, "PCA")[ ,1:(metadata(pc.choice.amy)$chosen)]
+## Assign this chosen (87 PCs) to 'PCA_opt'
+reducedDim(sce.amy, "PCA_opt") <- reducedDim(sce.amy, "PCA_corrected")[ ,1:(metadata(pc.choice.amy)$chosen)]
 
 
 ## t-SNE
 set.seed(109)
 sce.amy <- runTSNE(sce.amy, dimred="PCA_opt")
-plotTSNE(sce.amy, colour_by="sample")
 
 
 ## UMAP
@@ -127,16 +126,9 @@ set.seed(109)
 sce.amy <- runUMAP(sce.amy, dimred="PCA_opt")
 
 
-## Load in phenodata from pan-brain analysis -> colData for downstream use
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
-     verbose=T)
-    # Want 'ref.sampleInfo'
-
-sce.amy$region <- ss(sce.amy$sample,".5",1)
-sce.amy$donor <- paste0("Br",ss(sce.amy$sample,"y.",2))
-sce.amy$processDate <- ref.sampleInfo$realBatch[match(sce.amy$sample, ref.sampleInfo$sampleID)]
-sce.amy$protocol <- ref.sampleInfo$protocol[match(sce.amy$processDate, ref.sampleInfo$realBatch)]
-
+# How do these look?
+plotReducedDim(sce.amy, dimred="TSNE", colour_by="sampleID")
+plotReducedDim(sce.amy, dimred="UMAP", colour_by="sampleID")
 
 
 ### Clustering: Two-step ======================================================
@@ -145,17 +137,21 @@ sce.amy$protocol <- ref.sampleInfo$protocol[match(sce.amy$processDate, ref.sampl
 snn.gr <- buildSNNGraph(sce.amy, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
-    ## 23 prelim clusters
+    ## 59 prelim clusters
 
 # Assign as 'prelimCluster'
 sce.amy$prelimCluster <- factor(clusters.k20)
+plotReducedDim(sce.amy, dimred="TSNE", colour_by="prelimCluster")
 
 # Is sample driving this 'high-res' clustering at this level?
-table(sce.amy$prelimCluster, sce.amy$sample)  # (a little bit, but is typical)
+table(sce.amy$prelimCluster, sce.amy$sampleID)  # (a little bit, but is typical)
+
+# rbind the ref.sampleInfo[.rev]
+ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
 
 # Save for now
 save(sce.amy, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
 ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
@@ -174,7 +170,7 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
     # And btw...
     table(rowSums(prelimCluster.PBcounts)==0)
         #FALSE  TRUE
-        #28470  5068
+        #29381  4157
 
 # Compute LSFs at this level
 sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
@@ -186,32 +182,46 @@ geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFac
 ## Perform hierarchical clustering
 dist.clusCollapsed <- dist(t(geneExprs.temp))
 tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
-#tree.clusCollapsed$labels
 
 dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
 # Just for observation
 par(cex=.6)
-myplclust(tree.clusCollapsed, main="2x Amyg prelim-kNN-cluster relationships", cex.main=2, cex.lab=1.5, cex=1.8)
+myplclust(tree.clusCollapsed, main="5x Amyg prelim-kNN-cluster relationships", cex.main=2, cex.lab=1.5, cex=1.8)
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=375)
+                               minClusterSize=2, deepSplit=1, cutHeight=250)
 
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-    ## Cutting at 375 looks good - go ahead and proceed with this
+    ## Cutting at 250 looks good for the main neuronal branch, but a lot of glial
+     #    prelim clusters are dropped off (0's)
+
+    # Cut at 400 for broad glia branch (will manually merge remaining dropped off)    
+    glia.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
+                                  minClusterSize=2, deepSplit=1, cutHeight=400)
+    unname(glia.treeCut[order.dendrogram(dend)])
+    
+    # Take those and re-assign to the first assignments
+    clust.treeCut[order.dendrogram(dend)][c(38:59)] <- ifelse(glia.treeCut[order.dendrogram(dend)][c(38:59)] == 0,
+                                                                      0, glia.treeCut[order.dendrogram(dend)][c(38:59)] + 10)
+                                                                      
+    unname(clust.treeCut[order.dendrogram(dend)])
 
 # Add new labels to those prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2)
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1:2, 3,3, 4:6)
 
-labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
+# 'Re-write', since there are missing numbers
+clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[order.dendrogram(dend)]))
+
+labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("pdfs/regionSpecific_Amyg-n2_HC-prelimCluster-relationships_Feb2020.pdf")
-par(cex=1.1, font=2)
-plot(dend)
+pdf("pdfs/revision/regionSpecific_Amyg-n5_HC-prelimCluster-relationships_MNT2021.pdf")
+par(cex=0.8, font=2)
+plot(dend, main="5x Amyg prelim-kNN-cluster relationships with collapsed assignments")
 dev.off()
 
 
@@ -224,11 +234,15 @@ clusterRefTab.amy <- data.frame(origClust=order.dendrogram(dend),
 sce.amy$collapsedCluster <- factor(clusterRefTab.amy$merged[match(sce.amy$prelimCluster, clusterRefTab.amy$origClust)])
 
 # Print some visualizations:
-pdf("pdfs/regionSpecific_Amyg-n2_reducedDims-with-collapsedClusters_Feb2020.pdf")
-plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="sample", point_alpha=0.5)
+pdf("pdfs/revision/regionSpecific_Amyg-n5_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.amy, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="protocol", point_alpha=0.5)
 plotTSNE(sce.amy, colour_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.amy, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.amy, colour_by="sampleID", point_alpha=0.5)
 plotUMAP(sce.amy, colour_by="collapsedCluster", point_alpha=0.5)
 dev.off()
 
@@ -242,17 +256,19 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1')
 )
 
-pdf("pdfs/zold_regionSpecific_Amyg-n2_marker-logExprs_collapsedClusters_Feb2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_Amyg-n5_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]), ncol=2,
+                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.4, point_size=.7,
+                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:7], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+    ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
@@ -263,31 +279,48 @@ dev.off()
 # Observation: cluster 6 not an obvious 'cell type'
 newClusIndex <- splitit(sce.amy$collapsedCluster)
 sapply(newClusIndex, function(x) {quantile(sce.amy[,x]$sum)})
-    #          1        2       3     4       5       6        7
-    #0%     1974    787.0   597.0   756  2005.0  104.00   241.00
-    #25%   23879  30981.5  6979.5  4952  9529.0  126.50  3486.75
-    #50%   38317  48113.0 10514.0  7185 12947.0  177.50  5277.00
-    #75%   49701  67138.5 15754.5  9996 16867.5  256.75  6874.75
-    #100% 110271 165583.0 34702.0 32011 32885.0 7465.00 14531.00
+    #             1      2        3      4        5       6         7       8       9
+    # 0%     2876.0    831   7358.0   1685   566.00  2219.0   1238.00  1182.0   641.0
+    # 25%   25828.5  22550  31449.0   9983  6921.25 12195.5  20472.75  7471.5  4634.5
+    # 50%   48907.5  34143  50313.0  18481 11103.50 36275.0  45897.50 11275.0  6510.5
+    # 75%   66821.5  43717  70976.5  39510 17152.25 49672.5  67085.00 16469.5  8964.0
+    # 100% 156945.0 115493 165583.0 121273 95032.00 94599.0 171608.00 35728.0 30028.0
 
-## Add annotations, looking at marker gene expression
-annotationTab.amy <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7),
-                                  cellType=c("Inhib", "Excit", "Astro",
-                                             "Oligo", "OPC", "Ambig.lowNtrxts", "Micro")
-)
+    #           10    11       12    *13       14    *15     16     17
+    # 0%    1209.0   435  4036.00  121.0  1711.00  101.0  438.0  188.0
+    # 25%   9787.5  3952  8556.00  245.0  4021.75  373.5 2382.0  850.5
+    # 50%  13243.0  5381 10896.00  313.0  5210.00  743.0 3657.0 1156.0
+    # 75%  16967.5  7055 13478.25  468.5  7050.25 1018.0 5029.5 1842.5
+    # 100% 39830.0 20500 27167.00 2770.0 15214.00 1556.0 6237.0 7739.0
 
-sce.amy$cellType <- annotationTab.amy$cellType[match(sce.amy$collapsedCluster,
-                                                         annotationTab.amy$cluster)]
 
-# Save for now MNT 14Feb2020
+    ## Pick up here later === ===
+    ## *NOTES: looks like collapsedCluster's 13 & 15 should be dropped - their marker
+    ##         expression is noisy too;;  16 is unclear, but it may just be dropped
+    ##         from consideration in more downstream analyses
+    ##       - DOES look like 14 are endothelials...! (weirdly they came from the NeuN-enriched...)
+    ## === === === === === === ==
+
+
+
+# ## Add annotations, looking at marker gene expression
+# annotationTab.amy <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7),
+#                                   cellType=c("Inhib", "Excit", "Astro",
+#                                              "Oligo", "OPC", "Ambig.lowNtrxts", "Micro")
+# )
+# 
+# sce.amy$cellType <- annotationTab.amy$cellType[match(sce.amy$collapsedCluster,
+#                                                          annotationTab.amy$cluster)]
+
+# Save
 save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, 
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
 
 ### MNT 20Mar2020 === === ===
   # Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=T)
 table(sce.amy$cellType)
 
@@ -296,12 +329,12 @@ sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
 sce.amy$cellType <- droplevels(sce.amy$cellType)
 
 
-pdf("pdfs/regionSpecific_Amyg-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_Amyg-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
                                                 colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
@@ -377,7 +410,7 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionS
     # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
 
 # Look at some marker expression at the prelimCluster level
-pdf("pdfs/ztemp_amyg-prelimCluster-neuronalMarkerExpression.pdf", width=8, height=7)
+pdf("pdfs/revision/ztemp_amyg-prelimCluster-neuronalMarkerExpression.pdf", width=8, height=7)
 plotExpression(sce.amy, exprs_values="logcounts", features=c("SNAP25","GAD1","GAD2","SLC17A6","SLC17A7","VCAN"),
                x="prelimCluster", colour_by="prelimCluster", ncol=2)
 dev.off()
@@ -471,12 +504,12 @@ save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo,
 sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
 sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
 
-pdf("pdfs/regionSpecific_Amyg-n2_marker-logExprs_cellTypesSplit_May2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_Amyg-n2_marker-logExprs_cellTypesSplit_May2020.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
                                                 colour=rep(tableau20[1:12], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
@@ -488,7 +521,7 @@ dev.off()
 
 ## Let's also re-plot reducedDims with new [broad & split] cell type annotations
 #        (and rename old file with prefix 'zold_')
-pdf("pdfs/regionSpecific_Amyg-n2_reducedDims-with-collapsedClusters_May2020.pdf")
+pdf("pdfs/revision/regionSpecific_Amyg-n2_reducedDims-with-collapsedClusters_May2020.pdf")
 plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
 plotTSNE(sce.amy, colour_by="sample", point_size=3.5, point_alpha=0.5)
 plotTSNE(sce.amy, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
@@ -521,7 +554,7 @@ table(sce.amy$cellType.split, sce.amy$sample)
 # BLA or central amygdala-specific (Cartpt in all subregions... in mouse at least)
 plotExpression(sce.amy, exprs_values = "logcounts", features=toupper(c("Cyp26b1", "Bmp3", "Cartpt")),
                x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+               add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                             geom = "crossbar", width = 0.3,
                                             colour=rep(tableau20[1:12], 3)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
@@ -536,13 +569,13 @@ plotExpression(sce.amy, exprs_values = "logcounts", features=toupper(c("Cyp26b1"
 
 # Actually faceting is nicer and maintains colors but have to print genes, separately
 # From bulk-RNA-seq (AnJa shared): Look at PART1 (BLA >) & GABRQ/SYTL5 (MeA >)
-pdf("pdfs/exploration/zGenesByDonor_PART1-GABRQ-SYTL5_AMY-subclusters_MNT.pdf", height=3, width=7)
+pdf("pdfs/revision/exploration/zGenesByDonor_PART1-GABRQ-SYTL5_AMY-subclusters_MNT.pdf", height=3, width=7)
 # BLA-enriched
 plotExpression(sce.amy, exprs_values = "logcounts", features="PART1",
                x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+  stat_summary(fun = median, fun.min = median, fun.max = median,
                geom = "crossbar", width = 0.3,
                colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
 # MeA-enriched
@@ -550,14 +583,14 @@ plotExpression(sce.amy, exprs_values = "logcounts", features="GABRQ",
                x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+  stat_summary(fun = median, fun.min = median, fun.max = median,
                geom = "crossbar", width = 0.3,
                colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
 plotExpression(sce.amy, exprs_values = "logcounts", features="SYTL5",
                x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, size=7)) + facet_grid(~ sce.amy$donor) +
-  stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+  stat_summary(fun = median, fun.min = median, fun.max = median,
                geom = "crossbar", width = 0.3,
                colour=rep(tableau20[1:12][c(1:2,5:12, 1:7,9:12)])) 
 dev.off()
@@ -646,7 +679,7 @@ sce.amy.tsne.optb <- sce.amy.tsne.optb[ ,sce.amy.tsne.optb$cellType.split != "Am
 sce.amy.tsne.optb$cellType.split <- droplevels(sce.amy.tsne.optb$cellType.split)
 
 
-pdf("pdfs/exploration/zExplore_Amyg-n2_tSNE_22-13-10-optb-PCs_MNTMay2020.pdf", width=8)
+pdf("pdfs/revision/exploration/zExplore_Amyg-n2_tSNE_22-13-10-optb-PCs_MNTMay2020.pdf", width=8)
 # 22 PCs
 plotTSNE(sce.amy.tsne.22pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
          text_size=8, theme_size=18) +
@@ -733,7 +766,7 @@ DFforLabs.edit$Y[!is.na(DFforLabs$labels)] <- by_text_y[match(as.character(DFfor
 ## Finally print
 library(ggrepel)
 
-pdf("pdfs/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
+pdf("pdfs/revision/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
 set.seed(109)
 plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=6, point_alpha=0.5,
          theme_size=18) +
