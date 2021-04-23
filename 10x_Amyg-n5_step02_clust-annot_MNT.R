@@ -27,7 +27,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 # Load 'pilot' samples
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_processing-QC_MNTJan2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
     # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
     rm(pilot.data.unfiltered, e.out)
@@ -40,7 +40,8 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revisio
 
 ### MNT comment: At this point, each sample (which is a SCE object in the list, 'pilot.data') has been
   #              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
-  #   Additionally, there have been a computed '
+  #   Additionally, there have been a computed 'doubletScore', which will QC with, after
+  #   clustering (e.g. that there are no doublet-driven clusters, etc.)
 
 ### Merging shared-region samples ============================================
   # Newest iterations for normalization: multiBatchNorm-alize
