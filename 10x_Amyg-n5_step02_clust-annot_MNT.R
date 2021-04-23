@@ -276,7 +276,7 @@ dev.off()
 
 
 
-# Observation: cluster 6 not an obvious 'cell type'
+## QC - How do the total UMI distribution look?
 newClusIndex <- splitit(sce.amy$collapsedCluster)
 sapply(newClusIndex, function(x) {quantile(sce.amy[,x]$sum)})
     #             1      2        3      4        5       6         7       8       9
@@ -294,55 +294,59 @@ sapply(newClusIndex, function(x) {quantile(sce.amy[,x]$sum)})
     # 100% 39830.0 20500 27167.00 2770.0 15214.00 1556.0 6237.0 7739.0
 
 
-    ## Pick up here later === ===
-    ## *NOTES: looks like collapsedCluster's 13 & 15 should be dropped - their marker
+    ## Obser.: looks like collapsedCluster's 13 & 15 should be dropped - their marker
     ##         expression is noisy too;;  16 is unclear, but it may just be dropped
     ##         from consideration in more downstream analyses
     ##       - DOES look like 14 are endothelials...! (weirdly they came from the NeuN-enriched...)
     ## === === === === === === ==
 
+table(sce.amy$collapsedCluster)
+    #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17 
+    # 780  541  399  525  500  555  216 1555 6080 1459 1201   44 1067   70   71   31   83
+        #  * 13 is quite overrepresented in Br5400, but this sample also had a mode
+        #    of <1000 total UMIs that were still kept after QC - thus probably a low trxts-driven cluster
+        #  * 15 is pretty evenly-ish distributed (16 too, but will keep 16)
+
+## Add annotations, looking at marker gene expression
+annotationTab.amy <- data.frame(collapsedCluster=c(1:17))
+annotationTab.amy$cellType <- NA
+annotationTab.amy$cellType[c(1:2,4:7)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
+annotationTab.amy$cellType[c(3,12)] <- paste0("Excit_", c("A","B"))
+annotationTab.amy$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
+annotationTab.amy$cellType[c(13,15)] <- paste0("drop.lowNTx_", c("A","B"))
+annotationTab.amy$cellType[c(14,16:17)] <- c("Endo", "ambig.glial", "Astro_B")
 
 
-# ## Add annotations, looking at marker gene expression
-# annotationTab.amy <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7),
-#                                   cellType=c("Inhib", "Excit", "Astro",
-#                                              "Oligo", "OPC", "Ambig.lowNtrxts", "Micro")
-# )
-# 
-# sce.amy$cellType <- annotationTab.amy$cellType[match(sce.amy$collapsedCluster,
-#                                                          annotationTab.amy$cluster)]
+sce.amy$cellType.prelim <- annotationTab.amy$cellType[match(sce.amy$collapsedCluster,
+                                                         annotationTab.amy$collapsedCluster)]
+sce.amy$cellType.prelim <- factor(sce.amy$cellType.prelim)
 
 # Save
-save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, 
+save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
 
-### MNT 20Mar2020 === === ===
-  # Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
-     verbose=T)
-table(sce.amy$cellType)
-
-# First drop "Ambig.lowNtrxts" (50 nuclei)
-sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
-sce.amy$cellType <- droplevels(sce.amy$cellType)
-
-
-pdf("pdfs/revision/regionSpecific_Amyg-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+## Re-print marker expression plots with annotated cluster names ===
+pdf("pdfs/revision/regionSpecific_Amyg-n5_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:6], length(markers.mathys.custom[[i]]))) +
+                   x="cellType.prelim", colour_by="cellType.prelim", point_alpha=0.2, point_size=.7,
+                   add_legend=F) +
+      stat_summary(fun = median, fun.min = median, fun.max = median,
+                   geom = "crossbar", width = 0.3,
+                   #colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
+                   colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
 
+    ## Optionally, for a cleaner version, drop those 'drop.lowNTx_'s and re-print
+    sce.amy <- sce.amy[ ,-grep("drop.", sce.amy$cellType.prelim)]
+    sce.amy$cellType.prelim <- droplevels(sce.amy$cellType.prelim)
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
