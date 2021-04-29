@@ -2,6 +2,7 @@
 ###   **Region-specific analyses**
 ###     - (2x) sACC samples from: Br5161 & Br5212
 ### Initiated MNT 29Jan2020
+### MNT 29Apr2021: add expansion samples (n=3, incl'g 2 female)
 #####################################################################
 
 library(SingleCellExperiment)
@@ -26,52 +27,82 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_processing-QC_MNTJan2020.rda",
+# Load 'pilot' samples
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
-    # pilot.data, pilot.data.unfiltered, e.out
+    # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
+    rm(pilot.data.unfiltered, e.out)
+
+# Load 2021 expansion set
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda", verbose=T)
+    # pilot.data.2, pilot.data.2.unfiltered, e.out.2, ref.sampleInfo.rev
+    rm(pilot.data.2.unfiltered, e.out.2)
+
 
 ### MNT comment: At this point, each sample (which is a SCE object in the list, 'pilot.data') has been
-#              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
-
+  #              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
+  #   Additionally, there have been a computed 'doubletScore', which will QC with, after
+  #   clustering (e.g. that there are no doublet-driven clusters, etc.)
 
 ### Merging shared-region samples ============================================
-# Take those sACC samples
-pilot.sacc <- list(pilot.data[["sacc.5161"]],
-                  pilot.data[["sacc.5212"]])
-names(pilot.sacc) <- c("sacc.5161","sacc.5212")
+    # Newest iterations for normalization: multiBatchNorm-alize
+    
+# Order as will do for `fastMNN()` (this shouldn't matter here)
+sce.sacc <- cbind(pilot.data.2[["br5400.sacc"]], pilot.data[["br5212.sacc"]],
+                  pilot.data[["br5161.sacc"]],
+                  pilot.data.2[["br5701.sacc.neun"]], pilot.data.2[["br5276.sacc.neun"]]
+)
 
-### Newest iterations for normalization: cbind, THEN take scaled LSFs computed on all nuclei
-# Add $sample identity
-for(i in 1:length(pilot.sacc)){
-  pilot.sacc[[i]]$sample <- names(pilot.sacc)[i]
-}
+sce.sacc
+    #class: SingleCellExperiment 
+    # dim: 33538 15669 
+    # metadata(5): Samples Samples Samples Samples Samples
+    # assays(1): counts
+    # rownames(33538): MIR1302-2HG FAM138A ... AC213203.1 FAM231C
+    # rowData names(6): gene_id gene_version ... gene_biotype Symbol.uniq
+    # colnames(15669): AAACCCAAGAGTCTTC-1 AAACCCAAGGCCCGTT-1 ...
+    #   TTTGACTGTATCGTGT-1 TTTGGTTAGCAGCACA-1
+    # colData names(16): Sample Barcode ... protocol sequencer
+    # reducedDimNames(0):
+    # altExpNames(0):
 
-sce.sacc <- cbind(pilot.sacc[[1]], pilot.sacc[[2]])
+# Use `multiBatchNorm()` to compute log-normalized counts, matching the scaling across samples
+sce.sacc <- multiBatchNorm(sce.sacc, batch=sce.sacc$sampleID)
 
-# Remove $logcounts
-assay(sce.sacc, "logcounts") <- NULL
-# Re-generate log-normalized counts
-sce.sacc <- logNormCounts(sce.sacc)
-
+# Use the simple `modelGeneVar` - this makes more sense over `combineVar`, since the
+#   cell composition is already known to be quite different (with NeuN selection)
 geneVar.sacc <- modelGeneVar(sce.sacc)
 chosen.hvgs.sacc <- geneVar.sacc$bio > 0
 sum(chosen.hvgs.sacc)
-    # [1] 10791
+    # [1] 11898
 
 
 ### Dimensionality reduction ================================================================
 
-# Run PCA, taking top 100 (instead of default 50 PCs)
+# Run `fastMNN` (internally uses `multiBatchPCA`), taking top 100 (instead of default 50 PCs)
 set.seed(109)
-sce.sacc <- runPCA(sce.sacc, subset_row=chosen.hvgs.sacc, ncomponents=100,
-                  BSPARAM=BiocSingular::RandomParam())
+mnn.hold <-  fastMNN(sce.sacc, batch=sce.sacc$sampleID,
+                     merge.order=c("br5400.sacc","br5212.sacc","br5161.sacc",
+                                   "br5701.sacc.neun","br5276.sacc.neun"),
+                     subset.row=chosen.hvgs.sacc, d=100,
+                     correct.all=TRUE, get.variance=TRUE,
+                     BSPARAM=BiocSingular::IrlbaParam())
+    # This temp file just used for getting batch-corrected components (drops a variety of entries)
 
-# Save into a new data file, which will dedicate for pan-brain-analyses
-save(sce.sacc, chosen.hvgs.sacc, file="rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+table(colnames(mnn.hold) == colnames(sce.sacc))  # all TRUE
+table(mnn.hold$batch == sce.sacc$sampleID) # all TRUE
+
+# Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+reducedDim(sce.sacc, "PCA_corrected") <- reducedDim(mnn.hold, "corrected") # 100 components
+metadata(sce.sacc) <- metadata(mnn.hold)
+
+# Save into a new region-specific SCE object/file
+save(sce.sacc, chosen.hvgs.sacc, ref.sampleInfo, ref.sampleInfo.rev,
+     file="rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
-## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_sACC-n2_optimalPCselxn_MNTFeb2020.R')
-#    --> saved into same .rda
+    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_sACC-n2_optimalPCselxn_MNTFeb2020.R')
+    #    --> saved into same .rda
 
 
 ### Picking up with optimally-defined PC space ===
@@ -319,6 +350,96 @@ dev.off()
 
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
+
+
+
+### Session info for 29Apr2021 ==========================================================
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+# [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+# [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils    
+# [8] methods   base     
+# 
+# other attached packages:
+#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0          
+# [3] jaffelab_0.99.30            rafalib_1.0.0              
+# [5] DropletUtils_1.10.3         batchelor_1.6.2            
+# [7] scran_1.18.5                scater_1.18.6              
+# [9] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
+# [11] ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [13] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [15] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [17] Biobase_2.50.0              GenomicRanges_1.42.0       
+# [19] GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [21] S4Vectors_0.28.1            BiocGenerics_0.36.1        
+# [23] MatrixGenerics_1.2.1        matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
+# [3] colorspace_2.0-0          ellipsis_0.3.1           
+# [5] scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2      
+# [9] rstudioapi_0.13           bit64_4.0.5              
+# [11] fansi_0.4.2               xml2_1.3.2               
+# [13] splines_4.0.4             R.methodsS3_1.8.1        
+# [15] sparseMatrixStats_1.2.1   cachem_1.0.4             
+# [17] Rsamtools_2.6.0           ResidualMatrix_1.0.0     
+# [19] dbplyr_2.1.1              R.oo_1.24.0              
+# [21] HDF5Array_1.18.1          compiler_4.0.4           
+# [23] httr_1.4.2                dqrng_0.2.1              
+# [25] assertthat_0.2.1          Matrix_1.3-2             
+# [27] fastmap_1.1.0             lazyeval_0.2.2           
+# [29] limma_3.46.0              BiocSingular_1.6.0       
+# [31] prettyunits_1.1.1         tools_4.0.4              
+# [33] rsvd_1.0.3                igraph_1.2.6             
+# [35] gtable_0.3.0              glue_1.4.2               
+# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5              
+# [39] rappdirs_0.3.3            Rcpp_1.0.6               
+# [41] vctrs_0.3.6               Biostrings_2.58.0        
+# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0       
+# [45] DelayedMatrixStats_1.12.3 stringr_1.4.0            
+# [47] beachmat_2.6.4            lifecycle_1.0.0          
+# [49] irlba_2.3.3               statmod_1.4.35           
+# [51] XML_3.99-0.6              edgeR_3.32.1             
+# [53] zlibbioc_1.36.0           scales_1.1.1             
+# [55] hms_1.0.0                 ProtGenerics_1.22.0      
+# [57] rhdf5_2.34.0              RColorBrewer_1.1-2       
+# [59] curl_4.3                  memoise_2.0.0            
+# [61] gridExtra_2.3             segmented_1.3-3          
+# [63] biomaRt_2.46.3            stringi_1.5.3            
+# [65] RSQLite_2.2.7             BiocParallel_1.24.1      
+# [67] rlang_0.4.10              pkgconfig_2.0.3          
+# [69] bitops_1.0-7              lattice_0.20-41          
+# [71] purrr_0.3.4               Rhdf5lib_1.12.1          
+# [73] GenomicAlignments_1.26.0  bit_4.0.4                
+# [75] tidyselect_1.1.0          magrittr_2.0.1           
+# [77] R6_2.5.0                  generics_0.1.0           
+# [79] DelayedArray_0.16.3       DBI_1.1.1                
+# [81] pillar_1.6.0              withr_2.4.2              
+# [83] RCurl_1.98-1.3            tibble_3.1.1             
+# [85] crayon_1.4.1              utf8_1.2.1               
+# [87] BiocFileCache_1.14.0      viridis_0.6.0            
+# [89] progress_1.2.2            locfit_1.5-9.4           
+# [91] grid_4.0.4                blob_1.2.1               
+# [93] R.utils_2.10.1            openssl_1.4.3            
+# [95] munsell_0.5.0             beeswarm_0.3.1           
+# [97] viridisLite_0.4.0         vipor_0.4.5              
+# [99] askpass_1.1  
 
 
 
