@@ -265,102 +265,19 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1')
 )
 
-pdf("pdfs/revision/regionSpecific_sACC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_sACC-n5_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:11], length(markers.mathys.custom[[i]])))
-  )
-}
-dev.off()
-
-    ## Observation: microglia not really seen at this level of collapsing...
-
-    # Looking at collapsedCluster 7
-    sce.sacc.cc7 <- sce.sacc[ ,sce.sacc$collapsedCluster==7]
-    unique(sce.sacc.cc7$prelimCluster)
-    
-    plotExpression(sce.sacc.cc7, exprs_values = "logcounts", features=c(markers.mathys.custom[["microglia"]]),
-                   x="prelimCluster", colour_by="prelimCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:3], length(markers.mathys.custom[["microglia"]])))
-    
-    plotExpression(sce.sacc.cc7, exprs_values = "logcounts", features=c(markers.mathys.custom[["oligodendrocyte"]]),
-                   x="prelimCluster", colour_by="prelimCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:3], length(markers.mathys.custom[["microglia"]])))
-
-        ## So it looks like prelimCluster 3 is the one.  However at any cutHeights from 400:550, this
-         # would never be separated from the oligos, so manually assign, going back to line 176
-         #      (and re-name these plots with prefix 'zold_')
-    
-    
-    
-
-## Add annotations, looking at marker gene expression
-annotationTab.sacc <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
-                                 cellType=c("Excit.1", "Inhib.1", "Excit.2", "Inhib.2", "Excit.3",
-                                            "Astro", "Oligo", "OPC", "Excit.4", "Ambig.lowNtrxts",
-                                            "Micro")
-                                 )
-
-sce.sacc$cellType <- annotationTab.sacc$cellType[match(sce.sacc$collapsedCluster,
-                                                       annotationTab.sacc$cluster)]
-
-
-
-
-## Save for now MNT 21Feb2020
-save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda")
-
-
-
-# Observation: cluster 6 not an obvious 'cell type'...
-newClusIndex <- splitit(sce.sacc$collapsedCluster)
-sapply(newClusIndex, function(x) {quantile(sce.sacc[,x]$sum)})
-    #             1      2         3       4      5       6        7       8     9
-    #0%     3985.00   2448   2175.00  3595.0   4625   464.0   514.00  1276.0  5475
-    #25%   36862.00  25268  35064.75 24582.5  34369  4807.5  4368.50  8600.5 36320
-    #50%   56701.00  34905  46186.50 30895.0  53997  7014.0  6131.50 11122.0 47976
-    #75%   74135.75  44749  62363.00 38684.0  68638  9473.5  8041.25 13572.5 58484
-    #100% 196431.00 121477 127499.00 78788.0 118374 27467.0 25828.00 34023.0 97538
-    #         10      11
-    #0%    103.0  543.00
-    #25%   248.5 3072.25
-    #50%   455.0 4669.50
-    #75%   817.5 5761.50
-    #100% 4828.0 9973.00
-
-
-
-### MNT 25Mar2020 === === ===
-# Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-
-table(sce.sacc$cellType)
-
-# First drop "Ambig.lowNtrxts" (43 nuclei)
-sce.sacc <- sce.sacc[ ,sce.sacc$cellType != "Ambig.lowNtrxts"]
-sce.sacc$cellType <- droplevels(sce.sacc$cellType)
-
-pdf("pdfs/regionSpecific_sACC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
-for(i in 1:length(markers.mathys.custom)){
-  print(
-    plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
-                   add_legend=F) +
-      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-                   width = 0.3, colour=rep(tableau10medium[1:10], length(markers.mathys.custom[[i]]))) +
+    plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]), ncol=2,
+                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.3, point_size=.7,
+                   add_legend=F, show_median=T) +
+      # (since there are more than 20 collapsed clusters)
+      # stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+      #              geom = "crossbar", width = 0.3,
+      #              colour=rep(tableau20[1:11], length(markers.mathys.custom[[i]])))
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
@@ -368,6 +285,106 @@ for(i in 1:length(markers.mathys.custom)){
 dev.off()
 
 
+
+## QC - How do the total UMI distribution look?
+newClusIndex <- splitit(sce.sacc$collapsedCluster)
+sapply(newClusIndex, function(x) {quantile(sce.sacc[,x]$sum)})
+    #             1        2     3         4        5       6        7        8        9    10       11
+    # 0%    2909.00   2448.0  3360   2101.00   2390.0  2465.0  2313.00   2754.0   2984.0  2728  1472.00
+    # 25%  16433.75  22017.5 13669  26971.75  25059.5 20242.0 14973.75  30164.5  29526.5 13140 20121.75
+    # 50%  21474.50  30746.0 20617  40460.00  39576.0 26094.5 20633.00  43945.0  48494.0 19108 29225.00
+    # 75%  27697.50  41323.5 27494  56412.75  56040.5 32440.5 27588.75  60824.0  67895.0 25248 38971.00
+    # 100% 63006.00 121477.0 93363 127499.00 123619.0 69549.0 67423.00 172041.0 196431.0 73742 84097.00
+    #         12        13       14       15      16      17       18       19       20     21     *22
+    # 0%    1218   2156.00  2412.00  3238.00   174.0  1276.0  4614.00   102.00   113.00  111.0   103.0
+    # 25%   4046  30561.25 22631.00 23977.00  5781.0  7510.5  9990.25  1977.25  3198.50 1540.5   215.0
+    # 50%   5643  43868.50 32647.00 32559.00  7575.0 10068.0 12587.50  3872.50  4378.00 1706.0   321.0
+    # 75%   7539  58960.75 40748.75 39867.75 10077.5 12682.5 17470.25  6176.25  5458.25 1926.5   681.5
+    # 100% 25828 113463.00 73499.00 70217.00 23974.0 34023.0 27467.00 14206.00 11896.00 2649.0 14701.0
+    #             23       24      25       26    27
+    # 0%     3436.00  2333.00  2740.0  2874.00 12801
+    # 25%   19197.00  5914.25 21647.0 13851.50 23846
+    # 50%   47066.50  7686.00 33647.0 17916.50 27375
+    # 75%   58822.25  9597.50 45194.5 26535.75 30262
+    # 100% 102363.00 13985.00 69890.0 40784.00 48721
+
+# doublet score?
+sapply(newClusIndex, function(x) {round(quantile(sce.sacc$doubletScore[x]),2)})
+    #         1     2    3     4    5    6    7     8    9    10    11   12    13   14   15   16   17
+    # 0%   0.02  0.00 0.01  0.01 0.00 0.00 0.05  0.00 0.04  0.02  0.04 0.00  0.02 0.02 0.03 0.00 0.00
+    # 25%  0.11  0.08 0.05  0.08 0.17 0.08 0.12  0.11 0.28  0.08  0.28 0.03  0.18 0.06 0.17 0.01 0.02
+    # 50%  0.18  0.16 0.08  0.17 0.99 0.13 0.23  0.23 0.51  0.13  0.46 0.13  0.31 0.28 0.29 0.05 0.06
+    # 75%  0.31  0.30 0.18  0.39 1.71 0.48 0.54  0.41 0.83  0.21  0.70 0.45  0.54 0.98 0.47 0.12 0.13
+    # 100% 8.45 14.34 9.20 10.08 3.66 3.81 5.88 23.05 5.30 11.64 17.43 7.19 12.44 4.31 5.08 2.00 5.66
+    
+    #        *18   19   20   21   22    23   24   25   26   27
+    # 0%    2.37 0.00 0.00 0.00 0.01  0.05 0.39 0.02 0.04 0.10
+    # 25%   3.73 0.01 0.00 0.00 0.05  1.24 0.44 0.18 0.10 0.21
+    # 50%   5.34 0.01 0.02 0.01 0.12  2.09 0.71 0.39 0.14 0.28
+    # 75%   6.43 0.04 0.05 0.02 0.36  2.41 1.08 0.74 0.21 1.05
+    # 100% 20.33 3.21 5.84 0.30 1.68 13.00 1.20 1.59 4.74 2.00
+
+table(sce.sacc$collapsedCluster)
+    #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+    # 842  912  465  856  575  384  330 1735  311  521  206 4389  428  208  228  747 
+    #  17   18   19   20   21   22   23   24   25   26   27 
+    # 911   28  160  784  195  298   30   20   39   42   25 
+    
+
+## Add annotations, looking at marker gene expression
+annotationTab.sacc <- data.frame(collapsedCluster=c(1:27))
+annotationTab.sacc$cellType <- NA
+annotationTab.sacc$cellType[c(4:5,8:9,13,15,23)] <- paste0("Excit_", c("A","B","C","D","E","F","G"))
+annotationTab.sacc$cellType[c(1:3,6:7,10:11,14,25:27)] <- paste0("Inhib_",
+                                                                 c("A","B","C","D","E","F","G","H","I","J","K"))
+
+annotationTab.sacc$cellType[c(12,21)] <- paste0("Oligo_", c("A","B"))
+annotationTab.sacc$cellType[17] <- c("OPC")
+annotationTab.sacc$cellType[18] <- "drop.doublet"  # ahhh, these are doublets (see above)
+    # they express both astro & oligo markers - btw it's prelimCluster 62
+annotationTab.sacc$cellType[c(16,19)] <- paste0("Astro_", c("A","B"))
+annotationTab.sacc$cellType[20] <- "Micro"
+annotationTab.sacc$cellType[22] <- "drop.lowNTx"
+annotationTab.sacc$cellType[24] <- "ambig.SYT1.SNAP25"
+    # perhaps this one is axonal debris??  It was prelimCluster 67 (stuck out a ton)
+
+
+# Then add these to the SCE
+sce.sacc$cellType.prelim <- annotationTab.sacc$cellType[match(sce.sacc$collapsedCluster,
+                                                       annotationTab.sacc$collapsedCluster)]
+sce.sacc$cellType.prelim <- factor(sce.sacc$cellType.prelim)
+
+## Save
+save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo, annotationTab.sacc,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda")
+
+
+
+## Re-print marker expression with cell type labels ===
+# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
+#      verbose=T)
+
+pdf("pdfs/revision/regionSpecific_sACC-n5_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
+for(i in 1:length(markers.mathys.custom)){
+  print(
+    plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+                   x="cellType.prelim", colour_by="cellType.prelim", point_alpha=0.5, point_size=.7,
+                   add_legend=F, show_median=T) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+  )
+}
+dev.off()
+
+    # Optionally, drop doublet cluster & 'drop.lowNTx' and re-print
+    sce.sacc <- sce.sacc[ ,-grep("drop.",sce.sacc$cellType.prelim)]
+    sce.sacc$cellType.prelim <- droplevels(sce.sacc$cellType.prelim)
+
+    # Final comment - the Micro cluster--its prelim clusters were checked for endothelial
+    #                 markers, but doesn't seem they were merged together.  Perhaps this dataset
+    #                 just didn't capture any (unlike for the AMY)
+    
+    
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
