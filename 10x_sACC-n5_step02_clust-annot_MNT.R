@@ -106,16 +106,16 @@ save(sce.sacc, chosen.hvgs.sacc, ref.sampleInfo, ref.sampleInfo.rev,
 
 
 ### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
-    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc
+    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, ref.sampleInfo, ref.sampleInfo.rev
 
 
 # How many PCs is optimal?:
-metadata(pc.choice.sacc)$chosen # [1] 96
+metadata(pc.choice.sacc)$chosen # [1] 97
 
-## Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.sacc, "PCA_opt") <- reducedDim(sce.sacc, "PCA")[ ,1:(metadata(pc.choice.sacc)$chosen)]
+## Assign this chosen (97 PCs) to 'PCA_opt'
+reducedDim(sce.sacc, "PCA_opt") <- reducedDim(sce.sacc, "PCA_corrected")[ ,1:(metadata(pc.choice.sacc)$chosen)]
 
 
 ## t-SNE
@@ -127,20 +127,10 @@ sce.sacc <- runTSNE(sce.sacc, dimred="PCA_opt")
 set.seed(109)
 sce.sacc <- runUMAP(sce.sacc, dimred="PCA_opt")
 
-## Load in phenodata from pan-brain analysis -> colData for downstream use
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
-     verbose=T)
-# Want 'ref.sampleInfo'
 
-sce.sacc$region <- ss(sce.sacc$sample,".5",1)
-sce.sacc$donor <- paste0("Br",ss(sce.sacc$sample,"cc.",2))
-sce.sacc$processDate <- ref.sampleInfo$realBatch[match(sce.sacc$sample, ref.sampleInfo$sampleID)]
-sce.sacc$protocol <- ref.sampleInfo$protocol[match(sce.sacc$processDate, ref.sampleInfo$realBatch)]
-
-
-# Save for now
-save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, ref.sampleInfo, 
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda")
+# How do these look?
+plotReducedDim(sce.sacc, dimred="TSNE", colour_by="sampleID")
+plotReducedDim(sce.sacc, dimred="UMAP", colour_by="sampleID")
 
 
 ### Clustering: Two-step ======================================================
@@ -149,15 +139,23 @@ save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, ref.sampleInfo,
 snn.gr <- buildSNNGraph(sce.sacc, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
-    ## 46 prelim clusters
+    ## 67 prelim clusters
 
 # Assign as 'prelimCluster'
 sce.sacc$prelimCluster <- factor(clusters.k20)
+plotReducedDim(sce.sacc, dimred="TSNE", colour_by="prelimCluster")
 
 # Is sample driving this 'high-res' clustering at this level?
-table(sce.sacc$prelimCluster, sce.sacc$sample)
+table(sce.sacc$prelimCluster, sce.sacc$sampleID)  # (not much!)
 
-table(sce.sacc$sample)
+# rbind the ref.sampleInfo[.rev]
+ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
+
+## Save for now
+save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, ref.sampleInfo, 
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda")
+
+
 
 ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
   #         (as determined in: 'side-Rscript_testingStep2_HC-normalizn-approaches_wAmygData_MNTJan2020.R')
@@ -172,10 +170,10 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
   }
 )
 
-# And btw...
-table(rowSums(prelimCluster.PBcounts)==0)
-#FALSE  TRUE
-#27623  5915
+    # And btw...
+    table(rowSums(prelimCluster.PBcounts)==0)
+    # FALSE  TRUE
+    # 29600  3938 
 
 # Compute LSFs at this level
 sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
@@ -193,29 +191,46 @@ dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
 # Just for observation
 par(cex=.6)
-myplclust(tree.clusCollapsed, main="2x sACC prelim-kNN-cluster relationships", cex.main=2, cex.lab=1.5, cex=1.8)
+myplclust(tree.clusCollapsed, main="5x sACC prelim-kNN-cluster relationships", cex.main=2, cex.lab=1.5, cex=1.4)
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=550)
+                               minClusterSize=2, deepSplit=1, cutHeight=225)
 
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-    ## Cutting at 550 looks good - go ahead and proceed with this
+    #  [1]  0  0 16 16  0  0  0  0  0 12 12  0 15 15  4  4  4  4  9  9  9  8  8  8 13
+    # [26] 13  0  5  5  5  5  0  2  2  2  2  2  0 10 10 10  3  3  3  3  3 14 14  6  6
+    # [51]  6  6  0  1  1  1  1  1  1  0 11 11 11  7  7  7  7
 
-# Add new labels to those prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1)
+        ## Cutting at 225 looks good for the main neuronal branch, but a lot of glial
+         # prelim clusters are dropped off (0's)
+    
 
-# A posteriori: re-assign prelimCluster 3 as to not collapse with 23, 29
-clust.treeCut[order.dendrogram(dend)][which(order.dendrogram(dend)==3)] <- max(clust.treeCut)+c(1)
+## Cut at 325 shows that prelimClust's 32, 41 should be merged - the rest will leave, due to more
+ # extreme height differences:    
+    glia.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
+                                   minClusterSize=2, deepSplit=1, cutHeight=325)
+    unname(glia.treeCut[order.dendrogram(dend)])
+        #  [1]  9  9  9  9  0  0 12 12 10 10 10  0  4  4  4  4  4  4  2  2  2  2  2  2  2
+        # [26]  2  7  7  7  7  7  0  6  6  6  6  6  1  1  1  1  1  1  1  1  1  5  5  5  5
+        # [51]  5  5  3  3  3  3  3  3  3  8 11 11 11  8  8  8  8
+    
+    clust.treeCut[order.dendrogram(dend)][c(7:8)] <- max(clust.treeCut)+c(1)  # '17'
 
-labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
+
+# Add new labels to rest of the prelimClusters cut off
+clust.treeCut[order.dendrogram(dend)][which(
+  clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut) + c(1,2, 3,3, 4:10)
+
+# Add some colors for the sake of the dendrogram
+labels_colors(dend) <- c(tableau20, tableau10medium)[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("pdfs/regionSpecific_sACC-n2_HC-prelimCluster-relationships_Feb2020.pdf")
-par(cex=1, font=2)
-plot(dend, main="2x sACC prelim-kNN-cluster relationships")
+pdf("pdfs/revision/regionSpecific_sACC-n5_HC-prelimCluster-relationships_MNT2021.pdf", width=9)
+par(cex=0.8, font=2)
+plot(dend, main="5x sACC prelim-kNN-cluster relationships with collapsed assignments")
 dev.off()
 
 
@@ -228,12 +243,16 @@ sce.sacc$collapsedCluster <- factor(clusterRefTab.sacc$merged[match(sce.sacc$pre
 
 
 # Print some visualizations:
-pdf("pdfs/regionSpecific_sACC-n2_reducedDims-with-collapsedClusters_Feb2020.pdf")
-plotReducedDim(sce.sacc, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.sacc, colour_by="sample", point_alpha=0.5)
-plotTSNE(sce.sacc, colour_by="collapsedCluster", point_alpha=0.5)
+pdf("pdfs/revision/regionSpecific_sACC-n5_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.sacc, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="collapsedCluster", text_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="sum", point_alpha=0.5)
-plotUMAP(sce.sacc, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.sacc, colour_by="sampleID", point_alpha=0.5)
+plotUMAP(sce.sacc, colour_by="collapsedCluster", text_by="collapsedCluster", point_alpha=0.5)
 dev.off()
 
 
@@ -249,7 +268,7 @@ markers.mathys.custom = list(
   'endothelial' = c('CLDN5', 'FLT1', 'VTN')
 )
 
-pdf("pdfs/regionSpecific_sACC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_sACC-n2_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
