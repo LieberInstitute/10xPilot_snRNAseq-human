@@ -1257,73 +1257,113 @@ write.csv(top40genes, file="tables/top40genesLists_DLPFC-n2_cellType.split_SN-LE
 
 
 
-
-
-
-## 15May2020 for AnJa - print t's and FDRs ===
-# Bring in human stats; create t's
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+### MNT add 02May2021 =================================
+  # -> What if add param/requirement that for any given subcluster, median expression has to > 0?
+load("rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
     # markers.dlpfc.t.1vAll, markers.dlpfc.t.design
-    rm(markers.dlpfc.t.design)
 
-# Need to add t's with N nuclei used in constrasts
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+## Load SCE 
+load("/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
     # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
-    rm(clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo)
+
+table(sce.dlpfc.st$cellType.split)
 
 # First drop "Ambig.lowNtrxts" (168 nuclei)
 sce.dlpfc.st <- sce.dlpfc.st[ ,sce.dlpfc.st$cellType.split != "Ambig.lowNtrxts"]
 sce.dlpfc.st$cellType.split <- droplevels(sce.dlpfc.st$cellType.split)
 
-## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
-#      and fix row order to the first entry "Astro"
-fixTo <- rownames(markers.dlpfc.t.1vAll[["Astro"]])
+# Remove 0 genes across all nuclei
+sce.dlpfc.st <- sce.dlpfc.st[!rowSums(assay(sce.dlpfc.st, "counts"))==0, ]
+
+
+## Make list of Boolean param / cell subtype ===
+cellSubtype.idx <- splitit(sce.dlpfc.st$cellType.split)
+medianNon0.idx <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.dlpfc.st, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+lengths(medianNon0.idx)
+sapply(medianNon0.idx, head)
+
+# Add these to the stats for each set of markers
+for(i in names(markers.dlpfc.t.1vAll)){
+  markers.dlpfc.t.1vAll[[i]] <- cbind(markers.dlpfc.t.1vAll[[i]],
+                                    medianNon0.idx[[i]][match(rownames(markers.dlpfc.t.1vAll[[i]]),
+                                                              names(medianNon0.idx[[i]]))])
+  colnames(markers.dlpfc.t.1vAll[[i]])[5] <- "non0median"
+}
+
+
+## Use these restrictions to print (to png) a refined top 40, as before ===
+markerList.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){
+  rownames(x)[x$log.FDR < log10(0.000001) & x$non0median==TRUE]
+  }
+)
+lengths(markerList.t.1vAll)     # ( **without $non0median==TRUE restriction )
+    #         Oligo          Astro        Inhib.4     Excit.L4:5          Micro        Inhib.6 
+    #          2337           3712           5051           6623           3300           4935 
+    #           OPC     Excit.L2:3    Excit.ambig     Excit.L3:4     Excit.L5:6 Excit.L6.broad 
+    #          3198           4015           5068           2774           4020           4577 
+    #       Inhib.5       Excit.L5        Inhib.1        Inhib.2        Inhib.3 
+    #          3451           2807            763            907           1469
+
+lengths(markerList.t.1vAll)
+    #         Oligo          Astro        Inhib.4     Excit.L4:5          Micro        Inhib.6 
+    #           837            612           2832           3436            627           2311 
+    #           OPC     Excit.L2:3    Excit.ambig     Excit.L3:4     Excit.L5:6 Excit.L6.broad 
+    #          1059           2030           2775           1949           2289           2850 
+    #       Inhib.5       Excit.L5        Inhib.1        Inhib.2        Inhib.3 
+    #          1432           1756            433            507            986 
+
+    ## (Don't bother printing top 40 markers with this restriction - will change with revision analysis)
+
+## Do the same with the pairwise result ('markers.dlpfc.t.design') === === ===
+# Add these to the stats for each set of markers
+for(i in names(markers.dlpfc.t.design)){
+  markers.dlpfc.t.design[[i]] <- cbind(markers.dlpfc.t.design[[i]],
+                                     medianNon0.idx[[i]][match(rownames(markers.dlpfc.t.design[[i]]),
+                                                               names(medianNon0.idx[[i]]))])
+  colnames(markers.dlpfc.t.design[[i]])[19] <- "non0median"
+}
+
+markerList.t <- lapply(markers.dlpfc.t.design, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
+  }
+)
+# lengths(markerList.t)     # ( **without $non0median==TRUE restriction )
+    #         Astro    Excit.ambig     Excit.L2:3     Excit.L3:4     Excit.L4:5       Excit.L5 
+    #           234             77              2             96             25            228 
+    #    Excit.L5:6 Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4 
+    #            48             38            245            200            138             27 
+    #       Inhib.5        Inhib.6          Micro          Oligo            OPC 
+    #            30             28            540            153            156 
+
+lengths(markerList.t)
+    #         Astro    Excit.ambig     Excit.L2:3     Excit.L3:4     Excit.L4:5       Excit.L5 
+    #           162             52              1             27             18            100 
+    #    Excit.L5:6 Excit.L6.broad        Inhib.1        Inhib.2        Inhib.3        Inhib.4 
+    #            26             26             57             23             62             21 
+    #       Inhib.5        Inhib.6          Micro          Oligo            OPC 
+    #            15              9            240            153            118 
+
+
+    ## (Don't bother printing top 40 markers with this restriction - will change with revision analysis)
+
+
+## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
 for(s in names(markers.dlpfc.t.1vAll)){
   markers.dlpfc.t.1vAll[[s]]$t.stat <- markers.dlpfc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.dlpfc.st))
-  markers.dlpfc.t.1vAll[[s]] <- markers.dlpfc.t.1vAll[[s]][fixTo, ]
 }
-# Pull out the t's
-ts.dlpfc <- sapply(markers.dlpfc.t.1vAll, function(x){x$t.stat})
-rownames(ts.dlpfc) <- fixTo
-# Change to EnsemblID
-rownames(ts.dlpfc) <- rowData(sce.dlpfc.st)$ID[match(rownames(ts.dlpfc), rownames(sce.dlpfc.st))]
 
-# logFDRs
-logFDRs.dlpfc <- sapply(markers.dlpfc.t.1vAll, function(x){x$log.FDR})
-rownames(logFDRs.dlpfc) <- fixTo
-# EnsemblID
-rownames(logFDRs.dlpfc) <- rownames(ts.dlpfc)
+Readme <- "Making this iteration of marker/SCE objects so that can test MAGMA results with the 'non0median' filter, but for the preprint data/clusters (this was originally skipped for DLPFC) -MNT 02May2021"
 
-save(ts.dlpfc, logFDRs.dlpfc, file="rdas/zForAnJa_DLPFC-sn-level-markerStats_MNT.rda")
+save(markers.dlpfc.t.1vAll, markers.dlpfc.t.design, sce.dlpfc.st, Readme,
+     file="rdas/markerStats-and-SCE_DLPFC-n2_sn-level_cleaned_MNTMay2021.rda")
 
 
 
-
-
-
-
-
-## Checking Berger method for pval.type=="all" ====
-    ps.chosen <- markers.dlpfc.t.design[["Astro"]]$p.value
-    ps.chosen <- log10(ps.chosen)
-    head(ps.chosen)
-        # [1] -95.30511 -78.89036 -63.47255 -43.07298 -38.99470 -38.68466
-    
-    ps.pairwise <- cbind(sapply(c(3:18), function(x){markers.dlpfc.t.design[["Astro"]][ ,x]$log.p.value}))
-    head(ps.pairwise)
-    
-    maxpick <- apply(ps.pairwise, 1, which.max)
-    
-    max.p <- vector()
-    for(i in 1:length(maxpick)){
-      max.p[i] <- ps.pairwise[i, maxpick[i]]
-    }
-    
-    head(max.p, n=20)
-    head(ps.chosen, n=20) # not the same as the above..
-    cor(max.p, ps.chosen) # == 1
-        # interesting. So I guess it's NOT just the max p. but this transformed somehow
-    
 
 
 
