@@ -118,14 +118,14 @@ save(sce.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo, ref.sampleInfo.rev,
 ### Picking up with optimally-defined PC space ===
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda",
      verbose=TRUE)
-    # sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo, ref.sampleInfo.rev
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo, ref.sampleInfo.rev
 
 # How many PCs is optimal?:
-metadata(pc.choice.amy)$chosen
-    # [1] 87
+metadata(pc.choice.dlpfc)$chosen
+    # [1] 99
 
-## Assign this chosen (87 PCs) to 'PCA_opt'
-reducedDim(sce.dlpfc, "PCA_opt") <- reducedDim(sce.dlpfc, "PCA_corrected")[ ,1:(metadata(pc.choice.amy)$chosen)]
+## Assign this chosen (99 PCs) to 'PCA_opt'
+reducedDim(sce.dlpfc, "PCA_opt") <- reducedDim(sce.dlpfc, "PCA_corrected")[ ,1:(metadata(pc.choice.dlpfc)$chosen)]
 
 
 ## t-SNE
@@ -162,7 +162,7 @@ table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)  # (a little bit, but is typi
 ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
 
 # Save for now
-save(sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo,
+save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
 
 
@@ -238,12 +238,12 @@ dev.off()
 
 
 # Make reference for new cluster assignment
-clusterRefTab.amy <- data.frame(origClust=order.dendrogram(dend),
+clusterRefTab.dlpfc <- data.frame(origClust=order.dendrogram(dend),
                                 merged=clust.treeCut[order.dendrogram(dend)])
 
 
 # Assign as 'collapsedCluster'
-sce.dlpfc$collapsedCluster <- factor(clusterRefTab.amy$merged[match(sce.dlpfc$prelimCluster, clusterRefTab.amy$origClust)])
+sce.dlpfc$collapsedCluster <- factor(clusterRefTab.dlpfc$merged[match(sce.dlpfc$prelimCluster, clusterRefTab.dlpfc$origClust)])
 
 # Print some visualizations:
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_reducedDims-with-collapsedClusters_LAH2021.pdf")
@@ -320,21 +320,21 @@ table(sce.dlpfc$collapsedCluster)
         #  * 15 is pretty evenly-ish distributed (16 too, but will keep 16)
 
 ## Add annotations, looking at marker gene expression
-annotationTab.amy <- data.frame(collapsedCluster=c(1:17))
-annotationTab.amy$cellType <- NA
-annotationTab.amy$cellType[c(1:2,4:7)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
-annotationTab.amy$cellType[c(3,12)] <- paste0("Excit_", c("A","B"))
-annotationTab.amy$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
-annotationTab.amy$cellType[c(13,15)] <- paste0("drop.lowNTx_", c("A","B"))
-annotationTab.amy$cellType[c(14,16:17)] <- c("Endo", "ambig.glial", "Astro_B")
+annotationTab.dlpfc <- data.frame(collapsedCluster=c(1:17))
+annotationTab.dlpfc$cellType <- NA
+annotationTab.dlpfc$cellType[c(1:2,4:7)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
+annotationTab.dlpfc$cellType[c(3,12)] <- paste0("Excit_", c("A","B"))
+annotationTab.dlpfc$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
+annotationTab.dlpfc$cellType[c(13,15)] <- paste0("drop.lowNTx_", c("A","B"))
+annotationTab.dlpfc$cellType[c(14,16:17)] <- c("Endo", "ambig.glial", "Astro_B")
 
 
-sce.dlpfc$cellType.prelim <- annotationTab.amy$cellType[match(sce.dlpfc$collapsedCluster,
-                                                         annotationTab.amy$collapsedCluster)]
+sce.dlpfc$cellType.prelim <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
+                                                         annotationTab.dlpfc$collapsedCluster)]
 sce.dlpfc$cellType.prelim <- factor(sce.dlpfc$cellType.prelim)
 
 # Save
-save(sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy,
+save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
 
 
@@ -423,7 +423,7 @@ table(sce.dlpfc$cellType, sce.dlpfc$collapsedCluster)
 
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
-    # sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
 
 # Look at some marker expression at the prelimCluster level
 pdf("pdfs/revision/ztemp_amyg-prelimCluster-neuronalMarkerExpression.pdf", width=8, height=7)
@@ -433,46 +433,46 @@ dev.off()
 
 
 ## More-manual annotations for neuronal subpops:
-clusterRefTab.amy$cellType <- sce.dlpfc$cellType[match(clusterRefTab.amy$merged, sce.dlpfc$collapsedCluster)]
-clusterRefTab.amy$cellType <- as.character(clusterRefTab.amy$cellType)
+clusterRefTab.dlpfc$cellType <- sce.dlpfc$cellType[match(clusterRefTab.dlpfc$merged, sce.dlpfc$collapsedCluster)]
+clusterRefTab.dlpfc$cellType <- as.character(clusterRefTab.dlpfc$cellType)
 
 # Make new column for subclusers
-clusterRefTab.amy$manual <- clusterRefTab.amy$cellType
+clusterRefTab.dlpfc$manual <- clusterRefTab.dlpfc$cellType
 
     ## Excit subclusters: ====
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(3,9,16,20),
-                                       paste0(clusterRefTab.amy$cellType, ".1"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(3,9,16,20),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".1"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
     # 10 and 12 would cut off at different heights; 12 expresses SLC17A7 and 10 doesn't really any:
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(10),
-                                       paste0(clusterRefTab.amy$cellType, ".2"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(10),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".2"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(12),
-                                       paste0(clusterRefTab.amy$cellType, ".3"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(12),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".3"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
     ## Inhib subclusters: merge 2/6 and 7/14 pairs, then split the rest
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(2,6),
-                                       paste0(clusterRefTab.amy$cellType, ".1"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(2,6),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".1"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(7,14),
-                                       paste0(clusterRefTab.amy$cellType, ".2"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(7,14),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".2"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(23),
-                                       paste0(clusterRefTab.amy$cellType, ".3"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(23),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".3"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(18),
-                                       paste0(clusterRefTab.amy$cellType, ".4"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(18),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".4"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(21),
-                                       paste0(clusterRefTab.amy$cellType, ".5"),
-                                       as.character(clusterRefTab.amy$manual))
+    clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust %in% c(21),
+                                       paste0(clusterRefTab.dlpfc$cellType, ".5"),
+                                       as.character(clusterRefTab.dlpfc$manual))
     
     ## All other glial types will be kept the same
     
@@ -480,22 +480,22 @@ clusterRefTab.amy$manual <- clusterRefTab.amy$cellType
         #           (the latter is the ~39-40 high-VCAN nuclei ID'd in this sample at pan-brain) 
         #  -> swap them
         
-        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 10,  # ("Excit.2")
+        clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust == 10,  # ("Excit.2")
                                            "Inhib.5",
-                                           as.character(clusterRefTab.amy$manual))
-        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 21,  # ("Inhib.5")
+                                           as.character(clusterRefTab.dlpfc$manual))
+        clusterRefTab.dlpfc$manual <- ifelse(clusterRefTab.dlpfc$origClust == 21,  # ("Inhib.5")
                                            "Excit.2",
-                                           as.character(clusterRefTab.amy$manual))
+                                           as.character(clusterRefTab.dlpfc$manual))
     
         # --> THEN re-run the below
         
     ## end cluster splitting chunk ====
 
-clusterRefTab.amy
+clusterRefTab.dlpfc
     
 ## Add new annotations
-sce.dlpfc$cellType.split <- clusterRefTab.amy$manual[match(sce.dlpfc$prelimCluster,
-                                                         clusterRefTab.amy$origClust)]
+sce.dlpfc$cellType.split <- clusterRefTab.dlpfc$manual[match(sce.dlpfc$prelimCluster,
+                                                         clusterRefTab.dlpfc$origClust)]
 sce.dlpfc$cellType.split <- factor(sce.dlpfc$cellType.split)
 
 table(sce.dlpfc$cellType.split, sce.dlpfc$cellType)
@@ -510,7 +510,7 @@ table(sce.dlpfc$cellType.split) # (printing post-hoc-corrected annotations)
     #            764            3473             627
 
 ## Save these
-save(sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo,
+save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo,
      file="rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
 
 
@@ -619,7 +619,7 @@ dev.off()
 ## Added MNT 24May2020: tSNE in lower dims =======================================================
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
      verbose=T)
-    # sce.dlpfc, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
 
 
 # How many PCs?
@@ -634,7 +634,7 @@ head(attr(reducedDim(sce.dlpfc, "PCA"), "percentVar"), n=50)
     # [43]  0.05790745  0.05736661  0.05646818  0.05604596  0.05573424  0.05512331
     # [49]  0.05473937  0.05442114
 
-# Btw: metadata(pc.choice.amy)$chosen == 45 [PCs]
+# Btw: metadata(pc.choice.dlpfc)$chosen == 45 [PCs]
 
 # 0.1% var or greater
 reducedDim(sce.dlpfc, "PCA_22") <- reducedDim(sce.dlpfc, "PCA")[ ,c(1:22)]
@@ -657,7 +657,7 @@ plotReducedDim(sce.dlpfc, dimred="PCA", ncomponents=5, colour_by="donor", point_
     # Can't really appreciate as well actually
 
     ## -> let's get rid of PC5 and try on "PCA_optb"
-reducedDim(sce.dlpfc, "PCA_optb") <- reducedDim(sce.dlpfc, "PCA")[ ,c(1:4, 6:(metadata(pc.choice.amy)$chosen))]
+reducedDim(sce.dlpfc, "PCA_optb") <- reducedDim(sce.dlpfc, "PCA")[ ,c(1:4, 6:(metadata(pc.choice.dlpfc)$chosen))]
 
 
 
