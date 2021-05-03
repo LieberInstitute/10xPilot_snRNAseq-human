@@ -47,7 +47,9 @@ MAGMA/Results
 
 # And now updated (v1.08) MAGMA stuff
 MAGMA_v1_08/SNP_Data
+MAGMA_v1_08/SNP_Data_v2
 MAGMA_v1_08/Results
+MAGMA_v1_08/Results_v2
 MAGMA_v1_08/logs
 MAGMA_v1_08/magma
 MAGMA_v1_08/magma_v1.08_static.zip

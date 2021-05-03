@@ -208,24 +208,26 @@ write.table(sumStats.CAD, file="./GWAS_Results/CoronaryArteryDisease_Nikpay2015_
 
 rm(list=ls(pattern=".CAD"))
 
+
+
 ### Gene marker sets (analagous to layer marker setup) ==============
   # We'll just use the 'enriched' stats--i.e. '1vAll'
+  # Update May 2021: Apply a filter for markers that median expression in respective subcluster != 0
+  #                  (already computed and added to a different .rda file)
 
 ## DLPFC ===
-load("rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.dlpfc.t.1vAll, markers.dlpfc.t.design
+load("rdas/markerStats-and-SCE_DLPFC-n2_sn-level_cleaned_MNTMay2021.rda", verbose=T)
+    # markers.dlpfc.t.1vAll, markers.dlpfc.t.design, sce.dlpfc.st, Readme
     rm(markers.dlpfc.t.design)
 
-sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
-    #      Oligo Astro Inhib.4 Excit.L4:5 Micro Inhib.6   OPC Excit.L2:3 Excit.ambig
-    # FALSE 26195 25277   24745      23641 25565   24960 25912      25367       24707
-    # TRUE   1916  2834    3366       4470  2546    3151  2199       2744        3404
-    #       Excit.L3:4 Excit.L5:6 Excit.L6.broad Inhib.5 Excit.L5 Inhib.1 Inhib.2
-    # FALSE      26329      25338          25069   25793    26300   27738   27663
-    # TRUE        1782       2773           3042    2318     1811     373     448
-    #       Inhib.3
-    # FALSE   27281
-    # TRUE      830     - this looks good
+sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+    #       Oligo Astro Inhib.4 Excit.L4:5 Micro Inhib.6   OPC Excit.L2:3 Excit.ambig Excit.L3:4
+    # FALSE 27306 27536   25959      25458 27527   26421 27198      26506       26040      26748
+    # TRUE    805   575    2152       2653   584    1690   913       1605        2071       1363
+
+    #       Excit.L5:6 Excit.L6.broad Inhib.5 Excit.L5 Inhib.1 Inhib.2 Inhib.3
+    # FALSE      26325          26010   26964    26884   27917   27883   27509
+    # TRUE        1786           2101    1147     1227     194     228     602
 
     ## Btw:
         layerMarkers <- read.table("/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/MAGMA/laminar_sets.txt",
@@ -242,17 +244,15 @@ sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
 
 dlpfc.markerSet <- data.frame()
 for(i in names(markers.dlpfc.t.1vAll)){
-  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12))),
-             Gene=rownames(markers.dlpfc.t.1vAll[[i]])[markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12)])
+  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                         markers.dlpfc.t.1vAll[[i]]$non0median==TRUE)),
+             Gene=rownames(markers.dlpfc.t.1vAll[[i]])[markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                                         markers.dlpfc.t.1vAll[[i]]$non0median==TRUE])
   dlpfc.markerSet <- rbind(dlpfc.markerSet, dlpfc.i)
 }
 
 head(dlpfc.markerSet)
 table(dlpfc.markerSet$Set)  # looks good
-
-# Need to convert to Ensembl ID (these symbols are uniquified, so have to refer to SCE info)
-load("rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda")
-    # sce.dlpfc.st, 
 
 dlpfc.markerSet$Gene <- rowData(sce.dlpfc.st)$ID[match(dlpfc.markerSet$Gene, rownames(sce.dlpfc.st))]
 
@@ -263,35 +263,30 @@ write.table(dlpfc.markerSet, file="./MAGMA/dlpfcMarkerSets_fdr1e-12.txt", sep="\
 
 
 ## sACC ===
-load("rdas/markers-stats_sACC-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.sacc.t.design, markers.sacc.wilcox.block, markers.sacc.binom.block, markers.sacc.t.1vAll
-    rm(markers.sacc.t.design, markers.sacc.wilcox.block, markers.sacc.binom.block)
+load("rdas/markerStats-and-SCE_sACC-n2_sn-level_cleaned_MNTNov2020.rda", verbose=T)
+    # markers.sacc.t.1vAll, markers.sacc.t.design, sce.sacc
+    rm(markers.sacc.t.design)
 
-sapply(markers.sacc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
-    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
-    # FALSE 26058   21609   22359   25007   25887   22961   23800 26034 26789 26437
-    # TRUE   2716    7165    6415    3767    2887    5813    4974  2740  1985  2337
-        ## A lot of genes... but don't want to adjust too much the cutoff on a per-dataset-basis...
-
+sapply(markers.sacc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+    #      Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
+    # FALSE 27995   24601   24875   26197   26780   25436   25973 28104 27959 27747
+    # TRUE    779    4173    3899    2577    1994    3338    2801   670   815  1027
     
 sacc.markerSet <- data.frame()
 for(i in names(markers.sacc.t.1vAll)){
-  sacc.i <- data.frame(Set=rep(i, sum(markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12))),
-                        Gene=rownames(markers.sacc.t.1vAll[[i]])[markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12)])
+  sacc.i <- data.frame(Set=rep(i, sum(markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                        markers.sacc.t.1vAll[[i]]$non0median==TRUE)),
+                        Gene=rownames(markers.sacc.t.1vAll[[i]])[markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                                                   markers.sacc.t.1vAll[[i]]$non0median==TRUE])
   sacc.markerSet <- rbind(sacc.markerSet, sacc.i)
 }
 
 head(sacc.markerSet)
 table(sacc.markerSet$Set)  # looks good
 
-
-# Need to convert to Ensembl ID (these symbols are uniquified, so have to refer to SCE info)
-load("rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
-
 sacc.markerSet$Gene <- rowData(sce.sacc)$ID[match(sacc.markerSet$Gene, rownames(sce.sacc))]
     # (btw:)
-    length(unique(sacc.markerSet$Gene)) # [1] 16923 - though 40,799 entries
+    length(unique(sacc.markerSet$Gene)) # [1] 7237 - though 22,073 entries
 
 # Write out
 write.table(sacc.markerSet, file="./MAGMA/saccMarkerSets_fdr1e-12.txt", sep="\t",
@@ -301,36 +296,34 @@ write.table(sacc.markerSet, file="./MAGMA/saccMarkerSets_fdr1e-12.txt", sep="\t"
 
 
 ## HPC ===
-load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-  # markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block
+load("rdas/markerStats-and-SCE_HPC-n3_sn-level_cleaned_MNTNov2020.rda", verbose=T)
+  # markers.hpc.t.1vAll, markers.hpc.t.design, sce.hpc
 
-sapply(markers.hpc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
-    # #      Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3
-    # FALSE 24318   25940   25446   23167   26648   27400   27262   26239   25232
-    # TRUE   4439    2817    3311    5590    2109    1357    1495    2518    3525
+sapply(markers.hpc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3
+    # FALSE 27951   27112   26648   25829   27309   28118   27648   27182   26831
+    # TRUE    806    1645    2109    2928    1448     639    1109    1575    1926
+
     #       Inhib.4 Inhib.5 Micro Oligo   OPC Tcell
-    # FALSE   26884   26777 24765 25986 25602 27739
-    # TRUE     1873    1980  3992  2771  3155  1018
+    # FALSE   27404   27323 27983 27835 27775 28477
+    # TRUE     1353    1434   774   922   982   280
 
 
 hpc.markerSet <- data.frame()
 for(i in names(markers.hpc.t.1vAll)){
-  hpc.i <- data.frame(Set=rep(i, sum(markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12))),
-                       Gene=rownames(markers.hpc.t.1vAll[[i]])[markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12)])
+  hpc.i <- data.frame(Set=rep(i, sum(markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                       markers.hpc.t.1vAll[[i]]$non0median==TRUE)),
+                       Gene=rownames(markers.hpc.t.1vAll[[i]])[markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                                                 markers.hpc.t.1vAll[[i]]$non0median==TRUE])
   hpc.markerSet <- rbind(hpc.markerSet, hpc.i)
 }
 
 head(hpc.markerSet)
 table(hpc.markerSet$Set)  # looks good
 
-
-# Need to convert to Ensembl ID (these symbols are uniquified, so have to refer to SCE info)
-load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
-
 hpc.markerSet$Gene <- rowData(sce.hpc)$ID[match(hpc.markerSet$Gene, rownames(sce.hpc))]
     # (btw:)
-    length(unique(hpc.markerSet$Gene)) # [1] 17552
+    length(unique(hpc.markerSet$Gene)) # [1] 6249
 
 # Write out
 write.table(hpc.markerSet, file="./MAGMA/hpcMarkerSets_fdr1e-12.txt", sep="\t",
@@ -339,37 +332,35 @@ write.table(hpc.markerSet, file="./MAGMA/hpcMarkerSets_fdr1e-12.txt", sep="\t",
 
 
 ## NAc ===
-load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.design, markers.nac.t.1vAll
+load("rdas/markerStats-and-SCE_NAc-n5_sn-level_cleaned_MNTNov2020.rda", verbose=T)
+    # markers.nac.t.design, markers.nac.t.1vAll, sce.nac.all
     rm(markers.nac.t.design)
 
-sapply(markers.nac.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
+sapply(markers.nac.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
     #       Astro Inhib.1 Inhib.2 Inhib.3 Inhib.4 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3
-    # FALSE 25362   28529   28310   25829   26081 26330    28352    27649    27571
-    # TRUE   3874     707     926    3407    3155  2906      884     1587     1665
+    # FALSE 28097   28843   28879   27684   27924 28532    28735    28456    28297
+    # TRUE   1139     393     357    1552    1312   704      501      780      939
+
     #       MSN.D1.4 MSN.D2.1 MSN.D2.2 Oligo   OPC
-    # FALSE    25006    27827    27042 27303 26849
-    # TRUE      4230     1409     2194  1933  2387
+    # FALSE    26606    28397    27694 28552 28272
+    # TRUE      2630      839     1542   684   964
 
 
 nac.markerSet <- data.frame()
 for(i in names(markers.nac.t.1vAll)){
-  nac.i <- data.frame(Set=rep(i, sum(markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12))),
-                      Gene=rownames(markers.nac.t.1vAll[[i]])[markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12)])
+  nac.i <- data.frame(Set=rep(i, sum(markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                       markers.nac.t.1vAll[[i]]$non0median==TRUE)),
+                      Gene=rownames(markers.nac.t.1vAll[[i]])[markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                                                markers.nac.t.1vAll[[i]]$non0median==TRUE])
   nac.markerSet <- rbind(nac.markerSet, nac.i)
 }
 
 head(nac.markerSet)
 table(nac.markerSet$Set)  # looks good
 
-
-# Need to convert to Ensembl ID (these symbols are uniquified, so have to refer to SCE info)
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-
 nac.markerSet$Gene <- rowData(sce.nac.all)$ID[match(nac.markerSet$Gene, rownames(sce.nac.all))]
     # (btw:)
-    length(unique(nac.markerSet$Gene)) # [1] 15515
+    length(unique(nac.markerSet$Gene)) # [1] 6063
 
 # Write out
 write.table(nac.markerSet, file="./MAGMA/nacMarkerSets_fdr1e-12.txt", sep="\t",
@@ -380,37 +371,35 @@ write.table(nac.markerSet, file="./MAGMA/nacMarkerSets_fdr1e-12.txt", sep="\t",
 
 
 ## AMY ===
-load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
+load("rdas/markerStats-and-SCE_AMY-n2_sn-level_cleaned_MNTNov2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.design, sce.amy
     rm(markers.amy.t.design, markers.amy.wilcox.block)
 
-sapply(markers.amy.t.1vAll, function(x){table(x$log.FDR < log10(1e-12))})
-    #       Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5
-    # FALSE 24426   22088   26685   26092   23941   25135   26957   27455   25612
-    # TRUE   4038    6376    1779    2372    4523    3329    1507    1009    2852
+sapply(markers.amy.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+    #      Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5
+    # FALSE 27233   24838   27719   27006   25800   26249   27281   27753   26573
+    # TRUE   1231    3626     745    1458    2664    2215    1183     711    1891
+
     #       Micro Oligo   OPC
-    # FALSE 25215 26127 25604
-    # TRUE   3249  2337  2860   - also quite high numbers... just keep this in mind
+    # FALSE 27671 27514 27243
+    # TRUE    793   950  1221
 
 
 amy.markerSet <- data.frame()
 for(i in names(markers.amy.t.1vAll)){
-  amy.i <- data.frame(Set=rep(i, sum(markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12))),
-                      Gene=rownames(markers.amy.t.1vAll[[i]])[markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12)])
+  amy.i <- data.frame(Set=rep(i, sum(markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                       markers.amy.t.1vAll[[i]]$non0median==TRUE)),
+                      Gene=rownames(markers.amy.t.1vAll[[i]])[markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                                                                markers.amy.t.1vAll[[i]]$non0median==TRUE])
   amy.markerSet <- rbind(amy.markerSet, amy.i)
 }
 
 head(amy.markerSet)
 table(amy.markerSet$Set)  # looks good
 
-
-# Need to convert to Ensembl ID (these symbols are uniquified, so have to refer to SCE info)
-load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
-
 amy.markerSet$Gene <- rowData(sce.amy)$ID[match(amy.markerSet$Gene, rownames(sce.amy))]
     # (btw:)
-    length(unique(amy.markerSet$Gene)) # [1] 16533
+    length(unique(amy.markerSet$Gene)) # [1] 6815
 
 # Write out
 write.table(amy.markerSet, file="./MAGMA/amyMarkerSets_fdr1e-12.txt", sep="\t",
