@@ -384,7 +384,29 @@ dev.off()
     #                 markers, but doesn't seem they were merged together.  Perhaps this dataset
     #                 just didn't capture any (unlike for the AMY)
     
+
     
+## Re-print reducedDims with these annotations ===
+pdf("pdfs/revision/regionSpecific_sACC-n5_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.sacc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType.prelim", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="cellType.prelim", text_by="cellType.prelim",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.sacc, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.sacc, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotUMAP(sce.sacc, colour_by="cellType.prelim", text_by="cellType.prelim",
+         text_size=3, point_alpha=0.5)
+dev.off()
+
+
+
+  
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
