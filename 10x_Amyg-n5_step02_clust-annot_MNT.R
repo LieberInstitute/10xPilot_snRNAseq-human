@@ -349,210 +349,30 @@ dev.off()
     sce.amy <- sce.amy[ ,-grep("drop.", sce.amy$cellType.prelim)]
     sce.amy$cellType.prelim <- droplevels(sce.amy$cellType.prelim)
 
+
+    
+## Re-print reducedDims with these annotations ===
+pdf("pdfs/revision/regionSpecific_Amyg-n5_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.amy, dimred="PCA_corrected", ncomponents=5, colour_by="cellType.prelim", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="cellType.prelim", text_by="cellType.prelim",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.amy, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.amy, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotUMAP(sce.amy, colour_by="cellType.prelim", text_by="cellType.prelim",
+         text_size=3, point_alpha=0.5)
+dev.off()
+
+
+
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
-
-
-### For reference === == === == ===
-table(sce.amy$cellType, sce.amy$sample)
-    #                 amy.5161 amy.5212
-    # Ambig.lowNtrxts       34       16
-    # Astro                489      363
-    # Excit                226      261
-    # Inhib                 84      295
-    # Micro                425      339
-    # Oligo               1697     1776
-    # OPC                  335      292
-
-table(sce.amy$prelimCluster, sce.amy$sample)
-    #    amy.5161 amy.5212
-    # 1       425      339
-    # 2         8      113
-    # 3         0      123
-    # 4         2     1712
-    # 5      1695       64
-    # 6         8       42
-    # 7        33       16
-    # 8       473       20
-    # 9        73        1
-    # 10       85       13
-    # 11        0      272
-    # 12        0       55
-    # 13        2       62
-    # 14        0       60
-    # 15       34       16
-    # 16       68        0
-    # 17        0      255
-    # 18       24        0
-    # 19      335       37
-    # 20        0       69
-    # 21        0       40
-    # 22       14        9
-    # 23       11       24
-
-table(sce.amy$cellType, sce.amy$collapsedCluster)
-#                    1    2    3    4    5    6    7
-# Ambig.lowNtrxts    0    0    0    0    0   50    0
-# Astro              0    0  852    0    0    0    0
-# Excit              0  487    0    0    0    0    0
-# Inhib            379    0    0    0    0    0    0
-# Micro              0    0    0    0    0    0  764
-# Oligo              0    0    0 3473    0    0    0
-# OPC                0    0    0    0  627    0    0
-
-
-
-
-
-### MNT 06May2020: subcluster-level annotations ========================================
-# Some motivations:
-#   i) to see if the high-VCAN-neuronal cluster exists in prelimCluster
-#      as seen in the pan-brain level
-#   ii) To now formally define subcluster-level populations
-
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
-
-# Look at some marker expression at the prelimCluster level
-pdf("pdfs/revision/ztemp_amyg-prelimCluster-neuronalMarkerExpression.pdf", width=8, height=7)
-plotExpression(sce.amy, exprs_values="logcounts", features=c("SNAP25","GAD1","GAD2","SLC17A6","SLC17A7","VCAN"),
-               x="prelimCluster", colour_by="prelimCluster", ncol=2)
-dev.off()
-
-
-## More-manual annotations for neuronal subpops:
-clusterRefTab.amy$cellType <- sce.amy$cellType[match(clusterRefTab.amy$merged, sce.amy$collapsedCluster)]
-clusterRefTab.amy$cellType <- as.character(clusterRefTab.amy$cellType)
-
-# Make new column for subclusers
-clusterRefTab.amy$manual <- clusterRefTab.amy$cellType
-
-    ## Excit subclusters: ====
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(3,9,16,20),
-                                       paste0(clusterRefTab.amy$cellType, ".1"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    # 10 and 12 would cut off at different heights; 12 expresses SLC17A7 and 10 doesn't really any:
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(10),
-                                       paste0(clusterRefTab.amy$cellType, ".2"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(12),
-                                       paste0(clusterRefTab.amy$cellType, ".3"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    ## Inhib subclusters: merge 2/6 and 7/14 pairs, then split the rest
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(2,6),
-                                       paste0(clusterRefTab.amy$cellType, ".1"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(7,14),
-                                       paste0(clusterRefTab.amy$cellType, ".2"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(23),
-                                       paste0(clusterRefTab.amy$cellType, ".3"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(18),
-                                       paste0(clusterRefTab.amy$cellType, ".4"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust %in% c(21),
-                                       paste0(clusterRefTab.amy$cellType, ".5"),
-                                       as.character(clusterRefTab.amy$manual))
-    
-    ## All other glial types will be kept the same
-    
-        ## Post-hoc: Looks like Excit.2 truly inhibitory, and Inhib.5 truly [or more so] excitatory
-        #           (the latter is the ~39-40 high-VCAN nuclei ID'd in this sample at pan-brain) 
-        #  -> swap them
-        
-        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 10,  # ("Excit.2")
-                                           "Inhib.5",
-                                           as.character(clusterRefTab.amy$manual))
-        clusterRefTab.amy$manual <- ifelse(clusterRefTab.amy$origClust == 21,  # ("Inhib.5")
-                                           "Excit.2",
-                                           as.character(clusterRefTab.amy$manual))
-    
-        # --> THEN re-run the below
-        
-    ## end cluster splitting chunk ====
-
-clusterRefTab.amy
-    
-## Add new annotations
-sce.amy$cellType.split <- clusterRefTab.amy$manual[match(sce.amy$prelimCluster,
-                                                         clusterRefTab.amy$origClust)]
-sce.amy$cellType.split <- factor(sce.amy$cellType.split)
-
-table(sce.amy$cellType.split, sce.amy$cellType)
-    # good
-
-table(sce.amy$cellType.split) # (printing post-hoc-corrected annotations)
-    #Ambig.lowNtrxts           Astro         Excit.1         Excit.2         Excit.3
-    #             50             852             334              40              55
-    #        Inhib.1         Inhib.2         Inhib.3         Inhib.4         Inhib.5
-    #            171             109              35              24              98
-    #          Micro           Oligo             OPC
-    #            764            3473             627
-
-## Save these
-save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo,
-     file="rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda")
-
-
-## Also print expression at this level of partitioning ===
-
-# First remove "Ambig.lowNtrxts" (50 nuclei):
-sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
-sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
-
-pdf("pdfs/revision/regionSpecific_Amyg-n2_marker-logExprs_cellTypesSplit_May2020.pdf", height=6, width=8)
-for(i in 1:length(markers.mathys.custom)){
-  print(
-    plotExpression(sce.amy, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:12], length(markers.mathys.custom[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
-  )
-}
-dev.off()
-
-
-## Let's also re-plot reducedDims with new [broad & split] cell type annotations
-#        (and rename old file with prefix 'zold_')
-pdf("pdfs/revision/regionSpecific_Amyg-n2_reducedDims-with-collapsedClusters_May2020.pdf")
-plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="sample", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="prelimCluster", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="cellType", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.amy, colour_by="sum", point_size=3.5, point_alpha=0.5)
-plotUMAP(sce.amy, colour_by="cellType", point_size=3.5, point_alpha=0.5)
-plotUMAP(sce.amy, colour_by="cellType.split", point_size=3.5, point_alpha=0.5)
-dev.off()
-
-
-## And finally, for reference:
-table(sce.amy$cellType.split, sce.amy$sample)
-    #          amy.5161 amy.5212
-    # Astro        489      363
-    # Excit.1      141      193
-    # Excit.2        0       40
-    # Excit.3        0       55
-    # Inhib.1       16      155
-    # Inhib.2       33       76
-    # Inhib.3       11       24
-    # Inhib.4       24        0
-    # Inhib.5       85       13
-    # Micro        425      339
-    # Oligo       1697     1776
-    # OPC          335      292
 
 
 ## Some diggings-into for paper =======
@@ -604,117 +424,7 @@ dev.off()
 
 
 
-
-## Added MNT 24May2020: tSNE in lower dims =======================================================
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
-
-
-# How many PCs?
-head(attr(reducedDim(sce.amy, "PCA"), "percentVar"), n=50)
-    # [1] 20.56604550 10.39668224  6.66923256  3.20654266  1.88015247  0.90499720
-    # [7]  0.63195463  0.30153787  0.28714069  0.27722945  0.25484711  0.23154164
-    # [13]  0.21200112  0.19865766  0.19058467  0.17696622  0.15895906  0.14111373
-    # [19]  0.12953405  0.12661346  0.11187693  0.10874758  0.09528034  0.08876223
-    # [25]  0.08503460  0.08069491  0.07432969  0.07332327  0.07270196  0.07085366
-    # [31]  0.06895861  0.06840260  0.06628307  0.06566241  0.06499767  0.06456945
-    # [37]  0.06311090  0.06122234  0.05977570  0.05910767  0.05887602  0.05824736
-    # [43]  0.05790745  0.05736661  0.05646818  0.05604596  0.05573424  0.05512331
-    # [49]  0.05473937  0.05442114
-
-# Btw: metadata(pc.choice.amy)$chosen == 45 [PCs]
-
-# 0.1% var or greater
-reducedDim(sce.amy, "PCA_22") <- reducedDim(sce.amy, "PCA")[ ,c(1:22)]
-# 0.2% var or greater
-reducedDim(sce.amy, "PCA_13") <- reducedDim(sce.amy, "PCA")[ ,c(1:13)]
-# Top 10 (as Mathys, et al)
-reducedDim(sce.amy, "PCA_10") <- reducedDim(sce.amy, "PCA")[ ,c(1:10)]
-
-# First remove this reducedDim bc this has caused trouble previously
-reducedDim(sce.amy, "TSNE") <- NULL
-
-# This is interesting:
-sapply(c(1:45), function(x){round(cor(reducedDim(sce.amy,"PCA")[ ,x], as.numeric(as.factor(sce.amy$donor))),3)})
-    #[1] -0.03913056  0.18884743 -0.08465435  0.08171014  0.70429054  0.03941123
-    #[7] -0.07619896  0.02419195  0.08840512 -0.05000060
-boxplot(reducedDim(sce.amy,"PCA")[ ,5] ~ sce.amy$donor)
-    # Two distributions for sure, though 'close' to one another
-# Alternatively
-plotReducedDim(sce.amy, dimred="PCA", ncomponents=5, colour_by="donor", point_alpha=0.5)
-    # Can't really appreciate as well actually
-
-    ## -> let's get rid of PC5 and try on "PCA_optb"
-reducedDim(sce.amy, "PCA_optb") <- reducedDim(sce.amy, "PCA")[ ,c(1:4, 6:(metadata(pc.choice.amy)$chosen))]
-
-
-
-
-# ## 22 PCs tSNE === 
-# set.seed(109)
-# sce.amy.tsne.22pcs <- runTSNE(sce.amy, dimred="PCA_22")
-# 
-# ## 13 PCs tSNE ===
-# set.seed(109)
-# sce.amy.tsne.13pcs <- runTSNE(sce.amy, dimred="PCA_13")
-# 
-# ## 10 PCs tSNE ===
-# set.seed(109)
-# sce.amy.tsne.10pcs <- runTSNE(sce.amy, dimred="PCA_10")
-
-## "optimal-b" PCs tSNE ===
-set.seed(109)
-sce.amy.tsne.optb <- runTSNE(sce.amy, dimred="PCA_optb")
-    ## Overall this is the best.  Still very strong donor/batch effects, but this _could_ also be
-     #   because they seem to be quite different subdivisions of the amygdala...
-
-
-# Drop "Ambig.lowNtrxts" cluster as always
-# sce.amy.tsne.22pcs <- sce.amy.tsne.22pcs[ ,sce.amy.tsne.22pcs$cellType.split != "Ambig.lowNtrxts"] # 50
-# sce.amy.tsne.22pcs$cellType.split <- droplevels(sce.amy.tsne.22pcs$cellType.split)
-# 
-# sce.amy.tsne.13pcs <- sce.amy.tsne.13pcs[ ,sce.amy.tsne.13pcs$cellType.split != "Ambig.lowNtrxts"] # 50
-# sce.amy.tsne.13pcs$cellType.split <- droplevels(sce.amy.tsne.13pcs$cellType.split)
-# 
-# sce.amy.tsne.10pcs <- sce.amy.tsne.10pcs[ ,sce.amy.tsne.10pcs$cellType.split != "Ambig.lowNtrxts"] # 50
-# sce.amy.tsne.10pcs$cellType.split <- droplevels(sce.amy.tsne.10pcs$cellType.split)
-
-sce.amy.tsne.optb <- sce.amy.tsne.optb[ ,sce.amy.tsne.optb$cellType.split != "Ambig.lowNtrxts"] # 50
-sce.amy.tsne.optb$cellType.split <- droplevels(sce.amy.tsne.optb$cellType.split)
-
-
-pdf("pdfs/revision/exploration/zExplore_Amyg-n2_tSNE_22-13-10-optb-PCs_MNTMay2020.pdf", width=8)
-# 22 PCs
-plotTSNE(sce.amy.tsne.22pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
-         text_size=8, theme_size=18) +
-  ggtitle("t-SNE on top 22 PCs (>= 0.1% var)") + theme(plot.title = element_text(size=19))
-# 13 PCs
-plotTSNE(sce.amy.tsne.13pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
-         text_size=8, theme_size=18) +
-  ggtitle("t-SNE on top 13 PCs (>= 0.2% var)") + theme(plot.title = element_text(size=19))
-# 10 PCs
-plotTSNE(sce.amy.tsne.10pcs, colour_by="cellType.split", point_alpha=0.5, point_size=4.0,
-         text_size=8, theme_size=18) +
-  ggtitle("t-SNE on top 10 PCs") + theme(plot.title = element_text(size=19))
-# optimal PCs, version b (PC 5 removed)
-plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_alpha=0.5, point_size=4.0, text_by="cellType.split",
-         text_size=8, theme_size=18) +
-  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed") + theme(plot.title = element_text(size=15))
-# and color by sample
-plotTSNE(sce.amy.tsne.optb, colour_by="sample", point_size=4.5, point_alpha=0.5,
-         text_size=8, theme_size=18) +
-  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed") + theme(plot.title = element_text(size=15))
-dev.off()
-
-
-
-# Save the candidates
-Readme <- "This AMY SCE already has 50 'ambig.lowNtrxts' nuclei removed, and tSNE is on optimal 45 [-PC5] PCs"
-save(sce.amy.tsne.optb, Readme, file="rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda")
-
-
-
+## Reference chunk: If wanting to manually edit 'text_by=' coordinates =======
 # Adapted from scater::plotReducedDim():
 # Hidden function needed for this chunk ====
     .coerce_to_factor <- function(x, level.limit, msg) {
@@ -771,15 +481,16 @@ DFforLabs.edit$Y[!is.na(DFforLabs$labels)] <- by_text_y[match(as.character(DFfor
 ## Finally print
 library(ggrepel)
 
-pdf("pdfs/revision/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
+#pdf("pdfs/revision/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
 set.seed(109)
 plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=6, point_alpha=0.5,
          theme_size=18) +
   geom_text_repel(data=DFforLabs.edit, size=6.0,
                   aes(label=labels)) +
   ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed")
-dev.off()
+#dev.off()
 
+### end reference chunk ========
 
 
 
