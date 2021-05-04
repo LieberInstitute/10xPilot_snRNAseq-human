@@ -350,9 +350,9 @@ annotationTab.sacc$cellType[24] <- "ambig.SYT1.SNAP25"
 
 
 # Then add these to the SCE
-sce.sacc$cellType.prelim <- annotationTab.sacc$cellType[match(sce.sacc$collapsedCluster,
+sce.sacc$cellType <- annotationTab.sacc$cellType[match(sce.sacc$collapsedCluster,
                                                        annotationTab.sacc$collapsedCluster)]
-sce.sacc$cellType.prelim <- factor(sce.sacc$cellType.prelim)
+sce.sacc$cellType <- factor(sce.sacc$cellType)
 
 ## Save
 save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo, annotationTab.sacc,
@@ -368,7 +368,7 @@ pdf("pdfs/revision/regionSpecific_sACC-n5_marker-logExprs_collapsedClusters_MNT2
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.sacc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType.prelim", colour_by="cellType.prelim", point_alpha=0.5, point_size=.7,
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
                    add_legend=F, show_median=T) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
@@ -377,8 +377,8 @@ for(i in 1:length(markers.mathys.custom)){
 dev.off()
 
     # Optionally, drop doublet cluster & 'drop.lowNTx' and re-print
-    sce.sacc <- sce.sacc[ ,-grep("drop.",sce.sacc$cellType.prelim)]
-    sce.sacc$cellType.prelim <- droplevels(sce.sacc$cellType.prelim)
+    sce.sacc <- sce.sacc[ ,-grep("drop.",sce.sacc$cellType)]
+    sce.sacc$cellType <- droplevels(sce.sacc$cellType)
 
     # Final comment - the Micro cluster--its prelim clusters were checked for endothelial
     #                 markers, but doesn't seem they were merged together.  Perhaps this dataset
@@ -388,19 +388,19 @@ dev.off()
     
 ## Re-print reducedDims with these annotations ===
 pdf("pdfs/revision/regionSpecific_sACC-n5_reducedDims-with-collapsedClusters_MNT2021.pdf")
-plotReducedDim(sce.sacc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType.prelim", point_alpha=0.5)
+plotReducedDim(sce.sacc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="sampleID", point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="protocol", point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="prelimCluster", text_by="prelimCluster",
          text_size=3, point_alpha=0.5)
-plotTSNE(sce.sacc, colour_by="cellType.prelim", text_by="cellType.prelim",
+plotTSNE(sce.sacc, colour_by="cellType", text_by="cellType",
          text_size=3, point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="sum", point_alpha=0.5)
 plotTSNE(sce.sacc, colour_by="doubletScore", point_alpha=0.5)
 # And some more informative UMAPs
 plotUMAP(sce.sacc, colour_by="prelimCluster", text_by="prelimCluster",
          text_size=3, point_alpha=0.5)
-plotUMAP(sce.sacc, colour_by="cellType.prelim", text_by="cellType.prelim",
+plotUMAP(sce.sacc, colour_by="cellType", text_by="cellType",
          text_size=3, point_alpha=0.5)
 dev.off()
 
