@@ -1,8 +1,9 @@
 ### for MAGMA with LIBD 10x pilot analyses
-  #     - plotting results/heatmaps
+  #     - plotting Results_v2/heatmaps
   # UPDATE: re-running with new v1.08
   # nvm - don't include this 13Sep2020: PGC3-SCZD GWAS now published. lol. 
-  # MNT 15Sep2020 ======================
+  # MNT 05May2021: print stats from iteration with 'non0median' filter 
+  #                for subcluster markers ================================
 
 library(readr)
 library(stringr)
@@ -17,23 +18,23 @@ regions <- c("dlpfc","sacc","hpc","nac","amy")
 magmaStats <- list()
 
 for(i in regions){
-  magmaStats[[i]][["PGC2.SCZ"]] <- read.table(paste0("./Results/",i,"_clozuk_pgc2.gsa.out"), header=T)
-  #magmaStats[[i]][["PGC3.SCZ"]] <- read.table(paste0("./Results/",i,"_pgc3_scz.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.ASD"]] <- read.table(paste0("./Results/",i,"_PGC_ASD.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.BIP"]] <- read.table(paste0("./Results/",i,"_PGC_BIP.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.MDD"]] <- read.table(paste0("./Results/",i,"_MDD29_23andMe.gsa.out"), header=T)
+  magmaStats[[i]][["PGC2.SCZ"]] <- read.table(paste0("./Results_v2/",i,"_clozuk_pgc2.gsa.out"), header=T)
+  #magmaStats[[i]][["PGC3.SCZ"]] <- read.table(paste0("./Results_v2/",i,"_pgc3_scz.gsa.out"), header=T)
+  magmaStats[[i]][["PGC.ASD"]] <- read.table(paste0("./Results_v2/",i,"_PGC_ASD.gsa.out"), header=T)
+  magmaStats[[i]][["PGC.BIP"]] <- read.table(paste0("./Results_v2/",i,"_PGC_BIP.gsa.out"), header=T)
+  magmaStats[[i]][["PGC.MDD"]] <- read.table(paste0("./Results_v2/",i,"_MDD29_23andMe.gsa.out"), header=T)
   # PTSD - added 09Sep
-  magmaStats[[i]][["PGCFr2.PTSD"]] <- read.table(paste0("./Results/",i,"_PTSD.gsa.out"), header=T)
+  magmaStats[[i]][["PGCFr2.PTSD"]] <- read.table(paste0("./Results_v2/",i,"_PTSD.gsa.out"), header=T)
   
   # Addiction GWAS
-  magmaStats[[i]][["addxn.AgeSmk"]] <- read.table(paste0("./Results/",i,"_AgeSmk.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.CigDay"]] <- read.table(paste0("./Results/",i,"_CigDay.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.DrnkWk"]] <- read.table(paste0("./Results/",i,"_DrnkWk.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.SmkInit"]] <- read.table(paste0("./Results/",i,"_SmkInit.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.SmkCes"]] <- read.table(paste0("./Results/",i,"_SmkCes.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.AgeSmk"]] <- read.table(paste0("./Results_v2/",i,"_AgeSmk.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.CigDay"]] <- read.table(paste0("./Results_v2/",i,"_CigDay.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.DrnkWk"]] <- read.table(paste0("./Results_v2/",i,"_DrnkWk.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.SmkInit"]] <- read.table(paste0("./Results_v2/",i,"_SmkInit.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.SmkCes"]] <- read.table(paste0("./Results_v2/",i,"_SmkCes.gsa.out"), header=T)
   # Added for control but not including in multiple test corrxn, and just for supplement:
   #   - CARDIoGRAM+C4D coronary artery dx meta-GWAS
-  #magmaStats[[i]][["CoronArtDx"]] <- read.table(paste0("./Results/",i,"_CAD.gsa.out"), header=T)
+  #magmaStats[[i]][["CoronArtDx"]] <- read.table(paste0("./Results_v2/",i,"_CAD.gsa.out"), header=T)
 }
 
 ## merge to assess significance thresholds (did this before adding CAD meta-GWAS) ===
@@ -52,15 +53,15 @@ colnames(magmaStats_long)[3:4] = c("GWAS", "P")
 
 
 table(p.adjust(magmaStats_long$P, "fdr") < 0.05)
-    # FALSE  TRUE
-    #   444   236 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    # FALSE  TRUE 
+    #   356   324 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
 betacut.fdr <- max(magmaStats_long$P[p.adjust(magmaStats_long$P, "fdr") < 0.05])
-    # [1] 0.017309 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    # [1] 0.023635 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
 table(p.adjust(magmaStats_long$P, "bonf") < 0.05)
-    # FALSE  TRUE
-    #   620    60 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    # FALSE  TRUE 
+    #   579   101 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
 betacut.bonf <- max(magmaStats_long$P[p.adjust(magmaStats_long$P, "bonf") < 0.05])
-    #[1] 6.7732e-05 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    #[1] 7.2478e-05 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
 
 
     ## Btw - for Discussion:
@@ -73,6 +74,8 @@ betacut.bonf <- max(magmaStats_long$P[p.adjust(magmaStats_long$P, "bonf") < 0.05
     magmaStats_long$P.adj.fdr <- p.adjust(magmaStats_long$P, "fdr")
               
     magmaStats_long[which(magmaStats_long$P.adj.fdr < 0.05 & magmaStats_long$GWAS=="PGCFr2.PTSD"), ]
+        # ** NOTE: these were preprint stats (prior to 05May2021 update;
+        #          AMY 'Inhib.5' no longer meets FDR significance)
         #     Region       CellType        GWAS         P   P.adj.fdr
         # 279  dlpfc Excit.L6.broad PGCFr2.PTSD 0.0048336 0.020935338
         # 289  dlpfc          Oligo PGCFr2.PTSD 0.0035806 0.016340993
@@ -115,7 +118,9 @@ magmaStats_long$Beta <- magmaStats_long.beta$Beta
 magmaStats_long <- magmaStats_long[ ,c("Region", "CellType", "GWAS", "Beta", "P", "P.adj.fdr")]
 
 ## Supplementary table: PGC3.SCZ in lieu of PGC2 & PTSD ===
-write.csv(magmaStats_long, file = "../tables/suppTable_magma-v1.08_byCluster_GWASinMainSection.csv",
+# write.csv(magmaStats_long, file = "../tables/suppTable_magma-v1.08_byCluster_GWASinMainSection.csv",
+#           row.names=F)
+write.csv(magmaStats_long, file = "../tables/suppTable_magma-v1.08_byCluster_GWASinMainSection_MNT05May2021.csv",
           row.names=F)
 
 # PTSD results, separately because not part of main section
