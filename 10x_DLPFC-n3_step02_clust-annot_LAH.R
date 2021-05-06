@@ -149,7 +149,7 @@ plotReducedDim(sce.dlpfc, dimred="UMAP", colour_by="sampleID")
 snn.gr <- buildSNNGraph(sce.dlpfc, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
-    ## 59 prelim clusters
+    ## 107 prelim clusters
 
 # Assign as 'prelimCluster'
 sce.dlpfc$prelimCluster <- factor(clusters.k20)
@@ -181,8 +181,8 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
     
     # And btw...
     table(rowSums(prelimCluster.PBcounts)==0)
-        #FALSE  TRUE
-        #29381  4157
+    # FALSE  TRUE 
+    # 29310  4228
 
 # Compute LSFs at this level
 sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
@@ -199,11 +199,11 @@ dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
 # Just for observation
 par(cex=.6)
-myplclust(tree.clusCollapsed, main="5x Amyg prelim-kNN-cluster relationships", cex.main=2, cex.lab=1.5, cex=1.8)
+myplclust(tree.clusCollapsed, cex.main=2, cex.lab=1.5, cex=1.8)
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=250)
+                               minClusterSize=2, deepSplit=1, cutHeight=350)
 
 
 table(clust.treeCut)
@@ -217,23 +217,44 @@ unname(clust.treeCut[order.dendrogram(dend)])
     unname(glia.treeCut[order.dendrogram(dend)])
     
     # Take those and re-assign to the first assignments
-    clust.treeCut[order.dendrogram(dend)][c(38:59)] <- ifelse(glia.treeCut[order.dendrogram(dend)][c(38:59)] == 0,
-                                                                      0, glia.treeCut[order.dendrogram(dend)][c(38:59)] + 10)
-                                                                      
-    unname(clust.treeCut[order.dendrogram(dend)])
+    
+
+name_zeros <- function(g, groups_index){
+  next_group <- max(g) + 1
+  i_zero <- which(g == 0)
+  
+  i_groups <- unlist(groups_index)
+  stopifnot(all(i_groups %in% i_zero))
+  i_zero <- i_zero[!i_zero %in% i_groups]
+  
+  for(i in 1:length(groups_index)){
+    gi <- groups_index[[i]]
+    g[gi] <- next_group + (i - 1)
+  }
+  
+  ## non grouped 
+  next_group <- max(as.integer(g), na.rm = TRUE) + 1
+  new_names <- next_group:(next_group + length(i_zero) - 1)
+  g[i_zero] <- new_names
+  return(g)
+}
+
+clust <- clust.treeCut[order.dendrogram(dend)]
+clust2 <- name_zeros(clust, list(c(1,2), c(106,107)))
+unname(clust2)
 
 # Add new labels to those prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1:2, 3,3, 4:6)
+# clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1, 1, 2:6, 7, 7)
 
 # 'Re-write', since there are missing numbers
-clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[order.dendrogram(dend)]))
+clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust2))
 
-labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
+labels_colors(dend) <- tableau20[clust2]
 
 # Print for future reference
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_HC-prelimCluster-relationships_LAH2021.pdf")
 par(cex=0.8, font=2)
-plot(dend, main="5x Amyg prelim-kNN-cluster relationships with collapsed assignments")
+plot(dend, main="3x DLPFC prelim-kNN-cluster relationships with collapsed assignments")
 dev.off()
 
 
@@ -244,7 +265,7 @@ clusterRefTab.dlpfc <- data.frame(origClust=order.dendrogram(dend),
 
 # Assign as 'collapsedCluster'
 sce.dlpfc$collapsedCluster <- factor(clusterRefTab.dlpfc$merged[match(sce.dlpfc$prelimCluster, clusterRefTab.dlpfc$origClust)])
-
+n_clusters <- length(levels(sce.dlpfc$collapsedCluster))
 # Print some visualizations:
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_reducedDims-with-collapsedClusters_LAH2021.pdf")
 plotReducedDim(sce.dlpfc, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
@@ -278,7 +299,7 @@ for(i in 1:length(markers.mathys.custom)){
                    x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.4, point_size=.7,
                    add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
+                                                colour=rep(tableau20[1:n_clusters], length(markers.mathys.custom[[i]]))) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
     ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
