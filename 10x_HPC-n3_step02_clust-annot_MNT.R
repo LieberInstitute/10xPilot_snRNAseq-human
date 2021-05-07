@@ -2,6 +2,7 @@
 ###   **Region-specific analyses**
 ###     - (3x) HPC samples from: Br5161 & Br5212 & Br5287
 ### Initiated MNT 07Feb2020
+### MNT 23Apr2021: Updated QC'd SCE (no add'l donors)
 #####################################################################
 
 library(SingleCellExperiment)
@@ -90,22 +91,22 @@ save(sce.hpc, chosen.hvgs.hpc, ref.sampleInfo,
      file="rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
-    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_HPC-n3_optimalPCselxn_MNTFeb2020.R')
+    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_HPC-n3_optimalPCselxn_MNT2021.R')
     #    --> saved into same .rda
 
 
 ### Picking up with optimally-defined PC space ===
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo
 
 
 # How many PCs is optimal?:
 metadata(pc.choice.hpc)$chosen
-    ## 49
+    ## 59
 
 ## Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.hpc, "PCA_opt") <- reducedDim(sce.hpc, "PCA")[ ,1:(metadata(pc.choice.hpc)$chosen)]
+reducedDim(sce.hpc, "PCA_opt") <- reducedDim(sce.hpc, "PCA_corrected")[ ,1:(metadata(pc.choice.hpc)$chosen)]
 
 
 ## t-SNE
@@ -117,19 +118,10 @@ sce.hpc <- runTSNE(sce.hpc, dimred="PCA_opt")
 set.seed(109)
 sce.hpc <- runUMAP(sce.hpc, dimred="PCA_opt")
 
-## Load in phenodata from pan-brain analysis -> colData for downstream use
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
-     verbose=T)
-    # Want 'ref.sampleInfo'
-
-sce.hpc$region <- ss(sce.hpc$sample,".5",1)
-sce.hpc$donor <- paste0("Br",ss(sce.hpc$sample,"c.",2))
-sce.hpc$processDate <- ref.sampleInfo$realBatch[match(sce.hpc$sample, ref.sampleInfo$sampleID)]
-sce.hpc$protocol <- ref.sampleInfo$protocol[match(sce.hpc$processDate, ref.sampleInfo$realBatch)]
-
-# Save for now
-save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda")
+# How do these look?
+plotReducedDim(sce.hpc, dimred="TSNE", colour_by="sampleID")
+plotReducedDim(sce.hpc, dimred="TSNE", colour_by="prelimCluster")
+plotReducedDim(sce.hpc, dimred="UMAP", colour_by="sampleID")
 
 
 ### Clustering: Two-step ======================================================
@@ -137,16 +129,26 @@ save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo,
 #         - take k=20 NN to build graph
 snn.gr <- buildSNNGraph(sce.hpc, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
+
 table(clusters.k20)
-    ## 
+    ##    1    2    3    4    5    6    7    8    9   10   11   12   13   14 
+    #   236  302  117  767  111   69  112   35   35 1830   26  123  117   26 
+    #    15   16   17   18   19   20   21   22   23   24   25   26   27   28 
+    #   168   56 1512   84   51   27  892   43   68   34    6  269    5   36 
+    #    29   30   31   32   33   34   35   36   37   38   39   40   41   42 
+    #    32   46  231   33   15 1703   91   23   30  117   50    6   20    8 
+    #    43   44   45   46   47   48   49   50 
+    #     5    2   26  567   54    6   17   29
 
 # Assign as 'prelimCluster'
 sce.hpc$prelimCluster <- factor(clusters.k20)
 
 # Is sample driving this 'high-res' clustering at this level?
-table(sce.hpc$prelimCluster, sce.hpc$sample)  
+table(sce.hpc$prelimCluster, sce.hpc$sampleID)  
 
-table(sce.hpc$sample)
+table(sce.hpc$sampleID)
+    #br5161.hpc br5212.hpc br5287.hpc 
+    #      4421       3977       1870
 
 ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
 #         (as determined in: 'side-Rscript_testingStep2_HC-normalizn-approaches_wAmygData_MNTJan2020.R')
@@ -163,8 +165,8 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
 
     # And btw...
     table(rowSums(prelimCluster.PBcounts)==0)
-    #FALSE  TRUE
-    #28128  5410
+    #FALSE  TRUE 
+    #28768  4770
 
 # Compute LSFs at this level
 sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
@@ -184,24 +186,21 @@ myplclust(tree.clusCollapsed, main="3x HPC prelim-kNN-cluster relationships", ce
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=214)
+                               minClusterSize=2, deepSplit=1, cutHeight=400)
 
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-## Cutting at 475 looks the best - go ahead and proceed with this
+## Cutting at 400 looks the best - go ahead and proceed with this
 
-    ## The first cut-off prelimCluster only has 5 nuclei - re-merge with its originalmembers
-    #clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)[1]] <- 2
-
-# Add new labels to those (2x) prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2)
+# Add new labels to those (6x) prelimClusters cut off
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2, 3,3, 4,4)
 
 
-labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
+labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/regionSpecific_HPC-n3_HC-prelimCluster-relationships_Feb2020.pdf")
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf")
 par(cex=1.1, font=2)
 plot(dend, main="3x HPC prelim-kNN-cluster relationships")
 dev.off()
@@ -216,11 +215,15 @@ clusterRefTab.hpc <- data.frame(origClust=order.dendrogram(dend),
 sce.hpc$collapsedCluster <- factor(clusterRefTab.hpc$merged[match(sce.hpc$prelimCluster, clusterRefTab.hpc$origClust)])
 
 # Print some visualizations:
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_Feb2020.pdf")
-plotReducedDim(sce.hpc, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.hpc, colour_by="sample", point_alpha=0.5)
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.hpc, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="protocol", point_alpha=0.5)
 plotTSNE(sce.hpc, colour_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.hpc, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.hpc, colour_by="sampleID", point_alpha=0.5)
 plotUMAP(sce.hpc, colour_by="collapsedCluster", point_alpha=0.5)
 dev.off()
 
@@ -234,12 +237,12 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1'),
   # Added MNT 20Mar2020
   'Tcell' = c('TRAC','SKAP1','CCL5')
 )
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/zold_regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_Feb2020.pdf",
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf",
     height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -247,54 +250,46 @@ for(i in 1:length(markers.mathys.custom)){
                    x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:8], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau20[1:12], length(markers.mathys.custom[[i]])))
   )
 }
 dev.off()
 
 
-# Observation: cluster 7 or 8 not an obvious 'cell type'...
+## QC - How do the total UMI distribution look?
 newClusIndex <- splitit(sce.hpc$collapsedCluster)
 sapply(newClusIndex, function(x) {quantile(sce.hpc[,x]$sum)})
-    #            1       2      3       4     5     6    7       8
-    #0%      981.0   231.0   1152   343.0   328   168  102  783.00
-    #25%   22657.0  4215.5  18243  6145.0  4488  3481  127 2314.75
-    #50%   32994.0  7025.0  28322  9248.0  6266  4661  156 3215.00
-    #75%   46054.5 10610.0  40240 12553.5  8558  6103  236 3756.50
-    #100% 150461.0 30085.0 111453 30332.0 29556 22692 1739 6038.00
+    #           1        2       3         4       5         6     7     8
+    # 0%     2841   475.00  1940.0    981.00   535.0   1693.00   454   621
+    # 25%   18433  4540.25  5631.5  25939.00  6368.5   7674.75  3580  3684
+    # 50%   28434  6347.50  7996.5  33836.50  9347.0  14557.00  4661  5573
+    # 75%   40337  8634.50 11802.5  44510.25 12629.5  48292.25  5966  8338
+    # 100% 111453 29556.00 30085.0 114615.00 30332.0 150461.00 12463 20088
+    #             9      10   11      12
+    # 0%    1651.00 1105.00  451   434.0
+    # 25%   2478.50 2472.25  915   545.5
+    # 50%   6049.00 3215.00 1459   913.0
+    # 75%  19584.75 3756.50 1806  1097.0
+    # 100% 58784.00 6038.00 4235 54810.0
 
-    # Looks like that collapsedCluster 6 is just driven by low # transcripts...
-    library(pheatmap)
-    cc3 <- assay(sce.hpc, "logcounts")[ ,sce.hpc$collapsedCluster==3]
-    cor.cc3 <- cor(as.matrix(cc3))
-    pheatmap(cor.cc3,show_rownames=F,show_colnames=F)
-    
-    cc7 <- assay(sce.hpc, "logcounts")[ ,sce.hpc$collapsedCluster==7]
-    cor.cc7 <- cor(as.matrix(cc7))  # pretty poor, as expected
-    pheatmap(cor.cc7,show_rownames=F,show_colnames=F)
-    quantile(cor.cc7)
-        #          0%          25%          50%          75%         100%
-        #-0.005752025  0.021315889  0.033826675  0.049805456  1.000000000
-    
-    cc8 <- assay(sce.hpc, "logcounts")[ ,sce.hpc$collapsedCluster==8]
-    cor.cc8 <- cor(as.matrix(cc8))  # pretty poor - less bad than 7
-    pheatmap(cor.cc8,show_rownames=F,show_colnames=F)
-    quantile(cor.cc8)
-        #       0%       25%       50%       75%      100%
-        #0.2003143 0.3150381 0.3570639 0.3946995 1.0000000
+table(sce.hpc$collapsedCluster)
+#   1    2    3    4    5    6    7    8    9   10   11   12 
+# 369 5912  936  486  843  128 1161  277    6   26  105   19 
 
 ## Add annotations, looking at marker gene expression
-annotationTab.hpc <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7, 8),
-                                  cellType=c("Excit", "Astro", "Inhib", "OPC",
-                                             "Oligo", "Micro", "Ambig.lowNtrxts", "Ambig.glial")
-)
+annotationTab.hpc <- data.frame(collapsedCluster=c(1:12))
+annotationTab.hpc$cellType <- NA
+annotationTab.hpc$cellType[c(4,6)] <- paste0("Excit_", c("A","B"))
+annotationTab.hpc$cellType[c(1)] <- paste0("Inhib_", c("A"))
+annotationTab.hpc$cellType[c(2,5)] <- c("Oligo", "Astro")
+
 
 sce.hpc$cellType <- annotationTab.hpc$cellType[match(sce.hpc$collapsedCluster,
                                                          annotationTab.hpc$cluster)]
 
-## Save for now MNT 20Feb2020
-save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda")
+## Save for now (pre-annotating)
+save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, #annotationTab.hpc
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
 
