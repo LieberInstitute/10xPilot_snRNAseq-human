@@ -156,7 +156,9 @@ sce.dlpfc$prelimCluster <- factor(clusters.k20)
 plotReducedDim(sce.dlpfc, dimred="TSNE", colour_by="prelimCluster")
 
 # Is sample driving this 'high-res' clustering at this level?
-table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)  # (a little bit, but is typical)
+(sample_prelimClusters <- table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID))  # (a little bit, but is typical)
+sample_prelimClusters[which(rowSums(sample_prelimClusters == 0) == 2),]
+# 39 - only 4 samples all from Br5207
 
 # rbind the ref.sampleInfo[.rev]
 ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
@@ -190,7 +192,6 @@ sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
 # Normalize with these LSFs
 geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFactors.PB.all + 1)}))
 
-
 ## Perform hierarchical clustering
 dist.clusCollapsed <- dist(t(geneExprs.temp))
 tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
@@ -201,10 +202,13 @@ dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 par(cex=.6)
 myplclust(tree.clusCollapsed, cex.main=2, cex.lab=1.5, cex=1.8)
 
+dend %>% 
+  set("labels_cex", 0.8) %>%
+  plot(horiz = TRUE)
+abline(v = 350, lty = 2)
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
                                minClusterSize=2, deepSplit=1, cutHeight=350)
-
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
@@ -218,27 +222,6 @@ unname(clust.treeCut[order.dendrogram(dend)])
     
     # Take those and re-assign to the first assignments
     
-
-name_zeros <- function(g, groups_index){
-  next_group <- max(g) + 1
-  i_zero <- which(g == 0)
-  
-  i_groups <- unlist(groups_index)
-  stopifnot(all(i_groups %in% i_zero))
-  i_zero <- i_zero[!i_zero %in% i_groups]
-  
-  for(i in 1:length(groups_index)){
-    gi <- groups_index[[i]]
-    g[gi] <- next_group + (i - 1)
-  }
-  
-  ## non grouped 
-  next_group <- max(as.integer(g), na.rm = TRUE) + 1
-  new_names <- next_group:(next_group + length(i_zero) - 1)
-  g[i_zero] <- new_names
-  return(g)
-}
-
 clust <- clust.treeCut[order.dendrogram(dend)]
 clust2 <- name_zeros(clust, list(c(1,2), c(106,107)))
 unname(clust2)
@@ -312,33 +295,25 @@ dev.off()
 ## QC - How do the total UMI distribution look?
 newClusIndex <- splitit(sce.dlpfc$collapsedCluster)
 sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$sum)})
-    #             1      2        3      4        5       6         7       8       9
-    # 0%     2876.0    831   7358.0   1685   566.00  2219.0   1238.00  1182.0   641.0
-    # 25%   25828.5  22550  31449.0   9983  6921.25 12195.5  20472.75  7471.5  4634.5
-    # 50%   48907.5  34143  50313.0  18481 11103.50 36275.0  45897.50 11275.0  6510.5
-    # 75%   66821.5  43717  70976.5  39510 17152.25 49672.5  67085.00 16469.5  8964.0
-    # 100% 156945.0 115493 165583.0 121273 95032.00 94599.0 171608.00 35728.0 30028.0
+#          1     2     3     4     5     6        7         8       9       10       11    12       13   14       15
+# 0%    1708  3045  1803  1201  1838  1749   884.00   2295.00   850.0  9100.00   3029.0  1099   879.00 1774  8833.00
+# 25%  11416 15330 18791 28468 19205 23015  4008.75  39673.25  4940.5 26131.75  37044.5 27809  4052.50 2332 19428.75
+# 50%  16369 18968 24138 34997 25241 29623  5737.00  49345.00  6385.0 32065.50  49414.0 37430  6864.50 2762 20281.50
+# 75%  22181 23036 28996 43590 33292 35364  7953.00  59114.25  7986.0 39545.00  61162.0 47099  9722.75 4379 22677.00
+# 100% 66556 55574 81134 87392 69309 67503 26618.00 115449.00 25379.0 69202.00 101625.0 83826 23492.00 6919 27504.00
+#          16
+# 0%   1979.0
+# 25%  3210.5
+# 50%  4692.5
+# 75%  5218.0
+# 100% 8043.0
 
-    #           10    11       12    *13       14    *15     16     17
-    # 0%    1209.0   435  4036.00  121.0  1711.00  101.0  438.0  188.0
-    # 25%   9787.5  3952  8556.00  245.0  4021.75  373.5 2382.0  850.5
-    # 50%  13243.0  5381 10896.00  313.0  5210.00  743.0 3657.0 1156.0
-    # 75%  16967.5  7055 13478.25  468.5  7050.25 1018.0 5029.5 1842.5
-    # 100% 39830.0 20500 27167.00 2770.0 15214.00 1556.0 6237.0 7739.0
-
-
-    ## Obser.: looks like collapsedCluster's 13 & 15 should be dropped - their marker
-    ##         expression is noisy too;;  16 is unclear, but it may just be dropped
-    ##         from consideration in more downstream analyses
-    ##       - DOES look like 14 are endothelials...! (weirdly they came from the NeuN-enriched...)
-    ## === === === === === === ==
 
 table(sce.dlpfc$collapsedCluster)
-    #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17 
-    # 780  541  399  525  500  555  216 1555 6080 1459 1201   44 1067   70   71   31   83
-        #  * 13 is quite overrepresented in Br5400, but this sample also had a mode
-        #    of <1000 total UMIs that were still kept after QC - thus probably a low trxts-driven cluster
-        #  * 15 is pretty evenly-ish distributed (16 too, but will keep 16)
+#   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+# 461  333  365  529  773  413  782  524 5455  132  187  243  960   19    8   18 
+
+## Drop 14:16?
 
 ## Add annotations, looking at marker gene expression
 annotationTab.dlpfc <- data.frame(collapsedCluster=c(1:17))
