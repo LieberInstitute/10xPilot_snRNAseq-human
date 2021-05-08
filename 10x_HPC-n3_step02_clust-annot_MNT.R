@@ -186,21 +186,23 @@ myplclust(tree.clusCollapsed, main="3x HPC prelim-kNN-cluster relationships", ce
 
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=400)
+                               minClusterSize=2, deepSplit=1, cutHeight=325)
 
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-## Cutting at 400 looks the best - go ahead and proceed with this
+    ## Cutting at 325 looks the best - go ahead and proceed with this
+     #    - 32 & 27, though not their own unique branch (such as 6,28), will be
+     #      considered the same, since distance is negligible (27 is only 5 nuclei)
 
-# Add new labels to those (6x) prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2, 3,3, 4,4)
+# Add new labels to those (13x) prelimClusters cut off
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2,3,4,4,5,6,6,7:9,10,10)
 
 
 labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf")
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf",width=9)
 par(cex=1.1, font=2)
 plot(dend, main="3x HPC prelim-kNN-cluster relationships")
 dev.off()
@@ -248,9 +250,9 @@ for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:12], length(markers.mathys.custom[[i]])))
+                                                colour=rep(tableau20[1:18], length(markers.mathys.custom[[i]])))
   )
 }
 dev.off()
@@ -259,69 +261,119 @@ dev.off()
 ## QC - How do the total UMI distribution look?
 newClusIndex <- splitit(sce.hpc$collapsedCluster)
 sapply(newClusIndex, function(x) {quantile(sce.hpc[,x]$sum)})
-    #           1        2       3         4       5         6     7     8
-    # 0%     2841   475.00  1940.0    981.00   535.0   1693.00   454   621
-    # 25%   18433  4540.25  5631.5  25939.00  6368.5   7674.75  3580  3684
-    # 50%   28434  6347.50  7996.5  33836.50  9347.0  14557.00  4661  5573
-    # 75%   40337  8634.50 11802.5  44510.25 12629.5  48292.25  5966  8338
-    # 100% 111453 29556.00 30085.0 114615.00 30332.0 150461.00 12463 20088
-    #             9      10   11      12
-    # 0%    1651.00 1105.00  451   434.0
-    # 25%   2478.50 2472.25  915   545.5
-    # 50%   6049.00 3215.00 1459   913.0
-    # 75%  19584.75 3756.50 1806  1097.0
-    # 100% 58784.00 6038.00 4235 54810.0
+    #            1        2       3         4     5       6      7     8        9
+    # 0%     2841.0   475.00  1940.0    981.00   454   535.0   7674  1127  1693.00
+    # 25%   20273.5  4540.25  5631.5  25939.00  3580  6381.5  13944  3609  7598.50
+    # 50%   30830.0  6347.50  7996.5  33836.50  4661  9330.0  35400  5767 12681.00
+    # 75%   41428.0  8634.50 11802.5  44510.25  5966 12623.5  53016  8420 14749.25
+    # 100% 111453.0 29556.00 30085.0 114615.00 12463 27854.0 150461 20088 52661.00
+    #           10       11       12      13   14      15    16      17      18
+    # 0%    2665.0  1651.00  3641.00 1105.00  451   621.0 11237  1380.0   434.0
+    # 25%   4124.5  2478.50  7335.00 2472.25  915  3720.5 13892  4535.5   545.5
+    # 50%   4814.0  6049.00  9693.00 3215.00 1459  5352.0 14277  9119.0   913.0
+    # 75%   7011.0 19584.75 15610.25 3756.50 1806  7971.0 18065 12166.5  1097.0
+    # 100% 10390.0 58784.00 48371.00 6038.00 4235 17296.0 30332 20135.0 54810.0
 
 table(sce.hpc$collapsedCluster)
-#   1    2    3    4    5    6    7    8    9   10   11   12 
-# 369 5912  936  486  843  128 1161  277    6   26  105   19 
+    #   1    2    3    4    5    6    7    8    9   10   11   12   13   14 
+    # 331 5912  936  486 1161  823   87  234    6   35    6   38   26  105 
+    #  15   16   17   18 
+    #  43    5   15   19
+
+
+## doublet score?
+sapply(newClusIndex, function(x) {round(quantile(sce.hpc$doubletScore[x]),2)})
+    #         1     2     3    4    5     6    7    8    9   10   11   12
+    # 0%   0.03  0.00  0.00 0.02 0.00  0.00 0.04 0.01 0.72 0.03 0.80 0.27
+    # 25%  0.77  0.20  0.08 0.09 0.03  0.04 0.07 0.06 1.39 0.04 0.86 0.74
+    # 50%  1.14  0.51  0.15 0.16 0.07  0.12 0.20 0.08 1.51 0.04 1.01 0.92
+    # 75%  1.38  1.12  0.25 0.54 0.14  0.22 0.68 0.12 1.54 0.05 1.12 0.99
+    # 100% 6.93 15.58 16.04 7.74 4.90 12.03 1.44 2.48 1.89 0.67 6.98 6.50
+    #        13   14   15    16   17   18
+    # 0%   0.05 0.00 0.05  6.77 0.15 0.00
+    # 25%  0.06 0.02 0.27  6.80 0.56 0.01
+    # 50%  0.09 0.04 0.34  6.93 0.69 0.02
+    # 75%  0.11 0.05 0.41  7.84 1.35 0.04
+    # 100% 0.12 0.66 1.98 10.81 2.46 1.17
+
+# At 'prelimCluster' level?
+clusIndex <- splitit(sce.hpc$prelimCluster)
+sapply(clusIndex, function(x) {round(quantile(sce.hpc$doubletScore[x]),2)})
+    # 29 & 47 for sure - 41 & 43 relatively high--43 being 'collapsedCluster' 16
+
 
 ## Add annotations, looking at marker gene expression
-annotationTab.hpc <- data.frame(collapsedCluster=c(1:12))
+annotationTab.hpc <- data.frame(collapsedCluster=c(1:18))
 annotationTab.hpc$cellType <- NA
-annotationTab.hpc$cellType[c(4,6)] <- paste0("Excit_", c("A","B"))
-annotationTab.hpc$cellType[c(1)] <- paste0("Inhib_", c("A"))
-annotationTab.hpc$cellType[c(2,5)] <- c("Oligo", "Astro")
+annotationTab.hpc$cellType[c(1)] <- paste0("Inhib")
+annotationTab.hpc$cellType[c(2)] <- paste0("Oligo")
+annotationTab.hpc$cellType[c(4,7,9:12)] <- paste0("Excit_", c("A","B","C","D","E","F"))
+annotationTab.hpc$cellType[c(5,6)] <- c("Micro","OPC")
+annotationTab.hpc$cellType[13] <- "Tcell"
+annotationTab.hpc$cellType[c(3,8,14)] <- paste0("Astro_", c("A","B","C"))
+annotationTab.hpc$cellType[15] <- "ambig"
+annotationTab.hpc$cellType[16] <- "drop.doublet"
+annotationTab.hpc$cellType[c(17,18)] <- paste0("ambig.glial_", c("A","B"))
 
 
 sce.hpc$cellType <- annotationTab.hpc$cellType[match(sce.hpc$collapsedCluster,
-                                                         annotationTab.hpc$cluster)]
+                                                         annotationTab.hpc$collapsedCluster)]
+sce.hpc$cellType <- factor(sce.hpc$cellType)
 
-## Save for now (pre-annotating)
-save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, #annotationTab.hpc
+
+## Save
+save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
+## Re-print marker expression with cell type labels ===
+# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
+#      verbose=T)
 
-### MNT 20Mar2020 === === ===
-# Re-print marker expression plots with annotated cluster names, after dropping 'Ambig.lowNtrxts'
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-table(sce.hpc$cellType)
-
-# First drop "Ambig.lowNtrxts" (101 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
-# Then rename "Ambig.glial" to "Tcell" (26 nuclei)
-#     (A posteriori - from downstream marker exploration)
-sce.hpc.temp <- sce.hpc
-sce.hpc.temp$cellType <- droplevels(sce.hpc.temp$cellType)
-sce.hpc.temp$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc.temp$cellType))
-
-
-pdf("pdfs/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=8)
+pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.hpc.temp, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+    plotExpression(sce.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium[1:7], length(markers.mathys.custom[[i]]))) +
+                   add_legend=F, show_median=T) +
+      stat_summary(fun = median, fun.min = median, fun.max = median,
+                   geom = "crossbar", width = 0.3,
+                   #colour=rep(tableau20[1:18], length(markers.mathys.custom[[i]]))) +
+                   colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
       ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
   )
 }
 dev.off()
 
+    # Optionally, drop doublet cluster & 'drop.lowNTx' and re-print
+    sce.hpc <- sce.hpc[ ,-grep("drop.",sce.hpc$cellType)]
+    sce.hpc$cellType <- droplevels(sce.hpc$cellType)
+
+# Final comment - the Micro cluster--its prelim clusters were checked for endothelial
+#                 markers, but doesn't seem they were merged together.  Perhaps this dataset
+#                 just didn't capture any, as with sACC (unlike for the AMY)
+
+    
+## Re-print reducedDims with these annotations ===
+pdf("pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.hpc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="cellType", text_by="cellType",
+         text_size=3, point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.hpc, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.hpc, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5)
+plotUMAP(sce.hpc, colour_by="cellType", text_by="cellType",
+         text_size=3, point_alpha=0.5)
+dev.off()
+    
+    
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
@@ -432,7 +484,7 @@ for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpression(sce.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
                                                 geom = "crossbar", width = 0.3,
                                                 colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
@@ -476,7 +528,7 @@ table(sce.hpc$cellType.split, sce.hpc$sample)
     # Tcell         13       10        3
 
 
-### Session info for 23Apr2021 ==============================
+### Session info for 07May2021 ==========================================================
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -495,8 +547,8 @@ sessionInfo()
 # [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 # 
 # attached base packages:
-#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils    
-# [8] methods   base     
+#   [1] parallel  stats4    stats     graphics  grDevices datasets 
+# [7] utils     methods   base     
 # 
 # other attached packages:
 #   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0          
@@ -514,54 +566,56 @@ sessionInfo()
 # 
 # loaded via a namespace (and not attached):
 #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
-# [3] colorspace_2.0-0          ellipsis_0.3.1           
+# [3] colorspace_2.0-0          ellipsis_0.3.2           
 # [5] scuttle_1.0.4             bluster_1.0.0            
 # [7] XVector_0.30.0            BiocNeighbors_1.8.2      
-# [9] rstudioapi_0.13           bit64_4.0.5              
-# [11] fansi_0.4.2               xml2_1.3.2               
-# [13] splines_4.0.4             R.methodsS3_1.8.1        
-# [15] sparseMatrixStats_1.2.1   cachem_1.0.4             
-# [17] Rsamtools_2.6.0           ResidualMatrix_1.0.0     
-# [19] dbplyr_2.1.1              R.oo_1.24.0              
-# [21] HDF5Array_1.18.1          compiler_4.0.4           
-# [23] httr_1.4.2                dqrng_0.2.1              
-# [25] assertthat_0.2.1          Matrix_1.3-2             
-# [27] fastmap_1.1.0             lazyeval_0.2.2           
-# [29] limma_3.46.0              BiocSingular_1.6.0       
-# [31] prettyunits_1.1.1         tools_4.0.4              
-# [33] rsvd_1.0.3                igraph_1.2.6             
-# [35] gtable_0.3.0              glue_1.4.2               
-# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5              
-# [39] rappdirs_0.3.3            Rcpp_1.0.6               
-# [41] vctrs_0.3.6               Biostrings_2.58.0        
-# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0       
-# [45] DelayedMatrixStats_1.12.3 stringr_1.4.0            
-# [47] beachmat_2.6.4            lifecycle_1.0.0          
-# [49] irlba_2.3.3               statmod_1.4.35           
-# [51] XML_3.99-0.6              edgeR_3.32.1             
-# [53] zlibbioc_1.36.0           scales_1.1.1             
-# [55] hms_1.0.0                 ProtGenerics_1.22.0      
-# [57] rhdf5_2.34.0              RColorBrewer_1.1-2       
-# [59] curl_4.3                  memoise_2.0.0            
-# [61] gridExtra_2.3             segmented_1.3-3          
-# [63] biomaRt_2.46.3            stringi_1.5.3            
-# [65] RSQLite_2.2.7             BiocParallel_1.24.1      
-# [67] rlang_0.4.10              pkgconfig_2.0.3          
-# [69] bitops_1.0-6              lattice_0.20-41          
-# [71] purrr_0.3.4               Rhdf5lib_1.12.1          
-# [73] GenomicAlignments_1.26.0  bit_4.0.4                
-# [75] tidyselect_1.1.0          magrittr_2.0.1           
-# [77] R6_2.5.0                  generics_0.1.0           
-# [79] DelayedArray_0.16.3       DBI_1.1.1                
-# [81] pillar_1.6.0              withr_2.4.2              
-# [83] RCurl_1.98-1.3            tibble_3.1.1             
-# [85] crayon_1.4.1              utf8_1.2.1               
-# [87] BiocFileCache_1.14.0      viridis_0.6.0            
-# [89] progress_1.2.2            locfit_1.5-9.4           
-# [91] grid_4.0.4                blob_1.2.1               
-# [93] R.utils_2.10.1            openssl_1.4.3            
-# [95] munsell_0.5.0             beeswarm_0.3.1           
-# [97] viridisLite_0.4.0         vipor_0.4.5              
-# [99] askpass_1.1 
+# [9] rstudioapi_0.13           farver_2.1.0             
+# [11] bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4            
+# [15] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
+# [17] cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1             
+# [21] R.oo_1.24.0               HDF5Array_1.18.1         
+# [23] compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1         
+# [27] Matrix_1.3-2              fastmap_1.1.0            
+# [29] lazyeval_0.2.2            limma_3.46.0             
+# [31] BiocSingular_1.6.0        prettyunits_1.1.1        
+# [33] tools_4.0.4               rsvd_1.0.3               
+# [35] igraph_1.2.6              gtable_0.3.0             
+# [37] glue_1.4.2                GenomeInfoDbData_1.2.4   
+# [39] dplyr_1.0.5               rappdirs_0.3.3           
+# [41] Rcpp_1.0.6                vctrs_0.3.6              
+# [43] Biostrings_2.58.0         rhdf5filters_1.2.0       
+# [45] rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
+# [47] stringr_1.4.0             beachmat_2.6.4           
+# [49] lifecycle_1.0.0           irlba_2.3.3              
+# [51] statmod_1.4.35            XML_3.99-0.6             
+# [53] edgeR_3.32.1              zlibbioc_1.36.0          
+# [55] scales_1.1.1              hms_1.0.0                
+# [57] ProtGenerics_1.22.0       rhdf5_2.34.0             
+# [59] RColorBrewer_1.1-2        curl_4.3                 
+# [61] memoise_2.0.0             gridExtra_2.3            
+# [63] segmented_1.3-3           biomaRt_2.46.3           
+# [65] stringi_1.5.3             RSQLite_2.2.7            
+# [67] BiocParallel_1.24.1       rlang_0.4.10             
+# [69] pkgconfig_2.0.3           bitops_1.0-7             
+# [71] lattice_0.20-41           purrr_0.3.4              
+# [73] Rhdf5lib_1.12.1           labeling_0.4.2           
+# [75] GenomicAlignments_1.26.0  cowplot_1.1.1            
+# [77] bit_4.0.4                 tidyselect_1.1.1         
+# [79] magrittr_2.0.1            R6_2.5.0                 
+# [81] generics_0.1.0            DelayedArray_0.16.3      
+# [83] DBI_1.1.1                 pillar_1.6.0             
+# [85] withr_2.4.2               RCurl_1.98-1.3           
+# [87] tibble_3.1.1              crayon_1.4.1             
+# [89] utf8_1.2.1                BiocFileCache_1.14.0     
+# [91] viridis_0.6.0             progress_1.2.2           
+# [93] locfit_1.5-9.4            grid_4.0.4               
+# [95] blob_1.2.1                digest_0.6.27            
+# [97] R.utils_2.10.1            openssl_1.4.3            
+# [99] munsell_0.5.0             beeswarm_0.3.1           
+# [101] viridisLite_0.4.0         vipor_0.4.5              
+# [103] askpass_1.1
 
 
