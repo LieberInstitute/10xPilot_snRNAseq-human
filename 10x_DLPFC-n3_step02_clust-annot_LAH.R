@@ -395,53 +395,49 @@ dev.off()
 
 
 ### For reference === == === == ===
-table(sce.dlpfc$cellType, sce.dlpfc$sample)
-    #                 amy.5161 amy.5212
-    # Ambig.lowNtrxts       34       16
-    # Astro                489      363
-    # Excit                226      261
-    # Inhib                 84      295
-    # Micro                425      339
-    # Oligo               1697     1776
-    # OPC                  335      292
+table(sce.dlpfc$cellType, sce.dlpfc$sampleID)
+#               br5161.dlpfc br5207.dlpfc br5212.dlpfc
+# ambig.glial_A            3           11            5
+# ambig.glial_B            3           13            2
+# Astro                  371          274          137
+# Excit_A                111          298          120
+# Excit_B                 75          544          154
+# Excit_C                 44          325          155
+# Excit_D                 22           83           27
+# Excit_E                 77           85           25
+# Excit_F                102          105           36
+# Inhib_A                 39          205           89
+# Inhib_B                 98          250          106
+# Inhib_C                 47          262           56
+# Inhib_D                119          216           78
+# Inhib_E                  2            3            2
+# Inhib_F                  0            7            1
+# Micro                  152          144           92
+# Oligo                 2754         2184          517
+# OPC                    196          285           91
 
-table(sce.dlpfc$prelimCluster, sce.dlpfc$sample)
-    #    amy.5161 amy.5212
-    # 1       425      339
-    # 2         8      113
-    # 3         0      123
-    # 4         2     1712
-    # 5      1695       64
-    # 6         8       42
-    # 7        33       16
-    # 8       473       20
-    # 9        73        1
-    # 10       85       13
-    # 11        0      272
-    # 12        0       55
-    # 13        2       62
-    # 14        0       60
-    # 15       34       16
-    # 16       68        0
-    # 17        0      255
-    # 18       24        0
-    # 19      335       37
-    # 20        0       69
-    # 21        0       40
-    # 22       14        9
-    # 23       11       24
+table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)
 
 table(sce.dlpfc$cellType, sce.dlpfc$collapsedCluster)
-#                    1    2    3    4    5    6    7
-# Ambig.lowNtrxts    0    0    0    0    0   50    0
-# Astro              0    0  852    0    0    0    0
-# Excit              0  487    0    0    0    0    0
-# Inhib            379    0    0    0    0    0    0
-# Micro              0    0    0    0    0    0  764
-# Oligo              0    0    0 3473    0    0    0
-# OPC                0    0    0    0  627    0    0
-
-
+#                  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18
+# ambig.glial_A    0    0    0    0    0    0    0    0    0    0    0    0    0   19    0    0    0    0
+# ambig.glial_B    0    0    0    0    0    0    0    0    0    0    0    0    0    0   18    0    0    0
+# Astro            0    0    0    0    0    0  782    0    0    0    0    0    0    0    0    0    0    0
+# Excit_A          0    0    0  529    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+# Excit_B          0    0    0    0  773    0    0    0    0    0    0    0    0    0    0    0    0    0
+# Excit_C          0    0    0    0    0    0    0  524    0    0    0    0    0    0    0    0    0    0
+# Excit_D          0    0    0    0    0    0    0    0    0  132    0    0    0    0    0    0    0    0
+# Excit_E          0    0    0    0    0    0    0    0    0    0  187    0    0    0    0    0    0    0
+# Excit_F          0    0    0    0    0    0    0    0    0    0    0  243    0    0    0    0    0    0
+# Inhib_A        333    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+# Inhib_B          0  454    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+# Inhib_C          0    0  365    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+# Inhib_D          0    0    0    0    0  413    0    0    0    0    0    0    0    0    0    0    0    0
+# Inhib_E          0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    7    0
+# Inhib_F          0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    8
+# Micro            0    0    0    0    0    0    0    0    0    0    0    0    0    0    0  388    0    0
+# Oligo            0    0    0    0    0    0    0    0 5455    0    0    0    0    0    0    0    0    0
+# OPC              0    0    0    0    0    0    0    0    0    0    0    0  572    0    0    0    0    0
 
 
 
