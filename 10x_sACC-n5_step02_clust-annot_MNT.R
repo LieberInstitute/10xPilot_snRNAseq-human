@@ -308,7 +308,7 @@ sapply(newClusIndex, function(x) {quantile(sce.sacc[,x]$sum)})
     # 75%   58822.25  9597.50 45194.5 26535.75 30262
     # 100% 102363.00 13985.00 69890.0 40784.00 48721
 
-# doublet score?
+## doublet score?
 sapply(newClusIndex, function(x) {round(quantile(sce.sacc$doubletScore[x]),2)})
     #         1     2    3     4    5    6    7     8    9    10    11   12    13   14   15   16   17
     # 0%   0.02  0.00 0.01  0.01 0.00 0.00 0.05  0.00 0.04  0.02  0.04 0.00  0.02 0.02 0.03 0.00 0.00
@@ -323,6 +323,12 @@ sapply(newClusIndex, function(x) {round(quantile(sce.sacc$doubletScore[x]),2)})
     # 50%   5.34 0.01 0.02 0.01 0.12  2.09 0.71 0.39 0.14 0.28
     # 75%   6.43 0.04 0.05 0.02 0.36  2.41 1.08 0.74 0.21 1.05
     # 100% 20.33 3.21 5.84 0.30 1.68 13.00 1.20 1.59 4.74 2.00
+
+
+# At 'prelimCluster' level?
+clusIndex <- splitit(sce.sacc$prelimCluster)
+sapply(clusIndex, function(x) {round(quantile(sce.sacc$doubletScore[x]),2)})
+    # 62 [moderately, but with median > 5], which is == collapsedCluster 18 (see above); 32, 53 (meds 4.1, 3.9)
 
 table(sce.sacc$collapsedCluster)
     #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 

@@ -304,9 +304,31 @@ sapply(newClusIndex, function(x) {quantile(sce.amy[,x]$sum)})
 table(sce.amy$collapsedCluster)
     #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17 
     # 780  541  399  525  500  555  216 1555 6080 1459 1201   44 1067   70   71   31   83
-        #  * 13 is quite overrepresented in Br5400, but this sample also had a mode
+        #  * 13 is quite overrepresented in Br5400, but this sample also had a median
         #    of <1000 total UMIs that were still kept after QC - thus probably a low trxts-driven cluster
         #  * 15 is pretty evenly-ish distributed (16 too, but will keep 16)
+
+## doublet score?
+sapply(newClusIndex, function(x) {round(quantile(sce.amy$doubletScore[x]),2)})
+    #        1    2    3     4    5    6    7     8    9    10    11   12
+    # 0%   0.22 0.15 0.01  0.16 0.13 0.11 0.20  0.00 0.00  0.00  0.00 0.66
+    # 25%  0.52 0.37 0.06  0.36 0.28 0.31 0.97  0.07 0.16  0.07  0.03 1.02
+    # 50%  0.82 0.84 0.15  0.69 0.39 0.76 1.40  0.16 0.39  0.19  0.08 1.19
+    # 75%  1.01 1.09 0.31  1.12 0.64 1.00 1.54  0.29 0.86  0.35  0.19 1.31
+    # 100% 4.94 6.94 5.61 17.29 3.40 3.33 7.24 12.15 7.72 13.11 10.28 9.84
+    #        13   14   15   16   17
+    # 0%   0.00 0.17 0.00 0.01 0.01
+    # 25%  0.02 0.32 0.01 0.05 0.04
+    # 50%  0.06 0.46 0.02 0.07 0.16
+    # 75%  0.33 0.59 0.11 0.12 0.21
+    # 100% 2.45 1.01 1.00 0.85 0.77
+
+# At 'prelimCluster' level?
+clusIndex <- splitit(sce.amy$prelimCluster)
+sapply(clusIndex, function(x) {round(quantile(sce.amy$doubletScore[x]),2)})
+    # 47 for sure (maybe 25 too) - 55 relatively high
+    #     - none of these are single-donor-specific though (where doublets would arise)
+
 
 ## Add annotations, looking at marker gene expression
 annotationTab.amy <- data.frame(collapsedCluster=c(1:17))
