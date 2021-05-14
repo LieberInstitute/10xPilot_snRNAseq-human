@@ -163,6 +163,28 @@ sample_prelimClusters[which(rowSums(sample_prelimClusters == 0) == 2),]
 # rbind the ref.sampleInfo[.rev]
 ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
 
+## check doublet score for each prelim clust
+clusIndexes = splitit(sce.dlpfc$prelimCluster)
+prelimCluster.medianDoublet <- sapply(clusIndexes, function(ii){
+  median(sce.dlpfc$doubletScore[ii])
+}
+)
+
+summary(prelimCluster.medianDoublet)
+# Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# 0.01059  0.07083  0.14823  0.53264  0.30064 14.79144 
+
+hist(prelimCluster.medianDoublet)
+
+## watch in clustering
+prelimCluster.medianDoublet[prelimCluster.medianDoublet > 5]
+# 19       32       73 
+# 14.79144  7.98099 10.20462 
+
+table(sce.dlpfc$prelimCluster)[c(19, 32, 73)]
+# 19 32 73 
+# 27 32  8 
+
 # Save for now
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
@@ -172,7 +194,6 @@ save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo,
   #         (as determined in: 'side-Rscript_testingStep2_HC-normalizn-approaches_wAmygData_MNTJan2020.R')
   #           ** That is, to pseudo-bulk (aka 'cluster-bulk') on raw counts, on all [non-zero] genes,
   #              normalize with `librarySizeFactors()`, log2-transform, then perform HC'ing
-
 
 # Preliminary cluster index for pseudo-bulking
 clusIndexes = splitit(sce.dlpfc$prelimCluster)
@@ -198,6 +219,8 @@ tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
 
 dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
+# labels(dend)[grep(c("19|32|73"),labels(dend))] <- paste0(labels(dend)[grep(c("19|32|73"),labels(dend))], "*")
+
 # Just for observation
 par(cex=.6)
 myplclust(tree.clusCollapsed, cex.main=2, cex.lab=1.5, cex=1.8)
@@ -205,10 +228,10 @@ myplclust(tree.clusCollapsed, cex.main=2, cex.lab=1.5, cex=1.8)
 dend %>% 
   set("labels_cex", 0.8) %>%
   plot(horiz = TRUE)
-abline(v = 350, lty = 2)
+abline(v = 325, lty = 2)
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=350)
+                               minClusterSize=2, deepSplit=1, cutHeight=325)
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
@@ -222,22 +245,30 @@ unname(clust.treeCut[order.dendrogram(dend)])
     
     # Take those and re-assign to the first assignments
     
-clust <- clust.treeCut[order.dendrogram(dend)]
-clust2 <- name_zeros(clust, list(c(1,2), c(106,107)))
-unname(clust2)
+# clust <- clust.treeCut[order.dendrogram(dend)]
+# clust2 <- name_zeros(clust, list(c(1,2), c(106,107)))
+# unname(clust2)
 
 # Add new labels to those prelimClusters cut off
-# clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1, 1, 2:6, 7, 7)
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1, 1, 2, 3, 4, 5, 5)
 
 # 'Re-write', since there are missing numbers
-clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust2))
+# clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust2))
+clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[order.dendrogram(dend)]))
 
-labels_colors(dend) <- tableau20[clust2]
+## Define DLPFC pallet
+# labels_colors(dend) <- tableau20[clust2]
+dlpfc_pallet <- unique(tableau20[clust.treeCut[order.dendrogram(dend)]])
+names(dlpfc_pallet) <- unique(clust.treeCut[order.dendrogram(dend)])
+
+# labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
+labels_colors(dend) <- dlpfc_pallet[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
-pdf("pdfs/revision/regionSpecific_DLPFC-n3_HC-prelimCluster-relationships_LAH2021.pdf")
-par(cex=0.8, font=2)
-plot(dend, main="3x DLPFC prelim-kNN-cluster relationships with collapsed assignments")
+pdf("pdfs/revision/regionSpecific_DLPFC-n3_HC-prelimCluster-relationships_LAH2021.pdf", height = 9)
+par(cex=0.6, font=2)
+plot(dend, main="3x DLPFC prelim-kNN-cluster relationships with collapsed assignments", horiz = TRUE)
+abline(v = 325, lty = 2)
 dev.off()
 
 
@@ -289,45 +320,43 @@ for(i in 1:length(markers.mathys.custom)){
 }
 dev.off()
 
+## Add annotations, looking at marker gene expression
+annotationTab.dlpfc <- data.frame(collapsedCluster=c(1:n_clusters))
+annotationTab.dlpfc$cellType <- NA
+annotationTab.dlpfc$cellType[c(1:3, 6, 17,18)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
+annotationTab.dlpfc$cellType[c(4,5,8,10:13)] <- paste0("Excit_", c("A","B","C","D","E","F","G"))
+annotationTab.dlpfc$cellType[c(7, 9, 13, 16)] <- c("Astro", "Oligo", "OPC", "Micro")
+annotationTab.dlpfc$cellType[c(14,15)] <- paste0("ambig.glial_", c("A","B"))
 
 
+sce.dlpfc$cellType <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
+                                                         annotationTab.dlpfc$collapsedCluster)]
+sce.dlpfc$cellType <- factor(sce.dlpfc$cellType)
 
 ## QC - How do the total UMI distribution look?
-newClusIndex <- splitit(sce.dlpfc$collapsedCluster)
-sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$sum)})
-#          1     2     3     4     5     6        7         8       9       10       11    12       13   14       15
-# 0%    1708  3045  1803  1201  1838  1749   884.00   2295.00   850.0  9100.00   3029.0  1099   879.00 1774  8833.00
-# 25%  11416 15330 18791 28468 19205 23015  4008.75  39673.25  4940.5 26131.75  37044.5 27809  4052.50 2332 19428.75
-# 50%  16369 18968 24138 34997 25241 29623  5737.00  49345.00  6385.0 32065.50  49414.0 37430  6864.50 2762 20281.50
-# 75%  22181 23036 28996 43590 33292 35364  7953.00  59114.25  7986.0 39545.00  61162.0 47099  9722.75 4379 22677.00
-# 100% 66556 55574 81134 87392 69309 67503 26618.00 115449.00 25379.0 69202.00 101625.0 83826 23492.00 6919 27504.00
-#          16
-# 0%   1979.0
-# 25%  3210.5
-# 50%  4692.5
-# 75%  5218.0
-# 100% 8043.0
+# newClusIndex <- splitit(sce.dlpfc$collapsedCluster)
+newClusIndex <- splitit(sce.dlpfc$cellType)
+sapply(newClusIndex, function(x) {quantile(sce.dlpfc$sum[x])})
+#          1        2     3     4     5     6        7         8       9       10       11    12       13   14     15
+# 0%    3045  1708.00  1803  1201  1838  1749   884.00   2295.00   850.0  9100.00   3029.0  1099  2084.00 1774 1979.0
+# 25%  15330 11474.25 18791 28468 19205 23015  4008.75  39673.25  4940.5 26131.75  37044.5 27809  7371.75 2332 3210.5
+# 50%  18968 16423.50 24138 34997 25241 29623  5737.00  49345.00  6385.0 32065.50  49414.0 37430  9112.00 2762 4692.5
+# 75%  23036 22355.75 28996 43590 33292 35364  7953.00  59114.25  7986.0 39545.00  61162.0 47099 11052.75 4379 5218.0
+# 100% 55574 66556.00 81134 87392 69309 67503 26618.00 115449.00 25379.0 69202.00 101625.0 83826 23492.00 6919 8043.0
+#            16      17       18
+# 0%     879.00  7966.0  8833.00
+# 25%   3019.25  9056.5 19428.75
+# 50%   3883.50 14241.0 20281.50
+# 75%   4911.75 17472.0 22677.00
+# 100% 11137.00 42588.0 27504.00
+
+sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$doubletScore)})
 
 
 table(sce.dlpfc$collapsedCluster)
-#   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
-# 461  333  365  529  773  413  782  524 5455  132  187  243  960   19    8   18 
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18 
+# 333  454  365  529  773  413  782  524 5455  132  187  243  572   19   18  388    7    8 
 
-## Drop 14:16?
-
-## Add annotations, looking at marker gene expression
-annotationTab.dlpfc <- data.frame(collapsedCluster=c(1:17))
-annotationTab.dlpfc$cellType <- NA
-annotationTab.dlpfc$cellType[c(1:2,4:7)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
-annotationTab.dlpfc$cellType[c(3,12)] <- paste0("Excit_", c("A","B"))
-annotationTab.dlpfc$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
-annotationTab.dlpfc$cellType[c(13,15)] <- paste0("drop.lowNTx_", c("A","B"))
-annotationTab.dlpfc$cellType[c(14,16:17)] <- c("Endo", "ambig.glial", "Astro_B")
-
-
-sce.dlpfc$cellType.prelim <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
-                                                         annotationTab.dlpfc$collapsedCluster)]
-sce.dlpfc$cellType.prelim <- factor(sce.dlpfc$cellType.prelim)
 
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc,
@@ -336,6 +365,9 @@ save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sam
 
 
 ## Re-print marker expression plots with annotated cluster names ===
+dlpfc_pallet <- dlpfc_pallet[order(as.integer(names(dlpfc_pallet)))]
+names(dlpfc_pallet) <- annotationTab.dlpfc$cellType
+
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -345,9 +377,11 @@ for(i in 1:length(markers.mathys.custom)){
       stat_summary(fun = median, fun.min = median, fun.max = median,
                    geom = "crossbar", width = 0.3,
                    #colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
-                   colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
+                   # colour=rep(tableau20[1:n_clusters], length(markers.mathys.custom[[i]]))
+      )+
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))+
+      scale_color_manual(values = dlpfc_pallet)
   )
 }
 dev.off()
@@ -417,7 +451,7 @@ table(sce.dlpfc$cellType, sce.dlpfc$collapsedCluster)
 #      as seen in the pan-brain level
 #   ii) To now formally define subcluster-level populations
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda",
      verbose=T)
     # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
 
