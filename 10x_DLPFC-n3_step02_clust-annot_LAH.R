@@ -17,6 +17,8 @@ library(dendextend)
 library(dynamicTreeCut)
 library(purrr)
 
+source("plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -256,13 +258,10 @@ clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)
 # clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust2))
 clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[order.dendrogram(dend)]))
 
-## Define DLPFC pallet
-# labels_colors(dend) <- tableau20[clust2]
-dlpfc_pallet <- unique(tableau20[clust.treeCut[order.dendrogram(dend)]])
-names(dlpfc_pallet) <- unique(clust.treeCut[order.dendrogram(dend)])
-
-# labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
-labels_colors(dend) <- dlpfc_pallet[clust.treeCut[order.dendrogram(dend)]]
+## Define color pallet
+cluster_colors <- unique(tableau20[clust.treeCut[order.dendrogram(dend)]])
+names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
+labels_colors(dend) <- cluster_colors[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_HC-prelimCluster-relationships_LAH2021.pdf", height = 9)
@@ -306,19 +305,18 @@ markers.mathys.custom = list(
   'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1')
 )
 
+
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]), ncol=2,
-                   x="collapsedCluster", colour_by="collapsedCluster", point_alpha=0.4, point_size=.7,
-                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:n_clusters], length(markers.mathys.custom[[i]]))) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-    ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+    plotExpressionCustom(sce = sce.dlpfc,
+                         features = markers.mathys.custom[[i]], 
+                         features_name = names(markers.mathys.custom)[[i]], 
+                         anno_name = "collapsedCluster")
   )
 }
 dev.off()
+
 
 ## Add annotations, looking at marker gene expression
 annotationTab.dlpfc <- data.frame(collapsedCluster=c(1:n_clusters))
@@ -363,25 +361,25 @@ save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sam
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
 
 
-
 ## Re-print marker expression plots with annotated cluster names ===
-dlpfc_pallet <- dlpfc_pallet[order(as.integer(names(dlpfc_pallet)))]
-names(dlpfc_pallet) <- annotationTab.dlpfc$cellType
+cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
+names(cell_colors) <- annotationTab.dlpfc$cellType
+cell_colors
+# Inhib_A       Inhib_B       Inhib_C       Excit_A       Excit_B       Inhib_D         Astro       Excit_C 
+# "#1F77B4"     "#AEC7E8"     "#FF7F0E"     "#FFBB78"     "#2CA02C"     "#98DF8A"     "#D62728"     "#FF9896" 
+# Oligo       Excit_D       Excit_E       Excit_F           OPC ambig.glial_A ambig.glial_B         Micro 
+# "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7" 
+# Inhib_E       Inhib_F 
+# "#BCBD22"     "#DBDB8D" 
 
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType.prelim", colour_by="cellType.prelim", point_alpha=0.2, point_size=.7,
-                   add_legend=F) +
-      stat_summary(fun = median, fun.min = median, fun.max = median,
-                   geom = "crossbar", width = 0.3,
-                   #colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
-                   # colour=rep(tableau20[1:n_clusters], length(markers.mathys.custom[[i]]))
-      )+
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))+
-      scale_color_manual(values = dlpfc_pallet)
+    plotExpressionCustom(sce = sce.dlpfc,
+                         features = markers.mathys.custom[[i]], 
+                         features_name = names(markers.mathys.custom)[[i]], 
+                         anno_name = "cellType") +
+      scale_color_manual(values = cell_colors)
   )
 }
 dev.off()

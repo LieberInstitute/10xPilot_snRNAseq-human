@@ -21,5 +21,5 @@ plotExpressionCustom <- function(sce, features, features_name ,anno_name = "cell
                geom = "crossbar", 
                width = 0.3)+
   theme(axis.text.x = element_text(angle = 90, hjust = 1, face = "italic")) +  
-  ggtitle(label=paste0(features_name, " Markers"))
+  ggtitle(label=paste0(features_name, " markers"))
 }
