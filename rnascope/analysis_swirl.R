@@ -188,4 +188,54 @@ length(table(pheno$BrNum))
 length(unique(paste0(pheno$Section,":", pheno$BrNum)))
 
 dim(dat_inhib)
+
+### MNT / ABS update May2021 =============
+# objective: make more-interpretable graphics with RNAscope quantification data
+#(Abby can add/save this to the end of Andrew's script - analysis_swirl.R:)
+	# Some ideas ===
+	### 1) boxplot log2-transformed (/maybe add RVolume normalization)
+	## For PTHLH (Opal690)
+  pdf("swirl_pdfs/PTHLH_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal690Lp30 + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	# or (with $RVolume normalization)
+	pdf("swirl_pdfs/PTHLH_norm_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal690Lp30/dat_inhib$RVolume + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	## For KIT
+	pdf("swirl_pdfs/KIT_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal620_LP10 + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	# or (with $RVolume normalization)
+	pdf("swirl_pdfs/KIT_norm_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal620_LP10/dat_inhib$RVolume + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	## For PVALB
+	pdf("swirl_pdfs/PVALB_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal570Lp1_0 + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	# or (with $RVolume normalization)
+	pdf("swirl_pdfs/PVALB_norm_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal570Lp1_0/dat_inhib$RVolume + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	## For GAD1
+	pdf("swirl_pdfs/GAD1_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal520_Lp20  + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	# or (with $RVolume normalization)
+	pdf("swirl_pdfs/GAD1_norm_swirl_rnascope.pdf")
+	boxplot(log2(dat_inhib$MD_Opal520_Lp20/dat_inhib$RVolume + 1) ~ dat_match$cell_name)
+	dev.off()
+	
+	### 2) Hierarchically cluster the 212 (GAD1+) ROIs on normalized (i.e. `/RVolume`)
+		#    n transcript dots? (so 212 x 3 probes as input matrix)
+		#    (MD_* : total transcript dots in that ROI after Lipofuscin masking)
+		# - hopefully would see four (for four inhib. subpops) main branches??
 	
