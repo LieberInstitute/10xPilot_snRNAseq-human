@@ -238,3 +238,54 @@ length(table(pheno$BrNum))
 length(unique(paste0(pheno$Section,":", pheno$BrNum)))
 
 dim(dat_d1)
+
+
+### MNT / ABS update May2021 =============
+# objective: make more-interpretable graphics with RNAscope quantification data
+#(Abby can add/save this to the end of Andrew's script - analysis_square.R:)
+# Some ideas ===
+### 1) boxplot log2-transformed (/maybe add RVolume normalization)
+## For PTHLH (Opal690)
+pdf("square_pdfs/TAC1_square_rnascope.pdf")
+boxplot(log2(dat_inhib$MD_Opal690Lp30 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("square_pdfs/TAC1_norm_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal690Lp30/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For KIT
+pdf("square_pdfs/DRD1_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal620_LP10 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("square_pdfs/DRD1_norm_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal620_LP10/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For PVALB
+pdf("square_pdfs/GABRQ_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal570Lp1_0 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("square_pdfs/GABRQ_norm_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal570Lp1_0/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For GAD1
+pdf("square_pdfs/RXFP2_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal520_Lp20  + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("square_pdfs/RXFP2_norm_square_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal520_Lp20/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+### 2) Hierarchically cluster the 212 (GAD1+) ROIs on normalized (i.e. `/RVolume`)
+#    n transcript dots? (so 212 x 3 probes as input matrix)
+#    (MD_* : total transcript dots in that ROI after Lipofuscin masking)
+# - hopefully would see four (for four inhib. subpops) main branches??
