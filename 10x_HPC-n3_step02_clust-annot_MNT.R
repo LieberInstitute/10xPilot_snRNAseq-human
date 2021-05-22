@@ -15,6 +15,8 @@ library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
 
+source("plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -303,6 +305,7 @@ sapply(clusIndex, function(x) {round(quantile(sce.hpc$doubletScore[x]),2)})
 
 
 ## Add annotations, looking at marker gene expression
+ #    (canonical, above, and from markers looked at in 'step3')
 annotationTab.hpc <- data.frame(collapsedCluster=c(1:18))
 annotationTab.hpc$cellType <- NA
 annotationTab.hpc$cellType[c(1)] <- paste0("Inhib")
@@ -310,10 +313,11 @@ annotationTab.hpc$cellType[c(2)] <- paste0("Oligo")
 annotationTab.hpc$cellType[c(4,7,9:12)] <- paste0("Excit_", c("A","B","C","D","E","F"))
 annotationTab.hpc$cellType[c(5,6)] <- c("Micro","OPC")
 annotationTab.hpc$cellType[13] <- "Tcell"
-annotationTab.hpc$cellType[c(3,8,14)] <- paste0("Astro_", c("A","B","C"))
-annotationTab.hpc$cellType[15] <- "ambig"
+annotationTab.hpc$cellType[c(3,8)] <- paste0("Astro_", c("A","B"))
+annotationTab.hpc$cellType[c(14,18)] <- paste0("drop.lowNTx_", c("A","B"))
+annotationTab.hpc$cellType[15] <- "Mural"
 annotationTab.hpc$cellType[16] <- "drop.doublet"
-annotationTab.hpc$cellType[c(17,18)] <- paste0("ambig.glial_", c("A","B"))
+annotationTab.hpc$cellType[c(17)] <- "OPC_COP"
 
 
 sce.hpc$cellType <- annotationTab.hpc$cellType[match(sce.hpc$collapsedCluster,
@@ -333,15 +337,10 @@ save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc,
 pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
-                   add_legend=F, show_median=T) +
-      stat_summary(fun = median, fun.min = median, fun.max = median,
-                   geom = "crossbar", width = 0.3,
-                   #colour=rep(tableau20[1:18], length(markers.mathys.custom[[i]]))) +
-                   colour=rep(tableau20[1:17], length(markers.mathys.custom[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+    plotExpressionCustom(sce = sce.hpc,
+                         features = markers.mathys.custom[[i]], 
+                         features_name = names(markers.mathys.custom)[[i]], 
+                         anno_name = "cellType")
   )
 }
 dev.off()
