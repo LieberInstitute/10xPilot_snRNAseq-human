@@ -257,7 +257,9 @@ markers.mathys.custom = list(
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1')
+  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1'),
+  # Added post-hoc, looking at markers (step3) - MNT 25May2021
+  'Tcell' = c('SKAP1', 'ITK', 'CD247')
 )
 
 pdf("pdfs/revision/regionSpecific_Amyg-n5_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=8)
@@ -331,13 +333,14 @@ sapply(clusIndex, function(x) {round(quantile(sce.amy$doubletScore[x]),2)})
 
 
 ## Add annotations, looking at marker gene expression
+#    (canonical, above, and from markers looked at in 'step3')
 annotationTab.amy <- data.frame(collapsedCluster=c(1:17))
 annotationTab.amy$cellType <- NA
 annotationTab.amy$cellType[c(1:2,4:7)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
 annotationTab.amy$cellType[c(3,12)] <- paste0("Excit_", c("A","B"))
 annotationTab.amy$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
 annotationTab.amy$cellType[c(13,15)] <- paste0("drop.lowNTx_", c("A","B"))
-annotationTab.amy$cellType[c(14,16:17)] <- c("Endo", "ambig.glial", "Astro_B")
+annotationTab.amy$cellType[c(14,16:17)] <- c("Endo", "Tcell", "Astro_B")
 
 
 sce.amy$cellType <- annotationTab.amy$cellType[match(sce.amy$collapsedCluster,

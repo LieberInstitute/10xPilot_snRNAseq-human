@@ -75,16 +75,48 @@ varExpl = t(sapply(varCompAnalysis.amy, function(x) x[,"PctExp"]))
 colnames(varExpl) = rownames(varCompAnalysis.amy[[1]])
 
 
-
-#pdf("pdfs/revision/anova_Amyg_MNT2021.pdf")
-boxplot(varExpl, main="ANOVA on human Amyg 10x snRNA-seq \n (sn-level, n=5)",
+# (just interactive)
+boxplot(varExpl, main="ANOVA on human Amyg 10x snRNA-seq \n (sn-level, n=5, new logNormCounts)",
         ylab="Percent Var explained (%)")
-#dev.off()
-# ok so DEF keep 'individualID'
-
-save(varCompAnalysis.amy, file="rdas/revision/anova_Amyg-n5_MNT2021.rda")
 
 apply(varExpl, 2, function(x){quantile(x, na.rm=T)})
+
+# Try at the single-nucleus ('count')-level (took ~3.5 hrs with 96G RAM)
+#   (object 'varCompAnalysis.amy')
+# apply(varExpl, 2, function(x){quantile(x, na.rm=T)})
+#      cellType    donor Residuals
+# 0%    0.00933  0.00015      28.9
+# 25%   0.58500  0.06520      81.9
+# 50%   3.85000  0.36900      95.5
+# 75%  15.80000  1.83000      99.3
+# 100% 69.00000 38.10000     100.0
+
+
+# With sn-level, but on [MBN-computed-] 'logcounts':
+#   (object 'varCompAnalysis.amy.log')
+    #  ellType    donor Residuals
+# 0%    0.00807 3.26e-05      7.02
+# 25%   0.22200 3.44e-02     94.30
+# 50%   0.94800 9.39e-02     98.80
+# 75%   5.19000 2.87e-01     99.70
+# 100% 92.90000 8.75e+01    100.00		
+# - so 'logcounts' made by MBN did indeed remove a lot of donor-donor variance
+
+# One last iteration: run on de-novo (single-nucleus-level, sample-naive) 'logcounts' from 'logNormCounts':
+# (removed sce.hold$sizeFactors & 'logcounts', first)
+#   (object 'varCompAnalysis.amy.snSFs')	
+#      cellType    donor Residuals
+# 0%     0.0085 8.37e-05      6.64
+# 25%    0.2370 3.58e-02     94.00
+# 50%    1.0300 1.04e-01     98.70
+# 75%    5.4400 3.28e-01     99.70
+# 100%  92.8000 8.83e+01    100.00
+
+    # - ** so yep, the 'donor' term does account for slightly less var, when operating
+    # in the MBN-logcounts space **
+
+save(varCompAnalysis.amy, varCompAnalysis.amy.log,
+     varCompAnalysis.amy.snSFs, file="rdas/revision/anova_Amyg-n5_MNT2021.rda")
 
 
 
@@ -116,20 +148,20 @@ sapply(markers.amy.t.pw, function(x){table(x$FDR<0.05)})
 
         ## modeling with 'logcounts' - made interactively:
         sapply(markers.amy.t.pw.logcounts, function(x){table(x$FDR<0.05)})
-            # ambig.glial Astro_A Astro_B  Endo Excit_A Excit_B Inhib_A Inhib_B Inhib_C
+            #       ambig.glial Astro_A Astro_B  Endo Excit_A Excit_B Inhib_A Inhib_B Inhib_C
             # FALSE       28554   28712   29255 28537   28946   28658   29052   29167   29309
             # TRUE          817     659     116   834     425     713     319     204      62
-            # Inhib_D Inhib_E Inhib_F Micro Oligo   OPC
+            #       Inhib_D Inhib_E Inhib_F Micro Oligo   OPC
             # FALSE   28936   29126   29221 28550 28860 29037
             # TRUE      435     245     150   821   511   334
-
-
-## What is that 'ambig.glial'?
-head(rownames(markers.amy.t.pw[["ambig.glial"]]), n=20)
-    #   [1] "SKAP1"     "SLFN12L"   "CD2"       "IKZF3"     "SLAMF6"    "RUNX3"    
-    #   [7] "P2RY8"     "ITK"       "GRAP2"     "IL7R"      "SLAMF7"    "LINC00861"
-    # [13] "THEMIS"    "PRF1"      "SLAMF1"    "GPR174"    "LCK"       "IL32"     
-    #  [19] "TRBC2"     "CD247" 
+        
+            #       ambig.glial Astro_A Astro_B  Endo Excit_A Excit_B Inhib_A Inhib_B Inhib_C
+            # FALSE       29214   28974   29367 29213   29142   29160   29114   29261   29342
+            # TRUE          157     397       4   158     229     211     257     110      29
+            #       Inhib_D Inhib_E Inhib_F Micro Oligo   OPC
+            # FALSE   29146   29193   29297 29019 28989 29151
+            # TRUE      225     178      74   352   382   220   + non0median filter
+            #         - for the Astro_B, those genes are [1] "GFAP"  "DST"   "TTN"   "MACF1"
 
 
 ## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
@@ -197,8 +229,115 @@ for(i in names(genes.top40.t)){
 }
 
 
+### Make list of Boolean param / cell subtype ===
+    # Will use this to assess more 'valid', non-noise-driving markers
+cellSubtype.idx <- splitit(sce.amy$cellType)
+medianNon0.idx <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.amy, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+lengths(medianNon0.idx)
+sapply(medianNon0.idx, head)
+
+# Add respective 'non0median' column to the stats for each set of markers
+for(i in names(markers.amy.t.pw)){
+  markers.amy.t.pw[[i]] <- cbind(markers.amy.t.pw[[i]],
+                                 medianNon0.idx[[i]][match(rownames(markers.amy.t.pw[[i]]),
+                                                           names(medianNon0.idx[[i]]))])
+  colnames(markers.amy.t.pw[[i]])[18] <- "non0median"
+}
+
+sapply(markers.amy.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
+    # No result for 'Astro_B'
+
+# Save
+save(markers.amy.t.pw, markers.amy.t.pw.logcounts,
+     markers.amy.wilcox.block, medianNon0.idx,
+     file="rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda")
 
 
+## What do the markers look like between modeling on 'counts' vs [MBN] 'logcounts' ===
+markerList.t.pw.counts <- lapply(markers.amy.t.pw, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
+  })
+    #ambig.glial     Astro_A     Astro_B        Endo     Excit_A     Excit_B 
+    #         48         231           0          69        1396          47 
+    #    Inhib_A     Inhib_B     Inhib_C     Inhib_D     Inhib_E     Inhib_F 
+    #       2708         146          23          62         256         762 
+    #      Micro       Oligo         OPC 
+    #        148         131         123 
+
+markerList.t.pw.logcounts <- lapply(markers.amy.t.pw.logcounts, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
+})
+    #ambig.glial     Astro_A     Astro_B        Endo     Excit_A     Excit_B 
+    #        157         397           4         158         229         211 
+    #    Inhib_A     Inhib_B     Inhib_C     Inhib_D     Inhib_E     Inhib_F 
+    #        257         110          29         225         178          74 
+    #      Micro       Oligo         OPC 
+    #        352         382         220 
+
+    ## Intersecting ===
+    sapply(names(markerList.t.pw.counts), function(x){
+      length(intersect(markerList.t.pw.counts[[x]], markerList.t.pw.logcounts[[x]]))
+    })
+        # ambig.glial     Astro_A     Astro_B        Endo     Excit_A     Excit_B 
+        #          48         197           0          68         224          46 
+        #     Inhib_A     Inhib_B     Inhib_C     Inhib_D     Inhib_E     Inhib_F 
+        #         256          69          11          41         106          72 
+        #       Micro       Oligo         OPC 
+        #         144         131          98 
+    
+
+
+## What's captured in `findMarkers` with 'logcounts' that isn't in 'counts'?
+markers.lc.specific <- lapply(names(markerList.t.pw.counts), function(x){
+  setdiff(markerList.t.pw.logcounts[[x]], markerList.t.pw.counts[[x]])
+})
+names(markers.lc.specific) <- names(markerList.t.pw.counts)
+
+# Unique to modeling on 'counts'
+markers.rc.specific <- lapply(names(markerList.t.pw.counts), function(x){
+  setdiff(markerList.t.pw.counts[[x]], markerList.t.pw.counts[[x]])
+})
+names(markers.rc.specific) <- names(markerList.t.pw.counts)
+
+# OPC
+plotExpression(sce.amy, exprs_values = "logcounts", features=head(markers.lc.specific[["Excit_A"]], 10),
+               x="cellType", colour_by="cellType", point_alpha=0.3, point_size=.7, ncol=3,
+               add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
+                                            geom = "crossbar", width = 0.3,
+                                            colour=rep(tableau20[1:15], 10)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 10)) +  
+  ggtitle(label=paste0("Excit_A setdiff: raw counts vs logcounts"))
+
+    # I see - these seem to be driven by high total nuclear libraries:
+    cellIdx <- splitit(sce.amy$cellType)
+    sapply(cellIdx, function(x){round(quantile(sce.amy$sizeFactor[x]), 2)}) # or can look at $sum
+        #      ambig.glial Astro_A Astro_B drop.lowNTx_A drop.lowNTx_B Endo Excit_A
+        # 0%          0.04    0.12    0.02          0.01          0.01 0.16    0.69
+        # 25%         0.24    0.74    0.08          0.02          0.04 0.37    3.10
+        # 50%         0.37    1.11    0.11          0.03          0.07 0.51    5.02
+        # 75%         0.50    1.63    0.18          0.05          0.10 0.66    6.99
+        # 100%        0.61    3.58    0.76          0.26          0.15 1.42   16.67
+        
+        #      Excit_B Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Oligo  OPC
+        # 0%      0.40    0.27    0.08    0.16    0.06    0.21    0.12  0.04  0.06 0.12
+        # 25%     0.85    2.41    2.22    0.93    0.64    1.19    1.99  0.39  0.46 0.96
+        # 50%     1.07    4.67    3.36    1.75    1.03    3.55    4.51  0.54  0.65 1.31
+        # 75%     1.33    6.44    4.29    3.86    1.60    4.89    6.56  0.70  0.89 1.68
+        # 100%    2.72   15.34   11.29   12.16    9.29    9.49   16.77  2.02  3.02 3.99
+
+# For annotation purposes (back to step2), that 'ambig.glial''s markers:
+head(markerList.t.pw.logcounts[["ambig.glial"]], n=40)
+    # [1] "SKAP1"   "SLFN12L" "CD2"     "IKZF3"   "ITK"     "GRAP2"   "P2RY8"  
+    # [8] "RUNX3"   "TC2N"    "CD247"   "TNFAIP8" "ITGA4"   "SCML4"   "CD96"   
+    # [15] "THEMIS"  "ITGAL"   "CYTIP"   "STAT4"   "MDFIC"   "SYTL3"   "CARD11" 
+    # [22] "MCTP2"   "RHOH"    "LCP1"    "SAMD3"   "STK17B"  "EMB"     "PTPRC"  
+    # [29] "CLEC2D"  "IQGAP2"  "FAM129A" "IKZF1"   "CD44"    "CCND3"   "LCP2"   
+    # [36] "ADGRE5"  "STK10"   "FGD3"    "PRKCH"   "SEPT6"    - these are definitely T cells
 
 
 ### Cluster-vs-all single-nucleus-level iteration ======
@@ -593,68 +732,3 @@ save(markers.amy.t.1vAll, markers.amy.t.pw, sce.amy,
 
 
 
-
-
-
-
-### Aside - difference b/tw dropping 'Ambig.lowNtrxts' before or after PB'ing ===========
-  # MNT 05Mar2020
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-
-
-# First drop "Ambig.lowNtrxts" (50 nuclei)
-sce.amy.noAmbig <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
-sce.amy.noAmbig$cellType <- droplevels(sce.amy.noAmbig$cellType)
-# Then make the pseudo-bulked SCE
-sce.amy.PBafterDrop <- aggregateAcrossCells(sce.amy.noAmbig, ids=paste0(sce.amy.noAmbig$sample,":",sce.amy.noAmbig$cellType),
-                                              use_exprs_values="counts")
-# Drop genes with all 0's
-sce.amy.PBafterDrop <- sce.amy.PBafterDrop[!rowSums(assay(sce.amy.PBafterDrop, "counts"))==0, ]
-    ## 28464 remaining genes
-
-## OR
-
-# Just make the pseudo-bulked SCE, without dropping that cluster
-sce.amy.PB <- aggregateAcrossCells(sce.amy, ids=paste0(sce.amy$sample,":",sce.amy$cellType),
-                                     use_exprs_values="counts")
-# Drop genes with all 0's
-sce.amy.PB <- sce.amy.PB[!rowSums(assay(sce.amy.PB, "counts"))==0, ]
-    ## 28470
-
-## Then
-genesOfInterest <- setdiff(rownames(sce.amy.PB), rownames(sce.amy.PBafterDrop))
-#  [1] "FOXC1"      "CSAG1"      "AP000879.1" "TBX3"       "FOXL1"        "FOXS1"
-
-rowSums(assay(sce.amy.PB, "counts")[genesOfInterest, ])
-## all 1's# 166 zeros
-
-    ##    - so this is definitely just a poor, lowly-captured cluster; explains the poor
-    ##      intra-cluster correlation, compared to other clusters
-
-
-
-## And old...
-# For BoG abstract ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg_n2_MNTFeb2020.rda", verbose=T)
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_MNTFeb2020.rda", verbose=T)
-
-intersectingMarkers <- list()
-for(i in names(markerList.PB.tDesign.amy)){
-  intersectingMarkers[[i]] <- intersect(markerList.PB.tDesign.amy[[i]],
-                                        markerList.PB.tDesign.dlpfc[[i]])
-}
-# CEACAM21 a microglial marker - turns out to have been implicated in SCZ
-#     (Jewish-Israeli familial study - I don't think in large GWAS though)
-
-specificMarkers.amy <- list()
-for(i in names(markerList.PB.tDesign.amy)){
-  specificMarkers.amy[[i]] <- setdiff(markerList.PB.tDesign.amy[[i]],
-                                      markerList.PB.tDesign.dlpfc[[i]])  
-}
-
-specificMarkers.dlpfc <- list()
-for(i in names(markerList.PB.tDesign.amy)){
-  specificMarkers.dlpfc[[i]] <- setdiff(markerList.PB.tDesign.dlpfc[[i]],
-                                        markerList.PB.tDesign.amy[[i]])
-}
