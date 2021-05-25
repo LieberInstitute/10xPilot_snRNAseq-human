@@ -324,7 +324,7 @@ annotationTab.dlpfc$cellType <- NA
 annotationTab.dlpfc$cellType[c(1:3, 6, 17,18)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
 annotationTab.dlpfc$cellType[c(4,5,8,10:13)] <- paste0("Excit_", c("A","B","C","D","E","F","G"))
 annotationTab.dlpfc$cellType[c(7, 9, 13, 16)] <- c("Astro", "Oligo", "OPC", "Micro")
-annotationTab.dlpfc$cellType[c(14,15)] <- paste0("ambig.glial_", c("A","B"))
+annotationTab.dlpfc$cellType[c(14,15)] <- c("T-cells","Mural")
 
 
 sce.dlpfc$cellType <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
@@ -335,18 +335,18 @@ sce.dlpfc$cellType <- factor(sce.dlpfc$cellType)
 # newClusIndex <- splitit(sce.dlpfc$collapsedCluster)
 newClusIndex <- splitit(sce.dlpfc$cellType)
 sapply(newClusIndex, function(x) {quantile(sce.dlpfc$sum[x])})
-#          1        2     3     4     5     6        7         8       9       10       11    12       13   14     15
-# 0%    3045  1708.00  1803  1201  1838  1749   884.00   2295.00   850.0  9100.00   3029.0  1099  2084.00 1774 1979.0
-# 25%  15330 11474.25 18791 28468 19205 23015  4008.75  39673.25  4940.5 26131.75  37044.5 27809  7371.75 2332 3210.5
-# 50%  18968 16423.50 24138 34997 25241 29623  5737.00  49345.00  6385.0 32065.50  49414.0 37430  9112.00 2762 4692.5
-# 75%  23036 22355.75 28996 43590 33292 35364  7953.00  59114.25  7986.0 39545.00  61162.0 47099 11052.75 4379 5218.0
-# 100% 55574 66556.00 81134 87392 69309 67503 26618.00 115449.00 25379.0 69202.00 101625.0 83826 23492.00 6919 8043.0
-#            16      17       18
-# 0%     879.00  7966.0  8833.00
-# 25%   3019.25  9056.5 19428.75
-# 50%   3883.50 14241.0 20281.50
-# 75%   4911.75 17472.0 22677.00
-# 100% 11137.00 42588.0 27504.00
+#         Astro Excit_A Excit_B   Excit_C  Excit_D  Excit_E Excit_F Inhib_A  Inhib_B Inhib_C Inhib_D Inhib_E  Inhib_F
+# 0%     884.00    1201    1838   2295.00  9100.00   3029.0    1099    3045  1708.00    1803    1749  7966.0  8833.00
+# 25%   4008.75   28468   19205  39673.25 26131.75  37044.5   27809   15330 11474.25   18791   23015  9056.5 19428.75
+# 50%   5737.00   34997   25241  49345.00 32065.50  49414.0   37430   18968 16423.50   24138   29623 14241.0 20281.50
+# 75%   7953.00   43590   33292  59114.25 39545.00  61162.0   47099   23036 22355.75   28996   35364 17472.0 22677.00
+# 100% 26618.00   87392   69309 115449.00 69202.00 101625.0   83826   55574 66556.00   81134   67503 42588.0 27504.00
+#         Micro  Mural   Oligo      OPC T-cells
+# 0%     879.00 1979.0   850.0  2084.00    1774
+# 25%   3019.25 3210.5  4940.5  7371.75    2332
+# 50%   3883.50 4692.5  6385.0  9112.00    2762
+# 75%   4911.75 5218.0  7986.0 11052.75    4379
+# 100% 11137.00 8043.0 25379.0 23492.00    6919
 
 sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$doubletScore)})
 
@@ -359,7 +359,7 @@ table(sce.dlpfc$collapsedCluster)
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
-
+load()
 
 ## Re-print marker expression plots with annotated cluster names ===
 cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
@@ -384,60 +384,54 @@ for(i in 1:length(markers.mathys.custom)){
 }
 dev.off()
 
-    ## Optionally, for a cleaner version, drop those 'drop.lowNTx_'s and re-print
-    sce.dlpfc <- sce.dlpfc[ ,-grep("drop.", sce.dlpfc$cellType.prelim)]
-    sce.dlpfc$cellType.prelim <- droplevels(sce.dlpfc$cellType.prelim)
-
-      ## -> proceed to 'step03_markerDetxn-analyses[...].R'
+ ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 
 
 ### For reference === == === == ===
 table(sce.dlpfc$cellType, sce.dlpfc$sampleID)
-#               br5161.dlpfc br5207.dlpfc br5212.dlpfc
-# ambig.glial_A            3           11            5
-# ambig.glial_B            3           13            2
-# Astro                  371          274          137
-# Excit_A                111          298          120
-# Excit_B                 75          544          154
-# Excit_C                 44          325          155
-# Excit_D                 22           83           27
-# Excit_E                 77           85           25
-# Excit_F                102          105           36
-# Inhib_A                 39          205           89
-# Inhib_B                 98          250          106
-# Inhib_C                 47          262           56
-# Inhib_D                119          216           78
-# Inhib_E                  2            3            2
-# Inhib_F                  0            7            1
-# Micro                  152          144           92
-# Oligo                 2754         2184          517
-# OPC                    196          285           91
+#         br5161.dlpfc br5207.dlpfc br5212.dlpfc
+# Astro            371          274          137
+# Excit_A          111          298          120
+# Excit_B           75          544          154
+# Excit_C           44          325          155
+# Excit_D           22           83           27
+# Excit_E           77           85           25
+# Excit_F          102          105           36
+# Inhib_A           39          205           89
+# Inhib_B           98          250          106
+# Inhib_C           47          262           56
+# Inhib_D          119          216           78
+# Inhib_E            2            3            2
+# Inhib_F            0            7            1
+# Micro            152          144           92
+# Mural              3           13            2
+# Oligo           2754         2184          517
+# OPC              196          285           91
+# T-cells            3           11            5
 
 table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)
 
-table(sce.dlpfc$cellType, sce.dlpfc$collapsedCluster)
-#                  1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18
-# ambig.glial_A    0    0    0    0    0    0    0    0    0    0    0    0    0   19    0    0    0    0
-# ambig.glial_B    0    0    0    0    0    0    0    0    0    0    0    0    0    0   18    0    0    0
-# Astro            0    0    0    0    0    0  782    0    0    0    0    0    0    0    0    0    0    0
-# Excit_A          0    0    0  529    0    0    0    0    0    0    0    0    0    0    0    0    0    0
-# Excit_B          0    0    0    0  773    0    0    0    0    0    0    0    0    0    0    0    0    0
-# Excit_C          0    0    0    0    0    0    0  524    0    0    0    0    0    0    0    0    0    0
-# Excit_D          0    0    0    0    0    0    0    0    0  132    0    0    0    0    0    0    0    0
-# Excit_E          0    0    0    0    0    0    0    0    0    0  187    0    0    0    0    0    0    0
-# Excit_F          0    0    0    0    0    0    0    0    0    0    0  243    0    0    0    0    0    0
-# Inhib_A        333    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
-# Inhib_B          0  454    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
-# Inhib_C          0    0  365    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0
-# Inhib_D          0    0    0    0    0  413    0    0    0    0    0    0    0    0    0    0    0    0
-# Inhib_E          0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    7    0
-# Inhib_F          0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    8
-# Micro            0    0    0    0    0    0    0    0    0    0    0    0    0    0    0  388    0    0
-# Oligo            0    0    0    0    0    0    0    0 5455    0    0    0    0    0    0    0    0    0
-# OPC              0    0    0    0    0    0    0    0    0    0    0    0  572    0    0    0    0    0
-
-
+annotationTab.dlpfc
+# collapsedCluster cellType
+# 1                 1  Inhib_A
+# 2                 2  Inhib_B
+# 3                 3  Inhib_C
+# 4                 4  Excit_A
+# 5                 5  Excit_B
+# 6                 6  Inhib_D
+# 7                 7    Astro
+# 8                 8  Excit_C
+# 9                 9    Oligo
+# 10               10  Excit_D
+# 11               11  Excit_E
+# 12               12  Excit_F
+# 13               13      OPC
+# 14               14  T-cells
+# 15               15    Mural
+# 16               16    Micro
+# 17               17  Inhib_E
+# 18               18  Inhib_F
 
 ## Reproducibility information
 print("Reproducibility information:")
