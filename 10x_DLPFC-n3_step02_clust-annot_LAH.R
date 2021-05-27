@@ -15,20 +15,11 @@ library(DropletUtils)
 library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
-library(purrr)
+library(here)
 
 source("plotExpressionCustom.R")
 
-### Palette taken from `scater`
-tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
-                    "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
-                    "#CDCC5D", "#6DCCDA")
-tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
-              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
-              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
-              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
-
-# ===
+load(here("rdas","revision","tableau_colors.rda"), verbose = TRUE)
 
 # Load 'pilot' samples
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
@@ -294,17 +285,7 @@ dev.off()
 
 
 ## Print marker genes for annotation
-markers.mathys.custom = list(
-  'neurons' = c('SYT1', 'SNAP25', 'GRIN1'),
-  'excitatory_neuron' = c('CAMK2A', 'NRGN','SLC17A7', 'SLC17A6', 'SLC17A8'),
-  'inhibitory_neuron' = c('GAD1', 'GAD2', 'SLC32A1'),
-  'oligodendrocyte' = c('MBP', 'MOBP', 'PLP1'),
-  'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
-  'microglia' = c('CD74', 'CSF1R', 'C3'),
-  'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1')
-)
-
+load(here("rdas","revision","markers.rda"), verbose = TRUE)
 
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
@@ -324,7 +305,7 @@ annotationTab.dlpfc$cellType <- NA
 annotationTab.dlpfc$cellType[c(1:3, 6, 17,18)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
 annotationTab.dlpfc$cellType[c(4,5,8,10:13)] <- paste0("Excit_", c("A","B","C","D","E","F","G"))
 annotationTab.dlpfc$cellType[c(7, 9, 13, 16)] <- c("Astro", "Oligo", "OPC", "Micro")
-annotationTab.dlpfc$cellType[c(14,15)] <- c("T-cells","Mural")
+annotationTab.dlpfc$cellType[c(14,15)] <- c("Tcell","Mural")
 
 
 sce.dlpfc$cellType <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
@@ -359,7 +340,7 @@ table(sce.dlpfc$collapsedCluster)
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
-load()
+load(here( file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")))
 
 ## Re-print marker expression plots with annotated cluster names ===
 cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
@@ -371,6 +352,8 @@ cell_colors
 # "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7" 
 # Inhib_E       Inhib_F 
 # "#BCBD22"     "#DBDB8D" 
+save(cell_colors, file = here("rdas","revision","cell_colors_dlpfc.Rdata"))
+
 
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
@@ -385,8 +368,6 @@ for(i in 1:length(markers.mathys.custom)){
 dev.off()
 
  ## -> proceed to 'step03_markerDetxn-analyses[...].R'
-
-
 
 ### For reference === == === == ===
 table(sce.dlpfc$cellType, sce.dlpfc$sampleID)
