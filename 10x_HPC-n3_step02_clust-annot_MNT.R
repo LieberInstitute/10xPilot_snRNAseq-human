@@ -188,14 +188,30 @@ clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusColl
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
     ## Cutting at 325 looks the best - go ahead and proceed with this
-     #    - 32 & 27, though not their own unique branch (such as 6,28), will be
-     #      considered the same, since distance is negligible (27 is only 5 nuclei)
 
-# Add new labels to those (13x) prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,2,3,4,4,5,6,6,7:9,10,10)
+    # (post-hoc:) All/most the inhibs are collapsed to one cluster... let's cut shallower for these
+    neuron.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
+                                  minClusterSize=1, deepSplit=1, cutHeight=200)
+    unname(neuron.treeCut[order.dendrogram(dend)])
+    
+    # Take those and re-assign to the first assignments; leave 20,24,45 together
+    clust.treeCut[order.dendrogram(dend)][c(6:21)] <- ifelse(neuron.treeCut[order.dendrogram(dend)][c(6:21)] == 0,
+                                                              0, neuron.treeCut[order.dendrogram(dend)][c(6:21)] + 8)
+    
+    unname(clust.treeCut[order.dendrogram(dend)])
 
 
-labels_colors(dend) <- tableau20[clust.treeCut[order.dendrogram(dend)]]
+# Add new labels to those (18x) prelimClusters cut off
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <-
+  max(clust.treeCut)+c(1:8, 9,9, 10, 11,11, 12:14, 15,15)
+
+# 'Re-write', since there are missing numbers
+clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[order.dendrogram(dend)]))
+
+## Define color pallet
+cluster_colors <- unique(c(tableau10medium, tableau20)[clust.treeCut[order.dendrogram(dend)]])
+names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
+labels_colors(dend) <- cluster_colors[clust.treeCut[order.dendrogram(dend)]]
 
 # Print for future reference
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf",width=9)
@@ -236,8 +252,8 @@ markers.mathys.custom = list(
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
   'endothelial' = c('CLDN5', 'FLT1', 'VTN', 'PECAM1'),
-  # Added MNT 20Mar2020
-  'Tcell' = c('TRAC','SKAP1','CCL5')
+  # Updated T cell markers - these seem to be more stable (across regions)
+  'Tcell' = c('SKAP1', 'ITK', 'CD247')
 )
 
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf",
@@ -300,18 +316,18 @@ sapply(clusIndex, function(x) {round(quantile(sce.hpc$doubletScore[x]),2)})
 
 ## Add annotations, looking at marker gene expression
  #    (canonical, above, and from markers looked at in 'step3')
-annotationTab.hpc <- data.frame(collapsedCluster=c(1:18))
+annotationTab.hpc <- data.frame(collapsedCluster=c(1:23))
 annotationTab.hpc$cellType <- NA
-annotationTab.hpc$cellType[c(1)] <- paste0("Inhib")
-annotationTab.hpc$cellType[c(2)] <- paste0("Oligo")
-annotationTab.hpc$cellType[c(4,7,9:12)] <- paste0("Excit_", c("A","B","C","D","E","F"))
-annotationTab.hpc$cellType[c(5,6)] <- c("Micro","OPC")
-annotationTab.hpc$cellType[13] <- "Tcell"
-annotationTab.hpc$cellType[c(3,8)] <- paste0("Astro_", c("A","B"))
-annotationTab.hpc$cellType[c(14,18)] <- paste0("drop.lowNTx_", c("A","B"))
-annotationTab.hpc$cellType[15] <- "Mural"
-annotationTab.hpc$cellType[16] <- "drop.doublet"
-annotationTab.hpc$cellType[c(17)] <- "OPC_COP"
+annotationTab.hpc$cellType[c(1)] <- paste0("Oligo")
+annotationTab.hpc$cellType[c(3,4)] <- c("Micro","OPC")
+annotationTab.hpc$cellType[c(2,6)] <- paste0("Astro_", c("A","B"))
+annotationTab.hpc$cellType[c(5,8:12,14,15)] <- paste0("Excit_", c("A","B","C","D","E","F","G","H"))
+annotationTab.hpc$cellType[c(7,13,16,17)] <- paste0("Inhib_", c("A","B","C","D"))
+annotationTab.hpc$cellType[18] <- "Tcell"
+annotationTab.hpc$cellType[c(19,23)] <- paste0("drop.lowNTx_", c("A","B"))
+annotationTab.hpc$cellType[20] <- "Mural"
+annotationTab.hpc$cellType[21] <- "drop.doublet"
+annotationTab.hpc$cellType[c(22)] <- "OPC_COP"
 
 
 sce.hpc$cellType <- annotationTab.hpc$cellType[match(sce.hpc$collapsedCluster,
@@ -327,6 +343,23 @@ save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc,
 ## Re-print marker expression with cell type labels ===
 # load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
 #      verbose=T)
+cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
+names(cell_colors) <- annotationTab.hpc$cellType
+cell_colors
+    #         Oligo       Astro_A         Micro           OPC       Excit_A       Astro_B 
+    #     "#729ECE"     "#FF9E4A"     "#67BF5C"     "#ED665D"     "#AD8BC9"     "#A8786E" 
+    #       Inhib_A       Excit_B       Excit_C       Excit_D       Excit_E       Excit_F 
+    #     "#ED97CA"     "#A2A2A2"     "#CDCC5D"     "#6DCCDA"     "#1F77B4"     "#AEC7E8" 
+    #       Inhib_B       Excit_G       Excit_H       Inhib_C       Inhib_D         Tcell 
+    #     "#FF7F0E"     "#FFBB78"     "#2CA02C"     "#98DF8A"     "#D62728"     "#FF9896" 
+    # drop.lowNTx_A         Mural  drop.doublet       OPC_COP drop.lowNTx_B 
+    #     "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"
+
+    # Hmm can we make the colors match those in the dendrogram? What if did:
+    # cell_colors <- cluster_colors
+    # names(cell_colors) <- annotationTab.hpc$cellType[match(names(cluster_colors),
+    #                                                        annotationTab.hpc$collapsedCluster)]
+
 
 pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
 for(i in 1:length(markers.mathys.custom)){
@@ -334,7 +367,8 @@ for(i in 1:length(markers.mathys.custom)){
     plotExpressionCustom(sce = sce.hpc,
                          features = markers.mathys.custom[[i]], 
                          features_name = names(markers.mathys.custom)[[i]], 
-                         anno_name = "cellType")
+                         anno_name = "cellType") +
+      scale_color_manual(values = cell_colors)
   )
 }
 dev.off()
