@@ -211,7 +211,7 @@ clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust.treeCut[orde
 ## Define color pallet
 cluster_colors <- unique(c(tableau10medium, tableau20)[clust.treeCut[order.dendrogram(dend)]])
 names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
-labels_colors(dend) <- cluster_colors[clust.treeCut[order.dendrogram(dend)]]
+labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
 
 # Print for future reference
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf",width=9)
@@ -335,17 +335,14 @@ sce.hpc$cellType <- annotationTab.hpc$cellType[match(sce.hpc$collapsedCluster,
 sce.hpc$cellType <- factor(sce.hpc$cellType)
 
 
-## Save
-save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
 ## Re-print marker expression with cell type labels ===
 # load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
 #      verbose=T)
-cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
-names(cell_colors) <- annotationTab.hpc$cellType
-cell_colors
+cell_colors.hpc <- cluster_colors[order(as.integer(names(cluster_colors)))]
+names(cell_colors.hpc) <- annotationTab.hpc$cellType
+cell_colors.hpc
     #         Oligo       Astro_A         Micro           OPC       Excit_A       Astro_B 
     #     "#729ECE"     "#FF9E4A"     "#67BF5C"     "#ED665D"     "#AD8BC9"     "#A8786E" 
     #       Inhib_A       Excit_B       Excit_C       Excit_D       Excit_E       Excit_F 
@@ -355,10 +352,10 @@ cell_colors
     # drop.lowNTx_A         Mural  drop.doublet       OPC_COP drop.lowNTx_B 
     #     "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"
 
-    # Hmm can we make the colors match those in the dendrogram? What if did:
-    # cell_colors <- cluster_colors
-    # names(cell_colors) <- annotationTab.hpc$cellType[match(names(cluster_colors),
-    #                                                        annotationTab.hpc$collapsedCluster)]
+
+## Save
+save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
 pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
@@ -368,7 +365,7 @@ for(i in 1:length(markers.mathys.custom)){
                          features = markers.mathys.custom[[i]], 
                          features_name = names(markers.mathys.custom)[[i]], 
                          anno_name = "cellType") +
-      scale_color_manual(values = cell_colors)
+      scale_color_manual(values = cell_colors.hpc)
   )
 }
 dev.off()
