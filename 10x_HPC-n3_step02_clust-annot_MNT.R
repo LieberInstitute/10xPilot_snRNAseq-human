@@ -358,7 +358,7 @@ save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
-pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=6, width=10)
+pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=4.5, width=10)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpressionCustom(sce = sce.hpc,
@@ -380,21 +380,28 @@ dev.off()
 
     
 ## Re-print reducedDims with these annotations ===
-pdf("pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf")
-plotReducedDim(sce.hpc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.hpc, colour_by="sampleID", point_alpha=0.5)
-plotTSNE(sce.hpc, colour_by="protocol", point_alpha=0.5)
+pdf("pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf",width=8)
+plotReducedDim(sce.hpc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5) +
+  scale_color_manual(values = cell_colors.hpc) + labs(colour="Cell type")
+plotTSNE(sce.hpc, colour_by="sampleID", point_alpha=0.5, point_size=2)
+plotTSNE(sce.hpc, colour_by="protocol", point_alpha=0.5, point_size=2)
 plotTSNE(sce.hpc, colour_by="prelimCluster", text_by="prelimCluster",
-         text_size=3, point_alpha=0.5)
+         text_size=3, point_alpha=0.5, point_size=2)
 plotTSNE(sce.hpc, colour_by="cellType", text_by="cellType",
-         text_size=3, point_alpha=0.5)
-plotTSNE(sce.hpc, colour_by="sum", point_alpha=0.5)
-plotTSNE(sce.hpc, colour_by="doubletScore", point_alpha=0.5)
+         text_size=3, point_alpha=0.5, point_size=2) +
+  scale_color_manual(values = cell_colors.hpc,
+                     labels=paste0(levels(sce.hpc$cellType)," (",table(sce.hpc$cellType),")")) +
+  labs(colour="Cell type")
+plotTSNE(sce.hpc, colour_by="sum", point_alpha=0.5, point_size=2)
+plotTSNE(sce.hpc, colour_by="doubletScore", point_alpha=0.5, point_size=2)
 # And some more informative UMAPs
 plotUMAP(sce.hpc, colour_by="prelimCluster", text_by="prelimCluster",
-         text_size=3, point_alpha=0.5)
+         text_size=3, point_alpha=0.5, point_size=2)
 plotUMAP(sce.hpc, colour_by="cellType", text_by="cellType",
-         text_size=3, point_alpha=0.5)
+         text_size=3, point_alpha=0.5, point_size=2) +
+  scale_color_manual(values = cell_colors.hpc,
+                     labels=paste0(levels(sce.hpc$cellType)," (",table(sce.hpc$cellType),")")) +
+  labs(colour="Cell type")
 dev.off()
     
     
