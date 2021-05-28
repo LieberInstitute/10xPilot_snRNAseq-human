@@ -30,31 +30,33 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revisio
     # sce.hpc, clusterRefTab.hpc, chosen.hvgs.hpc, ref.sampleInfo
 
 table(sce.hpc$cellType)
-    #        ambig ambig.glial_A ambig.glial_B       Astro_A       Astro_B 
-    #           43            15            19           936           234 
-    #      Astro_C  drop.doublet       Excit_A       Excit_B       Excit_C 
-    #          105             5           486            87             6 
-    #      Excit_D       Excit_E       Excit_F         Inhib         Micro 
-    #           35             6            38           331          1161 
-    #        Oligo           OPC         Tcell 
-    #         5912           823            26
+    #  Astro_A       Astro_B  drop.doublet drop.lowNTx_A drop.lowNTx_B 
+    #      936           234             5           105            19 
+    #  Excit_A       Excit_B       Excit_C       Excit_D       Excit_E 
+    #       87           421             6            35             6 
+    #  Excit_F       Excit_G       Excit_H       Inhib_A       Inhib_B 
+    #       29             6            33           300            30 
+    #  Inhib_C       Inhib_D         Micro         Mural         Oligo 
+    #        5            31          1161            43          5912 
+    #      OPC       OPC_COP         Tcell 
+    #      823            15            26 
 
-# First drop "drop.doublet" (5 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "drop.doublet"]
+# First drop decided "drop." clusters (129 nuclei)
+sce.hpc <- sce.hpc[ ,-grep("drop.", sce.hpc$cellType)]
 sce.hpc$cellType <- droplevels(sce.hpc$cellType)
 
 # Remove 0 genes across all nuclei
-sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28768 genes
+sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28764 genes
+
+# Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+assay(sce.hpc, "logcounts") <- NULL
+sizeFactors(sce.hpc) <- NULL
+
+sce.hpc <- logNormCounts(sce.hpc)
 
 
-## Traditional t-test with design as in PB'd/limma approach ===
-mod <- with(colData(sce.hpc), model.matrix(~ donor))
-mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
-
-
-
-### Make list of Boolean param / cell subtype ===
-# Will use this to assess more 'valid', non-noise-driving markers
+### First make a list of Boolean param / cell subtype ===
+  # Will use this to assess more 'valid', non-noise-driving markers
 cellSubtype.idx <- splitit(sce.hpc$cellType)
 medianNon0.hpc <- lapply(cellSubtype.idx, function(x){
   apply(as.matrix(assay(sce.hpc, "logcounts")), 1, function(y){
@@ -66,6 +68,9 @@ lengths(medianNon0.hpc)
 sapply(medianNon0.hpc, table)
 
 
+## Traditional t-test implementation ===
+mod <- with(colData(sce.hpc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
 
 
 # Run pairwise t-tests
