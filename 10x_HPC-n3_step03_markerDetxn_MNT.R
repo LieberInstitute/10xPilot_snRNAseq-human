@@ -13,6 +13,8 @@ library(DropletUtils)
 library(jaffelab)
 library(limma)
 
+source("plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -48,10 +50,13 @@ sce.hpc$cellType <- droplevels(sce.hpc$cellType)
 # Remove 0 genes across all nuclei
 sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28764 genes
 
-# Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+## Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+
+# First 'hold' the MBN 'logcounts' for printing
+sce.hold <- sce.hpc
+
 assay(sce.hpc, "logcounts") <- NULL
 sizeFactors(sce.hpc) <- NULL
-
 sce.hpc <- logNormCounts(sce.hpc)
 
 
@@ -64,7 +69,6 @@ medianNon0.hpc <- lapply(cellSubtype.idx, function(x){
   })
 })
 
-lengths(medianNon0.hpc)
 sapply(medianNon0.hpc, table)
 
 
@@ -79,13 +83,15 @@ markers.hpc.t.pw <- findMarkers(sce.hpc, groups=sce.hpc$cellType,
                                 direction="up", pval.type="all", full.stats=T)
 
 sapply(markers.hpc.t.pw, function(x){table(x$FDR<0.05)})
-    #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3
-    # FALSE 28244   28435   28540   28498   28140   28394   28552   28629   28593
-    # TRUE    513     322     217     259     617     363     205     128     164
-
-    #       Inhib.4 Inhib.5 Micro Oligo   OPC Tcell
-    # FALSE   28601   28595 28093 28356 28506 28006
-    # TRUE      156     162   664   401   251   751
+    #       Astro_A Astro_B Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Excit_G
+    # FALSE   28622   28634   28701   28741   28534   28685   28653   28605   28576
+    # TRUE      142     130      63      23     230      79     111     159     188
+    #       Excit_H Inhib_A Inhib_B Inhib_C Inhib_D Micro Mural Oligo   OPC OPC_COP
+    # FALSE   28607   28757   28664   28666   28690 28474 28383 28673 28701   28561
+    # TRUE      157       7     100      98      74   290   381    91    63     203
+    #         Tcell
+    #   FALSE 28294
+    #   TRUE    470
 
 
 ## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
@@ -93,9 +99,8 @@ markers.hpc.wilcox.block <- findMarkers(sce.hpc, groups=sce.hpc$cellType,
                                           assay.type="logcounts", block=sce.hpc$donor, test="wilcox",
                                           direction="up", pval.type="all", full.stats=T)
 
-# no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
 sapply(markers.hpc.wilcox.block, function(x){table(x$FDR<0.05)})
-      # Actually some decent results but many subclusters with 0 hits
+    # No results... disregard these
 
 
 ## Binomial ===
@@ -104,116 +109,84 @@ markers.hpc.binom.block <- findMarkers(sce.hpc, groups=sce.hpc$cellType,
                                          direction="up", pval.type="all", full.stats=T)
 
 sapply(markers.hpc.binom.block, function(x){table(x$FDR<0.05)})
-    # only a couple dozen hits for glia, only - disregard these
+    # Also no results... disregard these 
 
 
 # Add respective 'non0median' column to the stats for each set of markers
-#   (just the pw t-test for now)
 for(i in names(markers.hpc.t.pw)){
   markers.hpc.t.pw[[i]] <- cbind(markers.hpc.t.pw[[i]],
                                  medianNon0.hpc[[i]][match(rownames(markers.hpc.t.pw[[i]]),
                                                            names(medianNon0.hpc[[i]]))])
-  colnames(markers.hpc.t.pw[[i]])[20] <- "non0median"
+  colnames(markers.hpc.t.pw[[i]])[23] <- "non0median"
 }
 
 sapply(markers.hpc.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
+    # Astro_A.TRUE Astro_B.TRUE Excit_A.TRUE Excit_B.TRUE Excit_C.TRUE Excit_D.TRUE 
+    #          124           83           46           13           57           40 
+    # Excit_E.TRUE Excit_F.TRUE Excit_G.TRUE Excit_H.TRUE Inhib_A.TRUE Inhib_B.TRUE 
+    #           48           61           55           52            1           44 
+    # Inhib_C.TRUE Inhib_D.TRUE   Micro.TRUE   Mural.TRUE   Oligo.TRUE     OPC.TRUE 
+    #           30           27          193           59           91           53 
+    # OPC_COP.TRUE   Tcell.TRUE 
+    #          101          114
 
-markerList.t.pw.logcounts <- lapply(markers.hpc.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
-})
-
-lengths(markerList.t.pw.logcounts)
-    #   ambig ambig.glial_A ambig.glial_B       Astro_A       Astro_B       Astro_C       Excit_A 
-    #      69           118             0           139            93             1            43 
-    # Excit_B       Excit_C       Excit_D       Excit_E       Excit_F         Inhib         Micro 
-    #     102           128            69            98            64            38           223 
-    #   Oligo           OPC         Tcell 
-    #     116            65           129 
-
-# Explore some of the prelim results
-plotExpression(sce.hpc, exprs_values = "logcounts", features=head(markerList.t.pw.logcounts[["ambig.glial_A"]], 15),
-               x="cellType", colour_by="cellType", point_alpha=0.2, point_size=.7, ncol=5,
-               add_legend=F, show_median=T) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
-
-    # total UMI distribution?
-    cellIdx <- splitit(sce.hpc$cellType)
-    sapply(cellIdx, function(x){quantile(sce.hpc$sum[x])})
-    sapply(cellIdx, function(x){round(quantile(sce.hpc$sizeFactor[x]),3)})
-    
-        # So 'ambig.glial_B' should definitely be a 'drop.lowNTx';
-        # 'Astro_C' should be, too, since, while median total UMIs ~1500, their SF median is 0.18,
-        #   so these the logcounts are scaled UP by a median of ~5x, inducing the single 'marker'
-
-    # What about 'ambig' & 'ambig.glial_A'?
-    head(markerList.t.pw.logcounts[["ambig"]], 40)
-        # [1] "COL1A2"     "CFH"        "PHLDB2"     "SLC6A13"    "TBX18"     
-        # [6] "ITIH5"      "AC092957.1" "ARHGAP29"   "COBLL1"     "CEMIP"     
-        # [11] "EBF1"       "SLC13A4"    "SLC16A12"   "ABCA9"      "RBPMS"     
-        # [16] "ADAMTS12"   "SLC6A12"    "FBLN1"      "MYO1B"      "COLEC12"
-        #[21] "SVIL"        "ADAMTS9-AS2" "NID1"        "ECM2"        "PDGFRB"     
-        # [26] "ARHGAP10"    "ATP1A2"      "KANK2"       "BICC1"       "IGFBP7"     
-        # [31] "PLCB4"       "UACA"        "PARVA"       "TPM1"        "PLA2R1"     
-        # [36] "RBMS3"       "FN1"         "VIM"         "YAP1"        "EYA1" 
-            # These look like mural cells (either pericytes/VSMCs; unclear which)
-      
-    head(markerList.t.pw.logcounts[["ambig.glial_A"]], 40)
-        # [1] "AC008080.4" "GPR17"      "ADAM33"     "BCAN"       "TNS3"      
-        # [6] "LIMS2"      "BCAS1"      "AC006058.1" "MDFI"       "PRICKLE1"  
-        # [11] "SEMA5B"     "ADAMTS20"   "SLC16A10"   "CENPJ"      "KCNS3"     
-        # [16] "BMPER"      "ASIC4"      "NBAT1"      "AC044781.1" "SOX4"      
-        # [21] "HRASLS"     "SMOC1"      "EPHB1"      "B3GNT7"     "DOCK6"     
-        # [26] "RHBDL3"     "TMEM163"    "SIRT2"      "C9orf129"   "SCRG1"     
-        # [31] "AC110285.1" "ANGPTL2"    "ELFN2"      "CRB1"       "RASGEF1B"  
-        # [36] "REXO5"      "TNFRSF21"   "FRMD4A"     "IL17RB"     "KY"
-            # These seem to be the 'differentiation-committed OPCs (COP)s' from
-            #    Marques-Zeisel, et al. 2017 (doi: 10.1126/science.aaf6463)
-    
-        # MNT 21May2021: go back and re-annotate these accordingly
 
 
 ## Save all these for future reference ===
-save(markers.hpc.t.pw.logcounts, #markers.hpc.wilcox.block, #markers.hpc.binom.block,
+save(markers.hpc.t.pw, #markers.hpc.wilcox.block, #markers.hpc.binom.block,
      medianNon0.hpc,
      file="rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda")
 
 
 
 # Print these to pngs
-markerList.t <- lapply(markers.hpc.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05]
+markerList.t.pw <- lapply(markers.hpc.t.pw, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median == TRUE]
   }
 )
 
-genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+genes.top40.t <- lapply(markerList.t.pw, function(x){head(x, n=40)})
 
 
 #dir.create("pdfs/revision/HPC/")
-for(i in names(genes.top40.t)){
+smaller.set <- names(genes.top40.t)[lengths(genes.top40.t) <= 20]
+left.set <- setdiff(names(genes.top40.t), smaller.set)
+
+# Smaller graphical window
+for(i in smaller.set){
+  png(paste0("pdfs/revision/HPC/HPC_t_pairwise_top40markers-", i, "_logExprs_MNT2021.png"), height=950, width=1200)
+  print(
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]], 
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.hpc) +  
+      ggtitle(label=paste0(i, " top markers: single-nucleus-level p.w. t-tests (FDR<0.05)"))
+  )
+  dev.off()
+}
+
+# 20-40 markers
+for(i in left.set){
   png(paste0("pdfs/revision/HPC/HPC_t_pairwise_top40markers-", i, "_logExprs_MNT2021.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]], 
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.hpc) +  
+      ggtitle(label=paste0(i, " top markers: single-nucleus-level p.w. t-tests (FDR<0.05)"))
   )
   dev.off()
 }
 
 
-# Save
-save(markers.hpc.t.pw, markers.hpc.t.pw.logcounts,
-     markers.hpc.wilcox.block, medianNon0.hpc,
-     file="rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda")
-
-
+#source('plotExpressionCustom.R')
 
 
 ### Cluster-vs-all single-nucleus-level iteration ================================
-# MNT 30Apr2020
 
 ## Load SCE with new info
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
