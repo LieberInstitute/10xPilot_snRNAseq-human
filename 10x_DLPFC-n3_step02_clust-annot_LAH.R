@@ -322,7 +322,7 @@ sapply(newClusIndex, function(x) {quantile(sce.dlpfc$sum[x])})
 # 50%   5737.00   34997   25241  49345.00 32065.50  49414.0   37430   18968 16423.50   24138   29623 14241.0 20281.50
 # 75%   7953.00   43590   33292  59114.25 39545.00  61162.0   47099   23036 22355.75   28996   35364 17472.0 22677.00
 # 100% 26618.00   87392   69309 115449.00 69202.00 101625.0   83826   55574 66556.00   81134   67503 42588.0 27504.00
-#         Micro  Mural   Oligo      OPC T-cells
+#         Micro  Mural   Oligo      OPC   Tcell
 # 0%     879.00 1979.0   850.0  2084.00    1774
 # 25%   3019.25 3210.5  4940.5  7371.75    2332
 # 50%   3883.50 4692.5  6385.0  9112.00    2762
@@ -337,12 +337,6 @@ table(sce.dlpfc$collapsedCluster)
 # 333  454  365  529  773  413  782  524 5455  132  187  243  572   19   18  388    7    8 
 
 
-# Save
-save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
-load(here( file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")))
-
-## Re-print marker expression plots with annotated cluster names ===
 cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
 names(cell_colors) <- annotationTab.dlpfc$cellType
 cell_colors
@@ -352,9 +346,12 @@ cell_colors
 # "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7" 
 # Inhib_E       Inhib_F 
 # "#BCBD22"     "#DBDB8D" 
-save(cell_colors, file = here("rdas","revision","cell_colors_dlpfc.Rdata"))
 
+# Save
+save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors,
+     file=here("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda"))
 
+## Re-print marker expression plots with annotated cluster names ===
 pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH2021.pdf", height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -389,7 +386,7 @@ table(sce.dlpfc$cellType, sce.dlpfc$sampleID)
 # Mural              3           13            2
 # Oligo           2754         2184          517
 # OPC              196          285           91
-# T-cells            3           11            5
+# Tcell            3           11            5
 
 table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)
 
@@ -408,7 +405,7 @@ annotationTab.dlpfc
 # 11               11  Excit_E
 # 12               12  Excit_F
 # 13               13      OPC
-# 14               14  T-cells
+# 14               14  Tcell
 # 15               15    Mural
 # 16               16    Micro
 # 17               17  Inhib_E
