@@ -189,115 +189,113 @@ for(i in left.set){
 ### Cluster-vs-all single-nucleus-level iteration ================================
 
 ## Load SCE with new info
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
+# sce.hpc, clusterRefTab.hpc, chosen.hvgs.hpc, ref.sampleInfo
 
-table(sce.hpc$cellType)
-
-# First drop "Ambig.lowNtrxts" (101 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
+# First drop decided "drop." clusters (129 nuclei)
+sce.hpc <- sce.hpc[ ,-grep("drop.", sce.hpc$cellType)]
 sce.hpc$cellType <- droplevels(sce.hpc$cellType)
 
 # Remove 0 genes across all nuclei
-sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28757 genes
+sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]  # keeps same 28764 genes
 
+## Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+# First 'hold' the MBN 'logcounts' for printing
+sce.hold <- sce.hpc
+
+assay(sce.hpc, "logcounts") <- NULL
+sizeFactors(sce.hpc) <- NULL
+sce.hpc <- logNormCounts(sce.hpc)
+
+
+## Load pw marker stats .rda with the non0median Booleans/cellType
+load("rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.hpc.t.pw, medianNon0.hpc
 
 ## Traditional t-test with design as in PB'd/limma approach ===
 mod <- with(colData(sce.hpc), model.matrix(~ donor))
 mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
 
-
 markers.hpc.t.1vAll <- list()
 for(i in levels(sce.hpc$cellType)){
   # Make temporary contrast
   sce.hpc$contrast <- ifelse(sce.hpc$cellType==i, 1, 0)
-  # Test cluster vs. all
+  # Test cluster vs. all others
   markers.hpc.t.1vAll[[i]] <- findMarkers(sce.hpc, groups=sce.hpc$contrast,
-                                            assay.type="logcounts", design=mod, test="t",
-                                            direction="up", pval.type="all", full.stats=T)
+                                          assay.type="logcounts", design=mod, test="t",
+                                          std.lfc=TRUE,
+                                          direction="up", pval.type="all", full.stats=T)
 }
+    ## Since all other stats are the same, and don't really use the non-standardized
+     #    logFC, just generate one object, unlike before
 
-    ## Then, temp set of stats to get the standardized logFC
-    temp.1vAll <- list()
-    for(i in levels(sce.hpc$cellType)){
-      # Make temporary contrast
-      sce.hpc$contrast <- ifelse(sce.hpc$cellType==i, 1, 0)
-      # Test cluster vs. all
-      temp.1vAll[[i]] <- findMarkers(sce.hpc, groups=sce.hpc$contrast,
-                                     assay.type="logcounts", design=mod, test="t",
-                                     std.lfc=TRUE,
-                                     direction="up", pval.type="all", full.stats=T)
-    }
-
-
-
-    ## As with DLPFC, for some reason all the results are in the
-     #    second List entry (first is always empty)
-
-head(markers.hpc.t.1vAll[["Oligo"]][[2]])
-    ## Nice, MBP and PLP1 are again in the top 6
+class(markers.hpc.t.1vAll[["Oligo"]])
+    # a SimpleList of length 2, named "0" and "1" (from the temporary 'contrast')
+    # -> we want the second entry, named "1"
+    #    (for other purposes, might be interesting to look into that "0" entry, which
+    #     is basically what genes are depleted in the cell type of interest)
 
 
 sapply(markers.hpc.t.1vAll, function(x){
-  table(x[[2]]$stats.0$log.FDR < log10(.001))
+  table(x[["1"]]$stats.0$log.FDR < log(.001))
 })
-    #       Oligo Micro   OPC Inhib.5 Inhib.2 Astro Inhib.3 Excit.2 Inhib.4 Tcell
-    # FALSE 24914 22821 23236   24401   23540 21612   21436   22608   24460 26858
-    # TRUE   3843  5936  5521    4356    5217  7145    7321    6149    4297  1899
-    #       Inhib.1 Excit.5 Excit.3 Excit.1 Excit.4
-    # FALSE   25456   25913   19431   23726   24170
-    # TRUE     3301    2844    9326    5031    4587
+    #      Astro_A Astro_B Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Excit_G Excit_H
+    # FALSE   23674   25280   24676   21295   27759   27031   27943   25816   28162   26815
+    # TRUE     5090    3484    4088    7469    1005    1733     821    2948     602    1949
+    
+    #       Inhib_A Inhib_B Inhib_C Inhib_D Micro Mural Oligo   OPC OPC_COP Tcell
+    # FALSE   21767   26520   28193   26797 23995 26934 25713 24731   28086 27391
+    # TRUE     6997    2244     571    1967  4769  1830  3051  4033     678  1373
 
+# Do some reorganizing
+markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){
+  # Basically take the 'stats.[1 or 0]' since is redundant with the 'summary'-level stats
+  lapply(x, function(y){ y[ ,4] }) 
+  })
 
-
-# Replace that empty slot with the entry with the actul stats
-markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){ x[[2]] })
-# Same for that with std.lfc
-temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
-
-# Now just pull from the 'stats.0' DataFrame column
-markers.hpc.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){ x$stats.0 })
-temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
-
-# Re-name std.lfc column and add to the first result
-for(i in names(temp.1vAll)){
-  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
-  markers.hpc.t.1vAll[[i]] <- cbind(markers.hpc.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
-  # Oh the colname is kept weird
-  colnames(markers.hpc.t.1vAll[[i]])[4] <- "std.logFC"
-  # Then re-organize
-  markers.hpc.t.1vAll[[i]] <- markers.hpc.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+# Re-name std.lfc column and the entries; add non-0-median info
+for(i in names(markers.hpc.t.1vAll)){
+  colnames(markers.hpc.t.1vAll[[i]][["0"]])[1] <- "std.logFC"
+  colnames(markers.hpc.t.1vAll[[i]][["1"]])[1] <- "std.logFC"
+  # Add non0median Boolean - might be informative for both sets of stats
+  markers.hpc.t.1vAll[[i]][["0"]] <- cbind(markers.hpc.t.1vAll[[i]][["0"]],
+                                 medianNon0.hpc[[i]][match(rownames(markers.hpc.t.1vAll[[i]][["0"]]),
+                                                           names(medianNon0.hpc[[i]]))])
+  colnames(markers.hpc.t.1vAll[[i]][["0"]])[4] <- "non0median"
+  
+  # "1" aka 'enriched'
+  markers.hpc.t.1vAll[[i]][["1"]] <- cbind(markers.hpc.t.1vAll[[i]][["1"]],
+                                           medianNon0.hpc[[i]][match(rownames(markers.hpc.t.1vAll[[i]][["1"]]),
+                                                                     names(medianNon0.hpc[[i]]))])
+  colnames(markers.hpc.t.1vAll[[i]][["1"]])[4] <- "non0median"
+  
+  # Then re-name the entries to more interpretable, because we'll keeping both contrasts
+  names(markers.hpc.t.1vAll[[i]]) <- paste0(i,c("_depleted", "_enriched"))
 }
 
 
-
-
-
 ## Let's save this along with the previous pairwise results
-save(markers.hpc.t.1vAll, markers.hpc.t.pw, markers.hpc.wilcox.block,
-#     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTApr2020.rda")
-#     (deleting this older version - doesn't have the std.lfc result)
-     file="rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda")
+save(markers.hpc.t.pw, markers.hpc.t.1vAll, medianNon0.hpc,
+     file="rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda")
 
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(0.000001)]
+  rownames(x[[2]])[ x[[2]]$log.FDR < log(0.05) & x[[2]]$non0median==TRUE ]
  }
 )
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 
 for(i in names(genes.top40.t)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HPC/HPC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900, width=1200)
+  png(paste0("pdfs/revision/HPC/HPC_t_1vALL_top40markers-",i,"_logExprs_MNT2021.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]], 
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.hpc) +  
+      ggtitle(label=paste0(i, " top markers: 'cluster-vs-all-others' t-tests (FDR<0.05)"))
   )
   dev.off()
 }
@@ -305,7 +303,7 @@ for(i in names(genes.top40.t)){
 
 ## How do they intersect?
 markerList.t.pw <- lapply(markers.hpc.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05]
+  rownames(x)[ x$FDR < 0.05 & x$non0median==TRUE ]
   }
 )
 
@@ -327,10 +325,10 @@ sapply(names(markerList.t.pw), function(c){
                        lapply(markerList.t.1vAll, function(l){head(l,n=40)})[[c]]
                        ))
     })
-    #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #      26      24      18      15      28      33      22      10      22      23
-    # Inhib.5   Micro   Oligo     OPC   Tcell
-    #      19      30      26      20      39
+    #Astro_A Astro_B Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Excit_G Excit_H Inhib_A 
+    #     24      30      16       7      20      21      31      23      23      28       1 
+    #Inhib_B Inhib_C Inhib_D   Micro   Mural   Oligo     OPC OPC_COP   Tcell 
+    #     22      21      16      31      30      26      17      32      37 
 
 
     
@@ -338,164 +336,34 @@ sapply(names(markerList.t.pw), function(c){
 names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
 names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
 
+# Many of the PW results don't have 40 markers:
+extend.idx <- names(which(lengths(markerList.t.pw) < 40))
+for(i in extend.idx){
+  markerList.t.pw[[i]] <- c(markerList.t.pw[[i]], rep("", 40-length(markerList.t.pw[[i]])))
+}
+
 top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
                     sapply(markerList.t.1vAll, function(y) head(y, n=40)))
 top40genes <- top40genes[ ,sort(colnames(top40genes))]
 
-write.csv(top40genes, file="tables/top40genesLists_HPC-n3_cellType_SN-LEVEL-tests_May2020.csv",
+write.csv(top40genes, file="tables/revision/top40genesLists_HPC-n3_cellType_SN-LEVEL-tests_MNT2021.csv",
           row.names=FALSE)
 
-
-
-
-### MNT add 18Nov2020 =================================
-  # -> What if add param/requirement that for any given subcluster, median expression has to > 0?
-load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.hpc.t.1vAll, markers.hpc.t.pw, markers.hpc.wilcox.block
-
-## Load SCE 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda",
-     verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
-
-table(sce.hpc$cellType)
-
-# First drop "Ambig.lowNtrxts" (101 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType != "Ambig.lowNtrxts"]
-sce.hpc$cellType <- droplevels(sce.hpc$cellType)
-
-# Remove 0 genes across all nuclei
-sce.hpc <- sce.hpc[!rowSums(assay(sce.hpc, "counts"))==0, ]
-
-
-## Make list of Boolean param / cell subtype ===
-cellSubtype.idx <- splitit(sce.hpc$cellType)
-medianNon0.hpc <- lapply(cellSubtype.idx, function(x){
-  apply(as.matrix(assay(sce.hpc, "logcounts")), 1, function(y){
-    median(y[x]) > 0
-  })
-})
-
-lengths(medianNon0.hpc)
-sapply(medianNon0.hpc, head)
-
-# Add these to the stats for each set of markers
-for(i in names(markers.hpc.t.1vAll)){
-  markers.hpc.t.1vAll[[i]] <- cbind(markers.hpc.t.1vAll[[i]],
-                                    medianNon0.hpc[[i]][match(rownames(markers.hpc.t.1vAll[[i]]),
-                                                           names(medianNon0.hpc[[i]]))])
-  colnames(markers.hpc.t.1vAll[[i]])[5] <- "non0median"
-}
-
-
-## Use these restrictions to print (to png) a refined top 40, as before ===
-markerList.t.1vAll <- lapply(markers.hpc.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(0.000001) & x$non0median==TRUE]
-  }
-)
-    # lengths(markerList.t.1vAll)     # ( **without $non0median==TRUE restriction )
-        #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-        #    5668    3876    4581    7414    3246    2033    2314    3679    5184    2806
-        # Inhib.5   Micro   Oligo     OPC   Tcell
-        #    2962    4934    3323    4182    1406
-
-lengths(markerList.t.1vAll)
-    #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #     847    1958    2659    3412    2000     832    1594    2111    2487    1861
-    # Inhib.5   Micro   Oligo     OPC   Tcell
-    #    1993     802     953    1065     354
-
-genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HPC/HPC_t-sn-level_1vALL_top40markers-REFINED-",gsub(":",".",i),"_logExprs_Nov2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests, cluster-vs-all"))
-  )
-  dev.off()
-}
-
-
-
-## Do the same with the pairwise result ('markers.hpc.t.pw') === === ===
-# Add these to the stats for each set of markers
-for(i in names(markers.hpc.t.pw)){
-  markers.hpc.t.pw[[i]] <- cbind(markers.hpc.t.pw[[i]],
-                                    medianNon0.hpc[[i]][match(rownames(markers.hpc.t.pw[[i]]),
-                                                           names(medianNon0.hpc[[i]]))])
-  colnames(markers.hpc.t.pw[[i]])[17] <- "non0median"
-}
-
-markerList.t <- lapply(markers.hpc.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
-  }
-)
-    # lengths(markerList.t)     # ( **without $non0median==TRUE restriction )
-        #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-        #     513     322     217     259     617     363     205     128     164     156
-        # Inhib.5   Micro   Oligo     OPC   Tcell
-        #     162     664     401     251     751
-
-lengths(markerList.t)
-    #  Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #    249     167      56     146     296      97      76      27      62      66
-    #Inhib.5   Micro   Oligo     OPC   Tcell
-    #     69     282     338     157     178
-
-
-genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HPC/HPC_t-sn-level_pairwise_top40markers-REFINED-", i, "_logExprs_Nov2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.hpc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests"))
-  )
-  dev.off()
-}
-
-## Then write a new CSV of these refined top 40 genes ===
-names(markerList.t) <- paste0(names(markerList.t),"_pw")
-names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
-
-# Many of the PW results don't have at least 40 markers:
-extend.idx <- names(which(lengths(markerList.t) < 40))
-for(i in extend.idx){
-  markerList.t[[i]] <- c(markerList.t[[i]], rep("", 40-length(markerList.t[[i]])))
-}
-
-top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
-                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
-top40genes <- top40genes[ ,sort(colnames(top40genes))]
-
-write.csv(top40genes, file="tables/top40genesLists-REFINED_HPC-n3_cellType_Nov2020.csv",
-          row.names=FALSE)
 
 
 
 
 ## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
-for(s in names(markers.hpc.t.1vAll)){
-  markers.hpc.t.1vAll[[s]]$t.stat <- markers.hpc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.hpc))
-}
+# for(s in names(markers.hpc.t.1vAll)){
+#   markers.hpc.t.1vAll[[s]]$t.stat <- markers.hpc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.hpc))
+# }
+# 
+# save(markers.hpc.t.1vAll, markers.hpc.t.pw, sce.hpc,
+#      file="rdas/markerStats-and-SCE_HPC-n3_sn-level_cleaned_MNTNov2020.rda")
 
-save(markers.hpc.t.1vAll, markers.hpc.t.pw, sce.hpc,
-     file="rdas/markerStats-and-SCE_HPC-n3_sn-level_cleaned_MNTNov2020.rda")
 
 
-
-### Session info for 21May2021 ============
+### Session info for 02Jun2021 ============
 sessionInfo()
     # R version 4.0.4 RC (2021-02-08 r79975)
     # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -506,80 +374,57 @@ sessionInfo()
     # LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
     # 
     # locale:
-    #   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
-    # [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
-    # [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
-    # [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
-    # [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-    # [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+    #   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+    # [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+    # [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+    # [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
     # 
     # attached base packages:
-    #   [1] parallel  stats4    stats     graphics  grDevices datasets  utils    
-    # [8] methods   base     
+    #   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+    # [9] base     
     # 
     # other attached packages:
-    #   [1] limma_3.46.0                jaffelab_0.99.30           
-    # [3] rafalib_1.0.0               DropletUtils_1.10.3        
-    # [5] batchelor_1.6.2             scran_1.18.5               
-    # [7] scater_1.18.6               ggplot2_3.3.3              
-    # [9] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
-    # [11] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
-    # [13] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
-    # [15] SummarizedExperiment_1.20.0 Biobase_2.50.0             
-    # [17] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
-    # [19] IRanges_2.24.1              S4Vectors_0.28.1           
-    # [21] BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
-    # [23] matrixStats_0.58.0         
+    #   [1] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
+    # [4] DropletUtils_1.10.3         batchelor_1.6.2             scran_1.18.5               
+    # [7] scater_1.18.6               ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
+    # [10] ensembldb_2.14.1            AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
+    # [13] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+    # [16] Biobase_2.50.0              GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
+    # [19] IRanges_2.24.1              S4Vectors_0.28.1            BiocGenerics_0.36.1        
+    # [22] MatrixGenerics_1.2.1        matrixStats_0.58.0         
     # 
     # loaded via a namespace (and not attached):
-    #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
-    # [3] colorspace_2.0-0          ellipsis_0.3.2           
-    # [5] scuttle_1.0.4             bluster_1.0.0            
-    # [7] XVector_0.30.0            BiocNeighbors_1.8.2      
-    # [9] rstudioapi_0.13           farver_2.1.0             
-    # [11] bit64_4.0.5               fansi_0.4.2              
-    # [13] xml2_1.3.2                splines_4.0.4            
-    # [15] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
-    # [17] cachem_1.0.4              Rsamtools_2.6.0          
-    # [19] ResidualMatrix_1.0.0      dbplyr_2.1.1             
-    # [21] R.oo_1.24.0               HDF5Array_1.18.1         
-    # [23] compiler_4.0.4            httr_1.4.2               
-    # [25] dqrng_0.2.1               assertthat_0.2.1         
-    # [27] Matrix_1.3-2              fastmap_1.1.0            
-    # [29] lazyeval_0.2.2            BiocSingular_1.6.0       
-    # [31] prettyunits_1.1.1         tools_4.0.4              
-    # [33] rsvd_1.0.3                igraph_1.2.6             
-    # [35] gtable_0.3.0              glue_1.4.2               
-    # [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5              
-    # [39] rappdirs_0.3.3            Rcpp_1.0.6               
-    # [41] vctrs_0.3.6               Biostrings_2.58.0        
-    # [43] rhdf5filters_1.2.0        rtracklayer_1.50.0       
-    # [45] DelayedMatrixStats_1.12.3 stringr_1.4.0            
-    # [47] beachmat_2.6.4            lifecycle_1.0.0          
-    # [49] irlba_2.3.3               statmod_1.4.35           
-    # [51] XML_3.99-0.6              edgeR_3.32.1             
-    # [53] zlibbioc_1.36.0           scales_1.1.1             
-    # [55] hms_1.0.0                 ProtGenerics_1.22.0      
-    # [57] rhdf5_2.34.0              RColorBrewer_1.1-2       
-    # [59] curl_4.3                  memoise_2.0.0            
-    # [61] gridExtra_2.3             segmented_1.3-3          
-    # [63] biomaRt_2.46.3            stringi_1.5.3            
-    # [65] RSQLite_2.2.7             BiocParallel_1.24.1      
-    # [67] rlang_0.4.10              pkgconfig_2.0.3          
-    # [69] bitops_1.0-7              lattice_0.20-41          
-    # [71] purrr_0.3.4               Rhdf5lib_1.12.1          
-    # [73] labeling_0.4.2            GenomicAlignments_1.26.0 
-    # [75] cowplot_1.1.1             bit_4.0.4                
-    # [77] tidyselect_1.1.1          magrittr_2.0.1           
-    # [79] R6_2.5.0                  generics_0.1.0           
-    # [81] DelayedArray_0.16.3       DBI_1.1.1                
-    # [83] pillar_1.6.0              withr_2.4.2              
-    # [85] RCurl_1.98-1.3            tibble_3.1.1             
-    # [87] crayon_1.4.1              utf8_1.2.1               
-    # [89] BiocFileCache_1.14.0      viridis_0.6.0            
-    # [91] progress_1.2.2            locfit_1.5-9.4           
-    # [93] grid_4.0.4                blob_1.2.1               
-    # [95] digest_0.6.27             R.utils_2.10.1           
-    # [97] openssl_1.4.3             munsell_0.5.0            
-    # [99] beeswarm_0.3.1            viridisLite_0.4.0        
-    # [101] vipor_0.4.5               askpass_1.1
+    #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
+    # [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+    # [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
+    # [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
+    # [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
+    # [16] sparseMatrixStats_1.2.1   cachem_1.0.4              Rsamtools_2.6.0          
+    # [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
+    # [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
+    # [25] dqrng_0.2.1               assertthat_0.2.1          Matrix_1.3-2             
+    # [28] fastmap_1.1.0             lazyeval_0.2.2            BiocSingular_1.6.0       
+    # [31] prettyunits_1.1.1         tools_4.0.4               rsvd_1.0.3               
+    # [34] igraph_1.2.6              gtable_0.3.0              glue_1.4.2               
+    # [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5               rappdirs_0.3.3           
+    # [40] Rcpp_1.0.6                vctrs_0.3.6               Biostrings_2.58.0        
+    # [43] rhdf5filters_1.2.0        rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
+    # [46] stringr_1.4.0             beachmat_2.6.4            lifecycle_1.0.0          
+    # [49] irlba_2.3.3               statmod_1.4.35            XML_3.99-0.6             
+    # [52] edgeR_3.32.1              zlibbioc_1.36.0           scales_1.1.1             
+    # [55] hms_1.0.0                 ProtGenerics_1.22.0       rhdf5_2.34.0             
+    # [58] RColorBrewer_1.1-2        curl_4.3                  memoise_2.0.0            
+    # [61] gridExtra_2.3             segmented_1.3-3           biomaRt_2.46.3           
+    # [64] stringi_1.5.3             RSQLite_2.2.7             BiocParallel_1.24.1      
+    # [67] rlang_0.4.10              pkgconfig_2.0.3           bitops_1.0-7             
+    # [70] lattice_0.20-41           purrr_0.3.4               Rhdf5lib_1.12.1          
+    # [73] labeling_0.4.2            GenomicAlignments_1.26.0  cowplot_1.1.1            
+    # [76] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
+    # [79] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+    # [82] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+    # [85] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+    # [88] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
+    # [91] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
+    # [94] blob_1.2.1                digest_0.6.27             R.utils_2.10.1           
+    # [97] openssl_1.4.3             munsell_0.5.0             beeswarm_0.3.1           
+    # [100] viridisLite_0.4.0         vipor_0.4.5               askpass_1.1 
