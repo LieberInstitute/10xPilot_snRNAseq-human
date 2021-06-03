@@ -17,7 +17,6 @@ library(here)
 
 source("plotExpressionCustom.R")
 
-
 load(here("rdas","revision","tableau_colors.rda"), verbose = TRUE)
 
 ## Load SCE with new info
@@ -28,11 +27,43 @@ load(here("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rd
 # clusterRefTab.dlpfc
 # ref.sampleInfo
 # annotationTab.dlpfc
+# cell_colors
 
 table(sce.dlpfc$cellType)
+# Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F   Micro   Mural 
+# 782     529     773     524     132     187     243     333     454     365     413       7       8     388      18 
+# Oligo     OPC   Tcell 
+# 5455     572      19 
 
-# Remove 0 genes across all nuclei
+dim(sce.dlpfc)
+# [1] 33538 11202
+
+# Remove 0 genes across all nuclei - there are None
 sce.dlpfc <- sce.dlpfc[!rowSums(assay(sce.dlpfc, "counts"))==0, ]  # 29310
+
+# First 'hold' the MBN 'logcounts' for printing
+sce.hold <- sce.dlpfc
+
+assay(sce.dlpfc, "logcounts") <- NULL
+sizeFactors(sce.dlpfc) <- NULL
+sce.dlpfc <- logNormCounts(sce.dlpfc)
+
+### First make a list of Boolean param / cell subtype ===
+# Will use this to assess more 'valid', non-noise-driving markers
+cellSubtype.idx <- splitit(sce.dlpfc$cellType)
+medianNon0 <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.dlpfc, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+sapply(medianNon0, table)
+#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural
+# FALSE 28052   23023   24201   22110   23293   22397   23313   25080   25774   24528   23874   25636   24170 28439 28287
+# TRUE   1258    6287    5109    7200    6017    6913    5997    4230    3536    4782    5436    3674    5140   871  1023
+#       Oligo   OPC Tcell
+# FALSE 27985 27262 28735
+# TRUE   1325  2048   575
 
 ## Traditional t-test with design as in PB'd/limma approach ===
 mod <- with(colData(sce.dlpfc), model.matrix(~ donor))
@@ -40,17 +71,17 @@ mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMa
 
 
 # Run pairwise t-tests
-markers.t.design <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
+markers.t.pw <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
                                       assay.type="logcounts", design=mod, test="t",
                                       direction="up", pval.type="all", full.stats=T)
 
-sapply(markers.t.design, function(x){table(x$FDR<0.05)})
-#       ambig.glial_A ambig.glial_B Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D
-# FALSE         28848         28793 28988   29277   29232   29271   29203   29281   29255   29253   29303   29299   29240
-# TRUE            462           517   322      33      78      39     107      29      55      57       7      11      70
-#       Inhib_E Inhib_F Micro Oligo   OPC
-# FALSE   29103   29155 28854 29080 29136
-# TRUE      207     155   456   230   174
+sapply(markers.t.pw, function(x){table(x$FDR<0.05)})
+#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural
+# FALSE 28997   29273   29233   29272   29204   29278   29254   29252   29304   29300   29237   29104   29152 28860 28819
+# TRUE    313      37      77      38     106      32      56      58       6      10      73     206     158   450   491
+#       Oligo   OPC Tcell
+# FALSE 29085 29139 28882
+# TRUE    225   171   428
 
 
 ## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
@@ -58,7 +89,7 @@ markers.wilcox.block <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
                                           assay.type="logcounts", block=sce.dlpfc$donor, test="wilcox",
                                           direction="up", pval.type="all", full.stats=T)
 
-# no warnings as in pan-brain analyses, but NO results of FDR<0.05...:
+
 sapply(markers.wilcox.block, function(x){table(x$FDR<0.05)})
       # Actually some decent results but many subclusters with 0 hits
 # $Micro
@@ -79,42 +110,20 @@ markers.binom.block <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
 sapply(markers.binom.block, function(x){table(x$FDR<0.05)})
     # All FALSE
 
-## Save all these for future reference
-save(markers.t.design, markers.wilcox.block, #markers.binom.block,
-     file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda")
+# ## Save all these for future reference
+# save(markers.t.pw, markers.wilcox.block, #markers.binom.block,
+#      file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda")
 
 
-# Print these to pngs
-markerList.t <- lapply(markers.t.design, function(x){
+## Get top 40 pw genes
+markerList.t <- lapply(markers.t.pw, function(x){
   rownames(x)[x$FDR < 0.05]
   }
 )
 
 genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
 
-# $ambig.glial_A - T cells
-# "LILRB5" Leukocyte    
-# "RUNX3" 
-# "SIGLEC1" - expressed only by a subpopulation of macrophages   
-# "CD163" - exclusively expressed in monocytes and macrophages
-# "IQGAP2"  
-# "CD2"  peripheral blood T-cells      "ITK"  play a role in T-cell proliferation and differentiation   
-#  "NKG7"      
-# [9] "PRF1"       "GPR174"     "F13A1"      "CLEC2B"     "DOK2"       "CST7"       "SLFN12L"    "LINC00243" 
-# [17] "LINC00861"  "IL32"       "LINC01839"  "GZMB"       "TRGV5"      "FGFBP2"     "MS4A6A"     "CD52"      
-# [25] "MYO1G"      "SKAP1"      "TBC1D10C"   "VNN1"       "CCL3"       "CCR7"       "IL7R"       "JAML"      
-# [33] "ZAP70"      "SH2D2A"     "LILRB2"     "PTPN22"     "ANXA1"      "SLAMF6"     "AL109767.1" "MARCO"     
-# 
-# $ambig.glial_B - Mural
-# [1] "CARMN"      "EBF1"       "ITIH5"      "TBX3"       *"COL1A2"     "FOXC2"      "FOXC1"      "AC092957.1"
-# [9] "NOTCH3"     "TBX2"       "PGR"        "LRRC32"     "TBX18"      "STARD8"     "LINC02147"  "TINAGL1"   
-# [17] "TFPI"       *"CFH"        "SLC6A13"    "BMP5"       "ARHGAP29"   "FHL5"       "LINC02172"  "NOSTRIN"   
-# [25] "PEAR1"      "LEF1"       "CLDN5"      "A4GALT"     "FOXS1"      "GJC1"       "SLC12A7"    "COL6A2"    
-# [33] "FOXF2"      "ADGRF5"     "LINC02188"  "FOXL1"      "MYLK2"      "SOX18"      "AL353780.1" "GGT5"   
-
-# genes.top40.t$ambig.glial_B[genes.top40.t$ambig.glial_B %in% mural]
-# [1] "COL1A2"     "CFH"        "SLC6A13"    "TBX18"      "ITIH5"      "AC092957.1" "ARHGAP29"   "EBF1"
-
+# Print these to pngs
 #dir.create("pdfs/revision/DLPFC/")
 for(i in names(genes.top40.t)){
   png(paste0("pdfs/revision/DLPFC/DLPFC_t-sn-level_pairwise_top40markers-", i, "_logExprs_LAH2021.png"), height=1900, width=1200)
@@ -122,37 +131,14 @@ for(i in names(genes.top40.t)){
     plotExpressionCustom(sce = sce.dlpfc,
                          features = genes.top40.t[[i]], 
                          features_name = i, 
-                         anno_name = "cellType")
+                         anno_name = "cellType") +
+      scale_color_manual(values = cell_colors)
   )
   dev.off()
 }
 
 
-
-
-### Cluster-vs-all single-nucleus-level iteration ================================
-# MNT 30Apr2020
-
-## Load SCE with new info
-load(here("rdas/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda"),
-     verbose=T)
-    # sce.dlpfc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
-
-table(sce.dlpfc$cellType)
-
-# First drop "Ambig.lowNtrxts" (101 nuclei)
-sce.dlpfc <- sce.dlpfc[ ,sce.dlpfc$cellType != "Ambig.lowNtrxts"]
-sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
-
-# Remove 0 genes across all nuclei
-sce.dlpfc <- sce.dlpfc[!rowSums(assay(sce.dlpfc, "counts"))==0, ]  # keeps same 28757 genes
-
-
-## Traditional t-test with design as in PB'd/limma approach ===
-mod <- with(colData(sce.dlpfc), model.matrix(~ donor))
-mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
-
-
+#### 1vALL test ####
 markers.t.1vAll <- list()
 for(i in levels(sce.dlpfc$cellType)){
   # Make temporary contrast
@@ -183,18 +169,17 @@ for(i in levels(sce.dlpfc$cellType)){
 head(markers.t.1vAll[["Oligo"]][[2]])
     ## Nice, MBP and PLP1 are again in the top 6
 
+markers.t.1vAll.db <- findMarkers_1vAll(sce.dlpfc, assay_name = "logcounts")
 
 sapply(markers.t.1vAll, function(x){
   table(x[[2]]$stats.0$log.FDR < log10(.001))
 })
-    #       Oligo Micro   OPC Inhib.5 Inhib.2 Astro Inhib.3 Excit.2 Inhib.4 Tcell
-    # FALSE 24914 22821 23236   24401   23540 21612   21436   22608   24460 26858
-    # TRUE   3843  5936  5521    4356    5217  7145    7321    6149    4297  1899
-    #       Inhib.1 Excit.5 Excit.3 Excit.1 Excit.4
-    # FALSE   25456   25913   19431   23726   24170
-    # TRUE     3301    2844    9326    5031    4587
-
-
+#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural
+# FALSE 24313   18625   18603   19054   22991   22044   21319   21276   22932   21041   20449   28245   28333 25473 27693
+# TRUE   4997   10685   10707   10256    6319    7266    7991    8034    6378    8269    8861    1065     977  3837  1617
+#       Oligo   OPC Tcell
+# FALSE 26128 25312 27579
+# TRUE   3182  3998  1731
 
 # Replace that empty slot with the entry with the actul stats
 markers.t.1vAll <- lapply(markers.t.1vAll, function(x){ x[[2]] })
@@ -220,9 +205,7 @@ for(i in names(temp.1vAll)){
 
 
 ## Let's save this along with the previous pairwise results
-save(markers.t.1vAll, markers.t.design, markers.wilcox.block,
-#     file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda")
-#     (deleting this older version - doesn't have the std.lfc result)
+save(markers.t.1vAll, markers.t.1vAll.db, markers.t.pw, markers.wilcox.block,
      file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda")
 
 
@@ -234,22 +217,20 @@ markerList.t.1vAll <- lapply(markers.t.1vAll, function(x){
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 
 for(i in names(genes.top40.t)){
-  png(paste0(here(pdfs/DLPFC/DLPFC_t-sn-level_1vALL_top40markers-",gsub(":",".",i),"_logExprs_Apr2020.png"), height=1900, width=1200)
+  png(here("pdfs/revision/DLPFC", paste0("DLPFC_t-sn-level_1vALL_top40markers-",i,"_logExprs_Apr2020.png")), height=1900, width=1200)
   print(
-    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+      plotExpressionCustom(sce = sce.dlpfc,
+                           features = genes.top40.t[[i]], 
+                           features_name = paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests, cluster-vs-all"), 
+                           anno_name = "cellType") +
+        scale_color_manual(values = cell_colors)
   )
   dev.off()
 }
 
 
 ## How do they intersect?
-markerList.t.pw <- lapply(markers.t.design, function(x){
+markerList.t.pw <- lapply(markers.t.pw, function(x){
   rownames(x)[x$FDR < 0.05]
   }
 )
@@ -265,17 +246,20 @@ sapply(names(markerList.t.pw), function(c){
   length(intersect(markerList.t.pw[[c]],
                    markerList.t.1vAll[[c]]))
 })
-
+# Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F   Micro   Mural 
+# 313      37      77      38     106      32      56      58       6      10      73     206     158     450     491 
+# Oligo     OPC   Tcell 
+# 225     171     428 
     # Of top 40's:
     sapply(names(markerList.t.pw), function(c){
       length(intersect(lapply(markerList.t.pw, function(l){head(l,n=40)})[[c]],
                        lapply(markerList.t.1vAll, function(l){head(l,n=40)})[[c]]
                        ))
     })
-    #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #      26      24      18      15      28      33      22      10      22      23
-    # Inhib.5   Micro   Oligo     OPC   Tcell
-    #      19      30      26      20      39
+    # Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F   Micro   Mural 
+    # 32      18      26      18      28      18      22      20       3       5      23      33      30      30      38 
+    # Oligo     OPC   Tcell 
+    # 31      34      38 
 
 
     
@@ -283,161 +267,72 @@ sapply(names(markerList.t.pw), function(c){
 names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
 names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
 
+
+## Add empty string
+pad <- rep("",40 - min(sapply(markerList.t.pw, length)))
+markerList.t.pw <- sapply(markerList.t.pw, function(x) c(x, pad))
+
 top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
                     sapply(markerList.t.1vAll, function(y) head(y, n=40)))
 top40genes <- top40genes[ ,sort(colnames(top40genes))]
 
-write.csv(top40genes, file="tables/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv",
+## fix this
+write.csv(top40genes, file=here("rdas/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv"),
           row.names=FALSE)
 
+### Session info for 03Jun2021 ============
+sessionInfo()
 
-
-
-### MNT add 18Nov2020 =================================
-  # -> What if add param/requirement that for any given subcluster, median expression has to > 0?
-load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda", verbose=T)
-    # markers.t.1vAll, markers.t.design, markers.wilcox.block
-
-## Load SCE 
-load(here("rdas/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda",
-     verbose=T)
-    # sce.dlpfc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
-
-table(sce.dlpfc$cellType)
-
-# First drop "Ambig.lowNtrxts" (101 nuclei)
-sce.dlpfc <- sce.dlpfc[ ,sce.dlpfc$cellType != "Ambig.lowNtrxts"]
-sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
-
-# Remove 0 genes across all nuclei
-sce.dlpfc <- sce.dlpfc[!rowSums(assay(sce.dlpfc, "counts"))==0, ]
-
-
-## Make list of Boolean param / cell subtype ===
-cellSubtype.idx <- splitit(sce.dlpfc$cellType)
-medianNon0.idx <- lapply(cellSubtype.idx, function(x){
-  apply(as.matrix(assay(sce.dlpfc, "logcounts")), 1, function(y){
-    median(y[x]) > 0
-  })
-})
-
-lengths(medianNon0.idx)
-sapply(medianNon0.idx, head)
-
-# Add these to the stats for each set of markers
-for(i in names(markers.t.1vAll)){
-  markers.t.1vAll[[i]] <- cbind(markers.t.1vAll[[i]],
-                                    medianNon0.idx[[i]][match(rownames(markers.t.1vAll[[i]]),
-                                                           names(medianNon0.idx[[i]]))])
-  colnames(markers.t.1vAll[[i]])[5] <- "non0median"
-}
-
-
-## Use these restrictions to print (to png) a refined top 40, as before ===
-markerList.t.1vAll <- lapply(markers.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(0.000001) & x$non0median==TRUE]
-  }
-)
-    # lengths(markerList.t.1vAll)     # ( **without $non0median==TRUE restriction )
-        #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-        #    5668    3876    4581    7414    3246    2033    2314    3679    5184    2806
-        # Inhib.5   Micro   Oligo     OPC   Tcell
-        #    2962    4934    3323    4182    1406
-
-lengths(markerList.t.1vAll)
-    #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #     847    1958    2659    3412    2000     832    1594    2111    2487    1861
-    # Inhib.5   Micro   Oligo     OPC   Tcell
-    #    1993     802     953    1065     354
-
-genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t)){
-  png(paste0(here(pdfs/DLPFC/DLPFC_t-sn-level_1vALL_top40markers-REFINED-",gsub(":",".",i),"_logExprs_Nov2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests, cluster-vs-all"))
-  )
-  dev.off()
-}
-
-
-
-## Do the same with the pairwise result ('markers.t.design') === === ===
-# Add these to the stats for each set of markers
-for(i in names(markers.t.design)){
-  markers.t.design[[i]] <- cbind(markers.t.design[[i]],
-                                    medianNon0.idx[[i]][match(rownames(markers.t.design[[i]]),
-                                                           names(medianNon0.idx[[i]]))])
-  colnames(markers.t.design[[i]])[17] <- "non0median"
-}
-
-markerList.t <- lapply(markers.t.design, function(x){
-  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
-  }
-)
-    # lengths(markerList.t)     # ( **without $non0median==TRUE restriction )
-        #   Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-        #     513     322     217     259     617     363     205     128     164     156
-        # Inhib.5   Micro   Oligo     OPC   Tcell
-        #     162     664     401     251     751
-
-lengths(markerList.t)
-    #  Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3 Inhib.4
-    #    249     167      56     146     296      97      76      27      62      66
-    #Inhib.5   Micro   Oligo     OPC   Tcell
-    #     69     282     338     157     178
-
-
-genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t)){
-  png(paste0(here(pdfs/DLPFC/DLPFC_t-sn-level_pairwise_top40markers-REFINED-", i, "_logExprs_Nov2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.dlpfc, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:15], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests"))
-  )
-  dev.off()
-}
-
-## Then write a new CSV of these refined top 40 genes ===
-names(markerList.t) <- paste0(names(markerList.t),"_pw")
-names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
-
-# Many of the PW results don't have at least 40 markers:
-extend.idx <- names(which(lengths(markerList.t) < 40))
-for(i in extend.idx){
-  markerList.t[[i]] <- c(markerList.t[[i]], rep("", 40-length(markerList.t[[i]])))
-}
-
-top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
-                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
-top40genes <- top40genes[ ,sort(colnames(top40genes))]
-
-write.csv(top40genes, file="tables/top40genesLists-REFINED_DLPFC-n3_cellType_Nov2020.csv",
-          row.names=FALSE)
-
-
-
-
-## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
-for(s in names(markers.t.1vAll)){
-  markers.t.1vAll[[s]]$t.stat <- markers.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.dlpfc))
-}
-
-save(markers.t.1vAll, markers.t.design, sce.dlpfc,
-     file="rdas/revision/markerstats-and-SCE_DLPFC-n3_sn-level_cleaned_MNTNov2020.rda")
-
-
-
-
+# R version 4.1.0 Patched (2021-05-18 r80330)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.1/R/4.1/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.1/R/4.1/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8    LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods   base     
+# 
+# other attached packages:
+#   [1] here_1.0.1                  DeconvoBuddies_0.99.0       limma_3.48.0                jaffelab_0.99.31           
+# [5] rafalib_1.0.0               DropletUtils_1.12.0         batchelor_1.8.0             scran_1.20.1               
+# [9] scater_1.20.0               ggplot2_3.3.3               scuttle_1.2.0               EnsDb.Hsapiens.v86_2.99.0  
+# [13] ensembldb_2.16.0            AnnotationFilter_1.16.0     GenomicFeatures_1.44.0      AnnotationDbi_1.54.0       
+# [17] SingleCellExperiment_1.14.1 SummarizedExperiment_1.22.0 Biobase_2.52.0              GenomicRanges_1.44.0       
+# [21] GenomeInfoDb_1.28.0         IRanges_2.26.0              S4Vectors_0.30.0            BiocGenerics_0.38.0        
+# [25] MatrixGenerics_1.4.0        matrixStats_0.59.0          colorout_1.2-2             
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-1          rjson_0.2.20             
+# [5] ellipsis_0.3.2            rprojroot_2.0.2           bluster_1.2.1             XVector_0.32.0           
+# [9] BiocNeighbors_1.10.0      rstudioapi_0.13           bit64_4.0.5               fansi_0.5.0              
+# [13] splines_4.1.0             R.methodsS3_1.8.1         sparseMatrixStats_1.4.0   cachem_1.0.5             
+# [17] Rsamtools_2.8.0           ResidualMatrix_1.2.0      cluster_2.1.2             dbplyr_2.1.1             
+# [21] R.oo_1.24.0               png_0.1-7                 HDF5Array_1.20.0          compiler_4.1.0           
+# [25] httr_1.4.2                dqrng_0.3.0               assertthat_0.2.1          Matrix_1.3-4             
+# [29] fastmap_1.1.0             lazyeval_0.2.2            BiocSingular_1.8.0        prettyunits_1.1.1        
+# [33] tools_4.1.0               rsvd_1.0.5                igraph_1.2.6              gtable_0.3.0             
+# [37] glue_1.4.2                GenomeInfoDbData_1.2.6    dplyr_1.0.6               rappdirs_0.3.3           
+# [41] Rcpp_1.0.6                vctrs_0.3.8               Biostrings_2.60.0         rhdf5filters_1.4.0       
+# [45] rtracklayer_1.52.0        DelayedMatrixStats_1.14.0 stringr_1.4.0             beachmat_2.8.0           
+# [49] lifecycle_1.0.0           irlba_2.3.3               restfulr_0.0.13           statmod_1.4.36           
+# [53] XML_3.99-0.6              edgeR_3.34.0              zlibbioc_1.38.0           scales_1.1.1             
+# [57] hms_1.1.0                 ProtGenerics_1.24.0       rhdf5_2.36.0              RColorBrewer_1.1-2       
+# [61] yaml_2.2.1                curl_4.3.1                memoise_2.0.0             gridExtra_2.3            
+# [65] segmented_1.3-4           biomaRt_2.48.0            stringi_1.6.2             RSQLite_2.2.7            
+# [69] BiocIO_1.2.0              ScaledMatrix_1.0.0        filelock_1.0.2            BiocParallel_1.26.0      
+# [73] rlang_0.4.11              pkgconfig_2.0.3           bitops_1.0-7              lattice_0.20-44          
+# [77] Rhdf5lib_1.14.0           purrr_0.3.4               GenomicAlignments_1.28.0  bit_4.0.4                
+# [81] tidyselect_1.1.1          magrittr_2.0.1            R6_2.5.0                  generics_0.1.0           
+# [85] metapod_1.0.0             DelayedArray_0.18.0       DBI_1.1.1                 pillar_1.6.1             
+# [89] withr_2.4.2               KEGGREST_1.32.0           RCurl_1.98-1.3            tibble_3.1.2             
+# [93] crayon_1.4.1              utf8_1.2.1                BiocFileCache_2.0.0       viridis_0.6.1            
+# [97] progress_1.2.2            locfit_1.5-9.4            grid_4.1.0                blob_1.2.1               
+# [101] digest_0.6.27             R.utils_2.10.1            munsell_0.5.0             beeswarm_0.3.1           
+# [105] viridisLite_0.4.0         vipor_0.4.5    
