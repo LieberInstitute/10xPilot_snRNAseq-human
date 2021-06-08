@@ -277,7 +277,7 @@ top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
 top40genes <- top40genes[ ,sort(colnames(top40genes))]
 
 ## fix this
-write.csv(top40genes, file=here("rdas/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv"),
+write.csv(top40genes, file=here("tables/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv"),
           row.names=FALSE)
 
 ### Session info for 03Jun2021 ============
