@@ -364,6 +364,24 @@ for(i in 1:length(markers.mathys.custom)){
 }
 dev.off()
 
+# Reprint some visualizations:
+pdf("pdfs/revision/regionSpecific_DLPFC-n3_reducedDims-with-collapsedClusters_LAH2021.pdf")
+plotReducedDim(sce.dlpfc, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5)+
+  scale_color_manual(values = cell_colors) + labs(colour="Cell type")
+plotTSNE(sce.dlpfc, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.dlpfc, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.dlpfc, colour_by="cellType", point_alpha=0.5)+
+  scale_color_manual(values = cell_colors) + labs(colour="Cell type")
+plotTSNE(sce.dlpfc, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.dlpfc, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.dlpfc, colour_by="sampleID", point_alpha=0.5)
+plotUMAP(sce.dlpfc, colour_by="cellType", point_alpha=0.5)+
+  scale_color_manual(values = cell_colors) + labs(colour="Cell type")
+dev.off()
+
+
+
  ## -> proceed to 'step03_markerDetxn-analyses[...].R'
 
 ### For reference === == === == ===
