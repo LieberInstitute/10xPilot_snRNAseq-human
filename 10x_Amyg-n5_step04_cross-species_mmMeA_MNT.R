@@ -1,6 +1,6 @@
 ### MNT 10x snRNA-seq workflow: step 04 - downstream comparisons
 ###   **Region-specific analyses**
-###     - (3x) NAc samples from: Br5161 & Br5212 & Br5287
+###     - 5x AMY samples (incl'g revision samples)
 ###   * Comparison to UCLA's Drop-seq on mouse medial amyg (MeA)
 #####################################################################
 
@@ -173,183 +173,6 @@ rowData(sce.hsap.PBsub)$Symbol[duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)
     
     
     
-### FINALLY resume comparisons === === === === ===
-
-## mm stats
-pvals_mm <- sapply(eb_list.amy.mm, function(x) {
-  x$p.value[, 2, drop = FALSE]
-})
-rownames(pvals_mm) = rownames(sce.amy.mm.PB)
-
-ts_mm <- sapply(eb_list.amy.mm, function(x) {
-  x$t[, 2, drop = FALSE]
-})
-rownames(ts_mm) = rownames(sce.amy.mm.PB)
-
-
-
-## Human stats
-pvals_hsap <- sapply(eb_list.amy.broad, function(x) {
-  x$p.value[, 2, drop = FALSE]
-})
-rownames(pvals_hsap) = rowData(sce.amy.PB)$ID
-
-ts_hsap <- sapply(eb_list.amy.broad, function(x) {
-  x$t[, 2, drop = FALSE]
-})
-rownames(ts_hsap) = rowData(sce.amy.PB)$ID
-
-
-
-### Subset and check matching 'HomoloGene.ID' === === === ===
-pvals_mm <- pvals_mm[rownames(sce.mm.PBsub), ]
-ts_mm <- ts_mm[rownames(sce.mm.PBsub), ]
-
-pvals_hsap <- pvals_hsap[rowData(sce.hsap.PBsub)$ID, ]
-ts_hsap <- ts_hsap[rowData(sce.hsap.PBsub)$ID, ]
-
-rownames(ts_mm) <- rowData(sce.mm.PBsub)$HomoloGene.ID
-rownames(pvals_mm) <- rowData(sce.mm.PBsub)$HomoloGene.ID
-
-rownames(ts_hsap) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
-rownames(pvals_hsap) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
-
-table(rownames(ts_mm) == rownames(ts_hsap))
-    ## all 14121 TRUE - good
-
-
-## Now run correlation
-cor_t = cor(ts_mm, ts_hsap)
-signif(cor_t, 2)
-
-## On just hsap cluster-specific homologous genes ===
-hsap_specific_indices = mapply(function(t, p) {
-    oo = order(t, decreasing = TRUE)[1:100]
-  },
-  as.data.frame(ts_hsap),
-  as.data.frame(pvals_hsap)
-)
-hsap_ind = unique(as.numeric(hsap_specific_indices))
-
-cor_t_hsap = cor(ts_mm[hsap_ind, ],
-                  ts_hsap[hsap_ind, ])
-signif(cor_t_hsap, 3)
-
-## On just mouse cluster-specific homologous genes ===
-mm_specific_indices = mapply(function(t, p) {
-    oo = order(t, decreasing = TRUE)[1:100]
-  },
-  as.data.frame(ts_mm),
-  as.data.frame(pvals_mm)
-)
-mm_ind = unique(as.numeric(mm_specific_indices))
-
-cor_t_mm = cor(ts_mm[mm_ind, ],
-                 ts_hsap[mm_ind, ])
-signif(cor_t_mm, 3)
-
-
-
-### Heatmap
-theSeq.all = seq(-.5, .5, by = 0.01)
-my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all))
-
-ct = colData(sce.hsap.PBsub)
-ct = ct[!duplicated(sce.hsap.PBsub$cellType.final), ]
-
-cor_t_hsap_toPlot = cor_t_hsap
-rownames(cor_t_hsap_toPlot) = paste0(rownames(cor_t_hsap_toPlot),"_","M.mus")
-colnames(cor_t_hsap_toPlot) = paste0(colnames(cor_t_hsap_toPlot),"_","H.sap")
-
-cor_t_mm_toPlot = cor_t_mm
-rownames(cor_t_mm_toPlot) = paste0(rownames(cor_t_mm_toPlot),"_","M.mus")
-colnames(cor_t_mm_toPlot) = paste0(colnames(cor_t_mm_toPlot),"_","H.sap")
-
-cor_t_all_toPlot = cor_t
-rownames(cor_t_all_toPlot) = paste0(rownames(cor_t_all_toPlot),"_","M.mus")
-colnames(cor_t_all_toPlot) = paste0(colnames(cor_t_all_toPlot),"_","H.sap")
-
-
-    ## MNT added 14Apr2020: Reorder to diagonal & threshold at 0.4 for all-gene correlation === === ===
-        # Start from descending - easier to manually order
-        #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(1:ncol(cor_t_all_toPlot))]
-    # This is useful:
-    apply(cor_t_all_toPlot, 2, which.max)
-        # If want to re-order human labels (but prefer re-ordering mm labels)
-        #cor_t_all_toPlot <- cor_t_all_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
-    cor_t_all_toPlot <- cor_t_all_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
-    # Threshold at 0.4
-    range(cor_t_all_toPlot)
-    cor_t_all_toPlot <- ifelse(cor_t_all_toPlot >= 0.4, 0.4, cor_t_all_toPlot)
-    
-    
-    ## Do for other gene subsets ===
-    # Human
-        #cor_t_hsap_toPlot <- cor_t_hsap_toPlot[ ,rev(1:ncol(cor_t_hsap_toPlot))]
-        #cor_t_hsap_toPlot <- cor_t_hsap_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
-    cor_t_hsap_toPlot <- cor_t_hsap_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
-    # Threshold at 0.4
-    range(cor_t_hsap_toPlot)
-    cor_t_hsap_toPlot <- ifelse(cor_t_hsap_toPlot >= 0.4, 0.4, cor_t_hsap_toPlot)
-
-    # mm
-        #cor_t_mm_toPlot <- cor_t_mm_toPlot[ ,rev(1:ncol(cor_t_mm_toPlot))]
-        #cor_t_mm_toPlot <- cor_t_mm_toPlot[ ,rev(c(14,5,3,4, 7,10,12,6, 9,8,2,1, 11,13))]
-    cor_t_mm_toPlot <- cor_t_mm_toPlot[c(14,11:13,4,3, 2,8,7,9, 6,15,5,16,1,10), ]
-    # Threshold at 0.4
-    range(cor_t_mm_toPlot)
-    cor_t_mm_toPlot <- ifelse(cor_t_mm_toPlot >= 0.4, 0.4, cor_t_mm_toPlot)
-    
-    
-
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/overlap-mouse-MeA_with_LIBD-10x-Amyg_top100-or-all_Apr2020.pdf")
-# Most human-specific
-print(
-  levelplot(
-    cor_t_hsap_toPlot,
-    aspect = "fill",
-    at = theSeq.all,
-    col.regions = my.col.all,
-    ylab = "",
-    xlab = "",
-    scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
-    main="Correlation of cluster-specific t's \n (top 100 genes/human (LIBD) clusters)"
-  )
-)
-# Most mm-specific
-print(
-  levelplot(
-    cor_t_mm_toPlot,
-    aspect = "fill",
-    at = theSeq.all,
-    col.regions = my.col.all,
-    ylab = "",
-    xlab = "",
-    scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
-    main="Correlation of cluster-specific t's \n (top 100 genes/mouse MeA (UCLA) clusters)"
-  )
-)
-# All
-print(
-  levelplot(
-    cor_t_all_toPlot,
-    aspect = "fill",
-    at = theSeq.all,
-    col.regions = my.col.all,
-    ylab = "",
-    xlab = "",
-    scales = list(x = list(rot = 90, cex = 1), y = list(cex = 1)),
-    main="Correlation of cluster-specific t's \n (all shared 13,444 homologs)",
-    fontsize = 20
-  )
-)
-dev.off()
-
-
-
-
-
-
 
 ### Comparison to UCLA mouse MeA with SN-LEVEL stats ==================================
   # Added MNT 14May2020 - UPDATED 22May2020 to compare to 2019 dataset
@@ -537,17 +360,6 @@ Readme <- "These t-statistic matrices are subsetted and matched for shared 'Homo
 save(ts.amy, ts.mmMeA, Readme, file="rdas/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_25May2020.rda")
 
 
-# # Have to remove the markers objects bc the rows have been fixed  (actually don't need to lol)
-# rm(markers.amy.t.1vAll, markers.mmMeA.t.1vAll)
-# 
-# # Re-load them
-# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
-#     rm(markers.amy.t.design, markers.amy.wilcox.block)
-# 
-# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.mmMeA.t.1vAll
-#     
     
     
 ## On just hsap cluster-specific homologous genes ===
@@ -749,20 +561,7 @@ sapply(genes.top40.hsap, function(x){
   
 # (and btw) ===
 table(sce.amy$cellType.split, sce.amy$donor)
-    #                 Br5161 Br5212
-    # Ambig.lowNtrxts     34     16
-    # Astro              489    363
-    # Excit.1            141    193
-    # Excit.2              0     40
-    # Excit.3              0     55
-    # Inhib.1             16    155
-    # Inhib.2             33     76
-    # Inhib.3             11     24
-    # Inhib.4             24      0
-    # Inhib.5             85     13
-    # Micro              425    339
-    # Oligo             1697   1776
-    # OPC                335    292
+
 
 # Glucocorticoid receptors? (in relation to TLL1, as per https://doi.org/10.1016/j.molbrainres.2005.09.016)
 plotExpression(sce.amy, exprs_values="logcounts", x="cellType.split", colour_by="cellType.split",
