@@ -31,69 +31,118 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 ### Pseudobulk>modeling approach ============================================
   # * Skip this -> Now using sn-level stats for this comparison
 
-## load modeling outputs
-# 10x-pilot human Amyg
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_manualContrasts_MNTMar2020.rda", verbose=T)
-    # eb_contrasts.amy.broad, eb_list.amy.broad, sce.amy.PB
+## 10x-pilot human Amyg SCE
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
+     verbose=T)
+#rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy, cell_colors.amy)
+
+# First drop "drop.lowNTx_" (1138 nuclei)
+sce.amy <- sce.amy[ ,-grep("drop.",sce.amy$cellType)]
+sce.amy$cellType <- droplevels(sce.amy$cellType)
+
+# Remove 0 genes across all nuclei
+sce.amy <- sce.amy[!rowSums(assay(sce.amy, "counts"))==0, ]  # keeps same 29371 genes
+
+# Compute mean expression across nuclei - this is for later
+meanExprs.hsap.amy <- apply(assay(sce.amy, "logcounts"), 1, mean)
+
+## Marker stats
+load("rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+
+
+
+
 
 # UCLA mouse MeA Drop-seq
 load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/markers-stats_mouse-MeA-Drop-seq_manualContrasts_MNTApr2020.rda", verbose=T)
     # eb_list.amy.mm, corfit.amy.mm, sce.amy.mm.PB
 
 
+
+
+
+
 # Add EntrezID for human
-hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.amy.PB)$ID, 
+hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.amy)$gene_id, 
                        column="ENTREZID", keytype="ENSEMBL")
 # "'select()' returned 1:many mapping between keys and columns"
 table(!is.na(hs.entrezIds))
-    # 20,578 valid entries (remember this is already subsetted for those non-zero genes only)
+    # 21,041 valid entries  - that's a lot lost (8330)
+    withoutEntrez <- names(hs.entrezIds)[is.na(hs.entrezIds)]
+    # Store those somewhere, maybe for later reference
+    table(rowData(sce.amy)[rowData(sce.amy)$gene_id %in% withoutEntrez, ]$gene_id == withoutEntrez)
+    names(withoutEntrez) <- rowData(sce.amy)[rowData(sce.amy)$gene_id %in% withoutEntrez, ]$gene_name
+    
 
 # Add to rowData
-rowData(sce.amy.PB) <- cbind(rowData(sce.amy.PB), hs.entrezIds)
+rowData(sce.amy) <- cbind(rowData(sce.amy), hs.entrezIds)
 
 
 ## Bring in 'HomoloGene.ID' for human (already in rowData for mm SCE) ===
 ## JAX annotation info
 hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
                  as.is=TRUE)
-
+                 "http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt"
 hom_hs <- hom[hom$Common.Organism.Name == "human", ]
-    # of 19,124 entries
-table(rowData(sce.amy.PB)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
-    # 17,261
-table(rowData(sce.amy.PB)$Symbol %in% hom_hs$Symbol)
-    # 16,916 - not a bad difference
+    # of 22,522 entries
+table(hs.entrezIds %in% hom_hs$EntrezGene.ID)
+    # 16,986
+table(rowData(sce.amy)$gene_name %in% hom_hs$Symbol)
+    # 16,666 - not a bad difference (interestingly these numbers are lower than when done for preprint...)
 
         # So for mapping === == === ===
         # human.entrez > HomoloGene.ID < mm.Symbol
         #                ^ filter SCE's on this
 
 # Human (by Entrez)
-rowData(sce.amy.PB)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy.PB)$hs.entrezIds,
+rowData(sce.amy)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
                                                                  hom_hs$EntrezGene.ID)]
+    
+
+
+    ## ***** NEED TO RESOLVE ****** =============
+    ## MNT 08Jun2021: Oh.. apparently there is no longer a column named 'HomoloGene.ID'... 
+    length(intersect(rowData(sce.amy.mm.PB)$HomoloGene.ID, hom_hs$DB.Class.Key))
+        # [1] 0
+    
+        # -> Perhaps it's that $DB.Class.Key in the data.frame that seems to be organized
+        #    by overall homologous gene...
+    length(unique(hom$DB.Class.Key))
+        # [1] 20616
+
+    length(unique(hom_hs$DB.Class.Key))
+        # [1] 19537
+    
+    # Thus might want to check out the `duplicated(hom_hs$DB.Class.Key)`
+        # -> Let's reach out to Jackson Labs to see if this should be the replacement
+        #    for 'HomoloGene.ID'
+    
+    
+    ## resolved? ===================
+
 
 
 ## Now set/match to shared homologous genes ===
 
-length(intersect(rowData(sce.amy.PB)$HomoloGene.ID,
+length(intersect(rowData(sce.amy)$HomoloGene.ID,
                  rowData(sce.amy.mm.PB)$HomoloGene.ID))  # 13,444
 
-sharedHomologs <- intersect(rowData(sce.amy.PB)$HomoloGene.ID,
+sharedHomologs <- intersect(rowData(sce.amy)$HomoloGene.ID,
                             rowData(sce.amy.mm.PB)$HomoloGene.ID)
 # # That first one is NA - get rid of it
 # sharedHomologs <- sharedHomologs[-1]
 
 # Human not in mm
-length(setdiff(rowData(sce.amy.PB)$HomoloGene.ID,
+length(setdiff(rowData(sce.amy)$HomoloGene.ID,
                  rowData(sce.amy.mm.PB)$HomoloGene.ID))  # 3657
 # mm not in human
 length(setdiff(rowData(sce.amy.mm.PB)$HomoloGene.ID,
-               rowData(sce.amy.PB)$HomoloGene.ID))  # 928
+               rowData(sce.amy)$HomoloGene.ID))  # 928
 
 
 # Subset for those
 sce.mm.PBsub <- sce.amy.mm.PB[rowData(sce.amy.mm.PB)$HomoloGene.ID %in% sharedHomologs, ]   # 14247
-sce.hsap.PBsub <- sce.amy.PB[rowData(sce.amy.PB)$HomoloGene.ID %in% sharedHomologs, ]  # 14178
+sce.hsap.PBsub <- sce.amy[rowData(sce.amy)$HomoloGene.ID %in% sharedHomologs, ]  # 14178
     ## Many are duplicated...
 
 rowData(sce.mm.PBsub)$Symbol[duplicated(rowData(sce.mm.PBsub)$HomoloGene.ID)]
