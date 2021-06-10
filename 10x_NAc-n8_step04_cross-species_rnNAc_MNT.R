@@ -1,7 +1,7 @@
 ### MNT 10x snRNA-seq workflow: step 04 - downstream comparisons
 ###   **Region-specific analyses**
-###     - (3x) NAc samples from: Br5161 & Br5212 & Br5287
-###     - (2x) NeuN-sorted samples from: Br5207 & Br5182
+###     - (5x) NAc samples from Oct2020
+###     - (3x) revision samples, incl'g female donors
 ###   * Comparison to Jeremy Day Lab's rat NAc samples (n=4)
 #####################################################################
 
@@ -28,6 +28,11 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 # ===
 
+### *** 09Jun 2021 update:
+# JAX MGI database no longer reports a $HomoloGene.ID -> now use $DB.Class.Key
+# (corresponded with David Shaw @ JAX/MGI)
+
+### Setting up homologous gene IDs, for mapping b/tw species =============
 
 ## load modeling outputs
 # 10x-pilot human NAc
@@ -914,4 +919,249 @@ cor_t_nac[ ,"Grm8-MSN_R"]
     #  0.192243866  0.079574932  0.262900534  0.234844145  0.134149319  0.059178530
     #      Oligo_H        OPC_H
     # -0.345118419  0.149465693
+
+
+
+
+
+### Test MNT Apr2021 ======================================
+  # What about trying `fastMNN` as an integration approach?
+library(batchelor)
+
+# Load human NAc .rda (preprint)
+load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+
+# Load rat SCE
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
+    # sce.nac.rat, chosen.hvgs.nac.rat
+
+# Load previous object with 'pseudo-bulked' SCEs subsetted for aligned $HomoloGene.ID
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda",
+     verbose=T)
+    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+
+table(rowData(sce.rat.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+
+
+## Subset/match order for those
+sce.nac.all <- sce.nac.all[rowData(sce.nac.all)$ID %in% rowData(sce.hsap.PBsub)$ID, ]
+sce.nac.rat <- sce.nac.rat[rowData(sce.nac.rat)$ID %in% rowData(sce.rat.PBsub)$ID, ]
+
+# The rat SCE already has its $HomoloGene.ID; add it to 'sce.nac.all
+rowData(sce.nac.all)$HomoloGene.ID <- rowData(sce.hsap.PBsub)$HomoloGene.ID[match(
+  rowData(sce.nac.all)$ID, rowData(sce.hsap.PBsub)$ID
+)]
+
+# Match the order
+sce.nac.rat <- sce.nac.rat[match(rowData(sce.nac.all)$HomoloGene.ID, rowData(sce.nac.rat)$HomoloGene.ID), ]
+
+table(rowData(sce.nac.all)$HomoloGene.ID == rowData(sce.nac.rat)$HomoloGene.ID)
+    # good
+
+# Duplicate, in case mess anything up
+sce.rat <- sce.nac.rat
+sce.hsap <- sce.nac.all
+
+# Clean up and get 'intersecting' colData cols
+sce.hsap$Sample <- ss(sce.hsap$Sample,"/",9)
+sce.hsap$cellType <- sce.hsap$cellType.final
+sce.hsap$batch.a <- sce.hsap$processDate
+sce.hsap$batch.b <- sce.hsap$protocol
+sce.hsap$species <- "H.sap"
+
+sce.rat$sum <- sce.rat$nCount_RNA
+sce.rat$detected <- sce.rat$nFeature_RNA
+sce.rat$cellType <- sce.rat$Celltype
+sce.rat$batch.a <- sce.rat$Stim
+sce.rat$batch.b <- sce.rat$Sex
+sce.rat$species <- "R.nor"
+# Get rid of that weird $Barcode duplicate (it's col 3 that's the same as colnames)
+colData(sce.rat) <- colData(sce.rat)[ ,-2]
+
+# Keep:
+keepInfo <- c("Sample", "Barcode", "species", "sum", "detected", "batch.a", "batch.b", "cellType")
+
+colData(sce.rat) <- colData(sce.rat)[ ,keepInfo]
+colData(sce.hsap) <- colData(sce.hsap)[ ,keepInfo]
+
+# Remove all reducedDims
+reducedDim(sce.rat) <- NULL   # had to do this 3x to remove each of the three
+reducedDim(sce.hsap) <- NULL  # 4x
+
+# Remove logcounts
+assay(sce.rat, "logcounts") <- NULL
+assay(sce.hsap, "logcounts") <- NULL
+
+table(rowData(sce.rat)$HomoloGene.ID == rowData(sce.hsap)$HomoloGene.ID)
+
+# Make rownames the $HomoloGene.ID
+rownames(sce.rat) <- rowData(sce.rat)$HomoloGene.ID
+rownames(sce.hsap) <- rowData(sce.hsap)$HomoloGene.ID 
+
+
+## Requiring that the rowData basically match exactly - have to drop other info
+rowData(sce.rat) <- rowData(sce.rat)$HomoloGene.ID
+rowData(sce.hsap) <- rowData(sce.hsap)$HomoloGene.ID
+
+sce.comb <- cbind(sce.hsap, sce.rat)
+
+
+## Save this for future work (along with original SCEs for their rowData)
+table(rownames(sce.comb) == rowData(sce.nac.all)$HomoloGene.ID) # good
+
+Readme <- "These SCEs are all subsetted for matching 'HomoloGene.ID'; the original spp. SCEs are saved for convenience of their gene info (rowData)"
+save(sce.comb, sce.nac.all, sce.nac.rat, Readme,
+     file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
+
+sce.comb
+    # class: SingleCellExperiment 
+    # dim: 14121 28872 
+    # metadata(6): Samples Samples ... Samples Samples
+    # assays(1): counts
+    # rownames(14121): 34983 6980 ... 55587 40764
+    # rowData names(1): value
+    # colnames(28872): AAACCCACATCGAACT-1 AAACCCATCCAACCAA-1 ...
+    #   TTTGGTTTCTCATAGG_4 TTTGTTGGTTCTCGTC_4
+    # colData names(8): Sample Barcode ... batch.b cellType
+    # reducedDimNames(0):
+    # altExpNames(0):
+
+
+
+### Re-normalizing counts; dimensionality reduction === === ===
+
+# Distribution across spp./Samples??
+sample.idx <- splitit(sce.comb$Sample)
+sapply(sample.idx, function(x){quantile(sce.comb$sum[x])})
+    #      Br5161_NAc Br5182_NAc_NeuN Br5207_NAc_NeuN Br5212_NAc Br5287_NAc cocaineF
+    # 0%          108           131.0          105.00     101.00      102.0    509.0
+    # 25%        4893         17699.5        18366.25    3025.25     7855.5   2135.0
+    # 50%        6702         22951.0        22404.00    4963.50    10226.0   4493.5
+    # 75%        9475         28709.0        26982.50   10292.25    14735.5   7431.5
+    # 100%      69559         85460.0        84761.00   76583.00    78013.0  26180.0
+    #      cocaineM  salineF  salineM
+    # 0%        524   540.00   596.00
+    # 25%      2501  2438.25  2373.75
+    # 50%      5228  5386.00  4179.50
+    # 75%      9400  9318.75  7631.75
+    # 100%    38400 47393.00 37781.00
+
+
+# Use `multiBatchNorm()` to compute log-normalized counts, matching the scaling across samples
+#   (since it's so variable, above)
+sce.comb <- multiBatchNorm(sce.comb, batch=sce.comb$Sample)
+
+# Use the simple `modelGeneVar` - this makes more sense over `combineVar`, since the
+#   cell composition is already known to be quite different (with NeuN selection)
+geneVar.comb <- modelGeneVar(sce.comb)
+chosen.hvgs.comb <- geneVar.comb$bio > 0
+sum(chosen.hvgs.comb)
+    # [1] 7087
+
+    # Alternatively, take top 1000
+    chosen.hvgs.1000 <- getTopHVGs(geneVar.comb, n=1000)
+        # (instead of a Boolean, this is a character vector of n defined length)
+    
+    # Top 1000, fitting (design=) ~ species
+    mod <- model.matrix(~ species, data=colData(sce.comb))
+    geneVar.spp <- modelGeneVar(sce.comb, design=mod)
+    chosen.hvgs.1000spp <- getTopHVGs(geneVar.spp, n=1000)
+        length(intersect(chosen.hvgs.1000, chosen.hvgs.1000spp))
+            # 860 - nah, just take top 500 lol
+
+    chosen.hvgs.500 <- getTopHVGs(geneVar.comb, n=500)
+        
+      
+### Run `fastMNN` (internally uses `multiBatchPCA`), taking 50 PCs ===
+  # Do two iterations: R.nor merged to H.sap (merge indiv. samples first); then vice versa
+
+# 'to H.sap' ===
+set.seed(109)
+mnn.hold <-  fastMNN(sce.comb, batch=sce.comb$Sample,
+                     merge.order=list(list("Br5161_NAc","Br5212_NAc","Br5287_NAc",
+                                           "Br5207_NAc_NeuN","Br5182_NAc_NeuN"),
+                                      list("salineF","salineM","cocaineF","cocaineM")
+                                      ),
+                     #subset.row=chosen.hvgs.comb, d=50,
+                     #subset.row=chosen.hvgs.1000, d=50,
+                     subset.row=chosen.hvgs.500, d=50,
+                     correct.all=TRUE, get.variance=TRUE,
+                     BSPARAM=BiocSingular::IrlbaParam())
+    # This temp file just used for getting batch-corrected components (drops a variety of entries)
+
+table(colnames(mnn.hold) == colnames(sce.comb))  # all TRUE
+table(mnn.hold$batch == sce.comb$Sample) # all TRUE
+
+# Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+#reducedDim(sce.comb, "PCA_corrected_2H") <- reducedDim(mnn.hold, "corrected")
+#reducedDim(sce.comb, "PCA_corrected_2H.1000") <- reducedDim(mnn.hold, "corrected")
+reducedDim(sce.comb, "PCA_corrected_2H.500") <- reducedDim(mnn.hold, "corrected")
+
+
+    # # 'to R.nor' ===
+    # set.seed(109)
+    # mnn.hold <-  fastMNN(sce.comb, batch=sce.comb$species,
+    #                      merge.order=c("R.nor", "H.sap"),
+    #                      subset.row=chosen.hvgs.comb, d=50,
+    #                      correct.all=TRUE, get.variance=TRUE,
+    #                      BSPARAM=BiocSingular::IrlbaParam())
+    
+    # Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+    #reducedDim(sce.comb, "PCA_corrected_2R") <- reducedDim(mnn.hold, "corrected") # 100 components
+
+
+# # Save with these new dims
+# save(sce.comb, sce.nac.all, sce.nac.rat, Readme, chosen.hvgs.comb,
+#      file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
+
+
+    # # Are those coordinates similar?
+    # sapply(c(1:50), function(x){round(cor(reducedDim(sce.comb, "PCA_corrected_2H")[ ,x],
+    #                                 reducedDim(sce.comb, "PCA_corrected_2R")[ ,x]), 3)})
+    #     # [1]  0.999  0.987  0.832 -0.418  0.918  0.986  0.740  0.852 -0.309  0.600
+    #     # [11]  0.874  0.789  0.195  0.808 -0.067  0.548  0.768  0.738 -0.033  0.623
+    #     # [21]  0.770  0.506  0.475  0.617  0.424  0.768  0.796  0.719  0.765  0.690
+    #     # [31]  0.590  0.742  0.456  0.773  0.607  0.811  0.658  0.753  0.790  0.807
+    #     # [41]  0.550  0.521  0.614  0.690  0.681  0.647  0.670  0.643  0.762  0.807
+    #     # Interesting.
+
+## t-SNE
+reducedDim(sce.comb, "TSNE") <- NULL
+set.seed(109)
+#sce.comb <- runTSNE(sce.comb, dimred="PCA_corrected_2H")
+#sce.comb <- runTSNE(sce.comb, dimred="PCA_corrected_2H.1000")
+sce.comb <- runTSNE(sce.comb, dimred="PCA_corrected_2H.500")
+
+
+# How do these look? 
+#pdf("pdfs/exploration/DayLab-ratNAc/zPiloting_human-rat-fastMNN-integration_posBioComp_MNT.pdf")
+#pdf("pdfs/exploration/DayLab-ratNAc/zPiloting_human-rat-fastMNN-integration_top1000hvgs_MNT.pdf")
+pdf("pdfs/exploration/DayLab-ratNAc/zPiloting_human-rat-fastMNN-integration_top500hvgs_MNT.pdf")
+plotReducedDim(sce.comb, dimred="TSNE", colour_by="species", point_alpha=0.1, point_size=2.0)
+plotReducedDim(sce.comb, dimred="TSNE", colour_by="Sample", point_alpha=0.25, point_size=2.0)
+    # Observation: these are quite still sample (esp. human)-batch-y
+    #     -> Will probs want to merge those samples, first, then across species
+    #reducedDim(sce.comb) <- NULL  # 3x
+plotReducedDim(sce.comb, dimred="TSNE", colour_by="cellType", point_alpha=0.25, point_size=2.0,
+               text_by="cellType", text_size=3)
+dev.off()
+
+
+# Save progress
+save(sce.comb, sce.nac.all, sce.nac.rat, Readme,
+     file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
+
+
+
+
+# ## UMAP
+# set.seed(109)
+# sce.comb <- runUMAP(sce.comb, dimred="PCA_corrected_2H")
+# 
+# plotReducedDim(sce.comb, dimred="UMAP", colour_by="species")
+
+
+
+
 
