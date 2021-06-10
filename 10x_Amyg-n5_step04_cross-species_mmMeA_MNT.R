@@ -28,8 +28,16 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 # ===
 
-### Pseudobulk>modeling approach ============================================
-  # * Skip this -> Now using sn-level stats for this comparison
+### *** 09Jun 2021 update:
+# JAX MGI database no longer reports a $HomoloGene.ID -> now use $DB.Class.Key
+# (corresponded with David Shaw @ JAX/MGI)
+
+# For mapping === == === ===
+# human.entrez > DB.Class.Key < mouse.entrez < mm.Symbol
+#                ^ filter SCE's on this - to be more descriptive, call 'JAX.geneID'
+
+
+### Setting up homologous gene IDs, for mapping b/tw species =============
 
 ## 10x-pilot human Amyg SCE
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
@@ -43,26 +51,8 @@ sce.amy$cellType <- droplevels(sce.amy$cellType)
 # Remove 0 genes across all nuclei
 sce.amy <- sce.amy[!rowSums(assay(sce.amy, "counts"))==0, ]  # keeps same 29371 genes
 
-# Compute mean expression across nuclei - this is for later
-meanExprs.hsap.amy <- apply(assay(sce.amy, "logcounts"), 1, mean)
 
-## Marker stats
-load("rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
-
-
-
-
-
-# UCLA mouse MeA Drop-seq
-load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/markers-stats_mouse-MeA-Drop-seq_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.amy.mm, corfit.amy.mm, sce.amy.mm.PB
-
-
-
-
-
-
-# Add EntrezID for human
+## Add EntrezID for human
 hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.amy)$gene_id, 
                        column="ENTREZID", keytype="ENSEMBL")
 # "'select()' returned 1:many mapping between keys and columns"
@@ -73,16 +63,14 @@ table(!is.na(hs.entrezIds))
     table(rowData(sce.amy)[rowData(sce.amy)$gene_id %in% withoutEntrez, ]$gene_id == withoutEntrez)
     names(withoutEntrez) <- rowData(sce.amy)[rowData(sce.amy)$gene_id %in% withoutEntrez, ]$gene_name
     
-
 # Add to rowData
 rowData(sce.amy) <- cbind(rowData(sce.amy), hs.entrezIds)
 
 
-## Bring in 'HomoloGene.ID' for human (already in rowData for mm SCE) ===
-## JAX annotation info
+## Bring in 'DB.Class.Key' for human ===
+# JAX annotation info:
 hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
                  as.is=TRUE)
-                 "http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt"
 hom_hs <- hom[hom$Common.Organism.Name == "human", ]
     # of 22,522 entries
 table(hs.entrezIds %in% hom_hs$EntrezGene.ID)
@@ -90,135 +78,132 @@ table(hs.entrezIds %in% hom_hs$EntrezGene.ID)
 table(rowData(sce.amy)$gene_name %in% hom_hs$Symbol)
     # 16,666 - not a bad difference (interestingly these numbers are lower than when done for preprint...)
 
-        # So for mapping === == === ===
-        # human.entrez > HomoloGene.ID < mm.Symbol
-        #                ^ filter SCE's on this
-
 # Human (by Entrez)
-rowData(sce.amy)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
+rowData(sce.amy)$JAX.geneID <- hom_hs$DB.Class.Key[match(rowData(sce.amy)$hs.entrezIds,
                                                                  hom_hs$EntrezGene.ID)]
-    
 
 
-    ## ***** NEED TO RESOLVE ****** =============
-    ## MNT 08Jun2021: Oh.. apparently there is no longer a column named 'HomoloGene.ID'... 
-    length(intersect(rowData(sce.amy.mm.PB)$HomoloGene.ID, hom_hs$DB.Class.Key))
-        # [1] 0
-    
-        # -> Perhaps it's that $DB.Class.Key in the data.frame that seems to be organized
-        #    by overall homologous gene...
-    length(unique(hom$DB.Class.Key))
-        # [1] 20616
 
-    length(unique(hom_hs$DB.Class.Key))
-        # [1] 19537
-    
-    # Thus might want to check out the `duplicated(hom_hs$DB.Class.Key)`
-        # -> Let's reach out to Jackson Labs to see if this should be the replacement
-        #    for 'HomoloGene.ID'
-    
-    
-    ## resolved? ===================
+## UCLA mouse MeA Drop-seq ===
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mouse-MeA_downstream-processing_MNT.rda", verbose=T)
+    # sce.amy.mm, chosen.hvgs.amy.mm
+
+# This SCE has already been set up with the 'EntrezGene.ID' & [deprecated] 'HomoloGene.ID'
+hom_mm <- hom[hom$Common.Organism.Name == "mouse, laboratory", ]
+
+table(rowData(sce.amy.mm)$EntrezGene.ID %in% hom_mm$EntrezGene.ID)
+    #FALSE  TRUE 
+    #  107 14403
+
+# Add this new 'DB.Class.Key'
+rowData(sce.amy.mm)$JAX.geneID <- hom_mm$DB.Class.Key[match(rowData(sce.amy.mm)$EntrezGene.ID,
+                                                            hom_mm$EntrezGene.ID)]
+
 
 
 
 ## Now set/match to shared homologous genes ===
 
-length(intersect(rowData(sce.amy)$HomoloGene.ID,
-                 rowData(sce.amy.mm.PB)$HomoloGene.ID))  # 13,444
+length(intersect(rowData(sce.amy)$JAX.geneID,
+                 rowData(sce.amy.mm)$JAX.geneID))  # 13,669
 
-sharedHomologs <- intersect(rowData(sce.amy)$HomoloGene.ID,
-                            rowData(sce.amy.mm.PB)$HomoloGene.ID)
-# # That first one is NA - get rid of it
-# sharedHomologs <- sharedHomologs[-1]
+sharedHomologs <- intersect(rowData(sce.amy)$JAX.geneID,
+                            rowData(sce.amy.mm)$JAX.geneID)
+    # That first one is NA - get rid of it
+    sharedHomologs <- sharedHomologs[-1]
 
 # Human not in mm
-length(setdiff(rowData(sce.amy)$HomoloGene.ID,
-                 rowData(sce.amy.mm.PB)$HomoloGene.ID))  # 3657
+length(setdiff(rowData(sce.amy)$JAX.geneID,
+                 rowData(sce.amy.mm)$JAX.geneID))  # 2806
 # mm not in human
-length(setdiff(rowData(sce.amy.mm.PB)$HomoloGene.ID,
-               rowData(sce.amy)$HomoloGene.ID))  # 928
+length(setdiff(rowData(sce.amy.mm)$JAX.geneID,
+               rowData(sce.amy)$JAX.geneID))  # 735
 
 
 # Subset for those
-sce.mm.PBsub <- sce.amy.mm.PB[rowData(sce.amy.mm.PB)$HomoloGene.ID %in% sharedHomologs, ]   # 14247
-sce.hsap.PBsub <- sce.amy[rowData(sce.amy)$HomoloGene.ID %in% sharedHomologs, ]  # 14178
+sce.mm.sub <- sce.amy.mm[rowData(sce.amy.mm)$JAX.geneID %in% sharedHomologs, ]   # 13668
+sce.hsap.sub <- sce.amy[rowData(sce.amy)$JAX.geneID %in% sharedHomologs, ]  # 13983
     ## Many are duplicated...
 
-rowData(sce.mm.PBsub)$Symbol[duplicated(rowData(sce.mm.PBsub)$HomoloGene.ID)]
-    # shoot many genes are orthologs
-rowData(sce.hsap.PBsub)$Symbol[duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)]
-    # same here, slightly less
+rowData(sce.mm.sub)$Symbol[duplicated(rowData(sce.mm.sub)$JAX.geneID)]
+    # no orthologs in this space
+rowData(sce.hsap.sub)$gene_name[duplicated(rowData(sce.hsap.sub)$JAX.geneID)]
+    # up to 315 orthologs...
 
 
-### -> Take the higher-expressing of the duplicated - just mean across PB clusters:
+### -> Take the higher-expressing of the orthologs - just mean across PB clusters:
 
-    ## mm ===
-    duplicatedSet.mm <- which(duplicated(rowData(sce.mm.PBsub)$HomoloGene.ID))
-    genes2compare.mm <- list()
-    gene2keep.mm <- character()
-    for(g in 1:length(duplicatedSet.mm)){
-      genes2compare.mm[[g]] <- rownames(sce.mm.PBsub)[rowData(sce.mm.PBsub)$HomoloGene.ID ==
-                                              rowData(sce.mm.PBsub)$HomoloGene.ID[duplicatedSet.mm[g]]]
-      rowmeansmat <- rowMeans(assay(sce.mm.PBsub[genes2compare.mm[[g]], ], "logcounts"))
-      gene2keep.mm[g] <- names(rowmeansmat[order(rowmeansmat, decreasing=TRUE)])[1]
-    }
-    
-    # Now pull out those that not being compared, so can `c()`
-    table(rownames(sce.mm.PBsub) %in% unlist(genes2compare.mm)) # 133   - why isn't this ==
-    sum(lengths(genes2compare.mm))                               # 328 ????
-    length(unique(unlist(genes2compare.mm))) # 133   - oh. also `length(unique(gene2keep.mm)) == 52`
-    
-    genesNoCompare.mm <- rownames(sce.mm.PBsub)[!(rownames(sce.mm.PBsub) %in% unlist(genes2compare.mm))]
-    
-    # Finally combine and subset
-    sce.mm.PBsub <- sce.mm.PBsub[c(genesNoCompare.mm, unique(gene2keep.mm)), ]
-    
-    table(rowData(sce.mm.PBsub)$HomoloGene.ID %in% sharedHomologs) # 13444 TRUE
-    table(duplicated(rowData(sce.mm.PBsub)$HomoloGene.ID)) # 13444 FALSE         dope.
+    # ## mm ===
+    # duplicatedSet.mm <- which(duplicated(rowData(sce.mm.sub)$HomoloGene.ID))
+    # genes2compare.mm <- list()
+    # gene2keep.mm <- character()
+    # for(g in 1:length(duplicatedSet.mm)){
+    #   genes2compare.mm[[g]] <- rownames(sce.mm.sub)[rowData(sce.mm.sub)$HomoloGene.ID ==
+    #                                           rowData(sce.mm.sub)$HomoloGene.ID[duplicatedSet.mm[g]]]
+    #   rowmeansmat <- rowMeans(assay(sce.mm.sub[genes2compare.mm[[g]], ], "logcounts"))
+    #   gene2keep.mm[g] <- names(rowmeansmat[order(rowmeansmat, decreasing=TRUE)])[1]
+    # }
+    # 
+    # # Now pull out those that not being compared, so can `c()`
+    # table(rownames(sce.mm.sub) %in% unlist(genes2compare.mm)) # 133   - why isn't this ==
+    # sum(lengths(genes2compare.mm))                               # 328 ????
+    # length(unique(unlist(genes2compare.mm))) # 133   - oh. also `length(unique(gene2keep.mm)) == 52`
+    # 
+    # genesNoCompare.mm <- rownames(sce.mm.sub)[!(rownames(sce.mm.sub) %in% unlist(genes2compare.mm))]
+    # 
+    # # Finally combine and subset
+    # sce.mm.sub <- sce.mm.sub[c(genesNoCompare.mm, unique(gene2keep.mm)), ]
+    # 
+    # table(rowData(sce.mm.sub)$HomoloGene.ID %in% sharedHomologs) # 13444 TRUE
+    # table(duplicated(rowData(sce.mm.sub)$HomoloGene.ID)) # 13444 FALSE         dope.
 
     
     ## Human ===
     # First change rownames to EnsemblID
-    rowData(sce.hsap.PBsub)$Symbol.unique <- rownames(sce.hsap.PBsub)
-    rownames(sce.hsap.PBsub) <- rowData(sce.hsap.PBsub)$ID
+    rowData(sce.hsap.sub)$Symbol.unique <- rownames(sce.hsap.sub)
+    rownames(sce.hsap.sub) <- rowData(sce.hsap.sub)$ID
         
-    duplicatedSet.hsap <- which(duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID))
+    duplicatedSet.hsap <- which(duplicated(rowData(sce.hsap.sub)$JAX.geneID))
     genes2compare.hsap <- list()
     gene2keep.hsap <- character()
     for(g in 1:length(duplicatedSet.hsap)){
-      genes2compare.hsap[[g]] <- rownames(sce.hsap.PBsub)[rowData(sce.hsap.PBsub)$HomoloGene.ID ==
-                                                          rowData(sce.hsap.PBsub)$HomoloGene.ID[duplicatedSet.hsap[g]]]
-      rowmeansmat <- rowMeans(assay(sce.hsap.PBsub[genes2compare.hsap[[g]], ], "logcounts"))
+      genes2compare.hsap[[g]] <- rownames(sce.hsap.sub)[rowData(sce.hsap.sub)$JAX.geneID ==
+                                                          rowData(sce.hsap.sub)$JAX.geneID[duplicatedSet.hsap[g]]]
+      rowmeansmat <- rowMeans(assay(sce.hsap.sub[genes2compare.hsap[[g]], ], "logcounts"))
       gene2keep.hsap[g] <- names(rowmeansmat[order(rowmeansmat, decreasing=TRUE)])[1]
     }
     
+    # This is interesting...
+    length(gene2keep.hsap)  #315
+    length(unique(gene2keep.hsap))  #230
+    
+    # Ahh that's because many 'tested' might have been orthologous,
+    #   b/tw themselves (i.e. 3+ orthologous genes):
+    length(unique(rowData(sce.hsap.sub)$JAX.geneID[duplicatedSet.hsap]))
+        # 230
+
+    
     # Now pull out those that not being compared, so can `c()`
-    table(rownames(sce.hsap.PBsub) %in% unlist(genes2compare.hsap)) # 109   - why isn't this ==
-    sum(lengths(genes2compare.hsap))                               # 136 ????
-    length(unique(unlist(genes2compare.hsap))) # 109   - oh. also `length(unique(gene2keep.hsap)) == 52`
-    
-    genesNoCompare.hsap <- rownames(sce.hsap.PBsub)[!(rownames(sce.hsap.PBsub) %in% unlist(genes2compare.hsap))]
-        # of length 13392 (which + 52 == 13444)
-    
+    genesNoCompare.hsap <- rownames(sce.hsap.sub)[!(rownames(sce.hsap.sub) %in% unlist(genes2compare.hsap))]
+
     # Finally combine and subset
-    sce.hsap.PBsub <- sce.hsap.PBsub[c(genesNoCompare.hsap, unique(gene2keep.hsap)), ]
+    sce.hsap.sub <- sce.hsap.sub[c(genesNoCompare.hsap, unique(gene2keep.hsap)), ]
     
-    table(rowData(sce.hsap.PBsub)$HomoloGene.ID %in% sharedHomologs) # 13444 TRUE
-    table(duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)) # 13444 FALSE         dope.
+    table(rowData(sce.hsap.sub)$JAX.geneID %in% sharedHomologs) # 13668 TRUE
+    table(duplicated(rowData(sce.hsap.sub)$JAX.geneID)) # 13668 FALSE         dope.
 
+    table(rowData(sce.hsap.sub)$JAX.geneID %in% rowData(sce.mm.sub)$JAX.geneID) # 13668 TRUE
 
+    
     ## Match order and save
-    sce.mm.PBsub <- sce.mm.PBsub[match(rowData(sce.hsap.PBsub)$HomoloGene.ID,
-                                   rowData(sce.mm.PBsub)$HomoloGene.ID), ]
+    sce.mm.sub <- sce.mm.sub[match(rowData(sce.hsap.sub)$JAX.geneID,
+                                   rowData(sce.mm.sub)$JAX.geneID), ]
 
-    table(rowData(sce.mm.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)
+    table(rowData(sce.mm.sub)$JAX.geneID == rowData(sce.hsap.sub)$JAX.geneID)
         # all TRUE - good
-    pheatmap(cor(assay(sce.mm.PBsub, "logcounts"), assay(sce.hsap.PBsub, "logcounts")), fontsize=5)
-        # (ah but this is at the sample:cluster level)
     
-    Readme <- "These two SCEs are subsetted and ordered for matching HomoloGene.ID in the rowData. This can be used to subset the nucleus-level SCEs in their respective Rdata files."
-    save(sce.mm.PBsub, sce.hsap.PBsub, Readme, file="/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/SCE_mm-MeA-PBd_w_matchingHsap-Amyg-PBd_HomoloGene.IDs_MNT.rda")
+    Readme <- "These two SCEs are subsetted and ordered for matching 'JAX.geneID' in the rowData. This can be used to subset the nucleus-level SCEs in their respective Rdata files."
+    save(sce.mm.sub, sce.hsap.sub, Readme, file="rdas/revision/SCE_mm-MeA_matched2_Hsap-Amyg_JAX.geneIDs_MNT2021.rda")
     
     
     
@@ -286,14 +271,14 @@ rownames(ts.amy) <- fixTo
 ## Bring in HomoloGene.ID info to subset/match order
 # load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mm-MeA-PBd_w_matchingHsap-Amyg-PBd_HomoloGene.IDs_MNT.rda",
 #      verbose=T)
-#     # sce.mm.PBsub, sce.hsap.PBsub, Readme
+#     # sce.mm.sub, sce.hsap.sub, Readme
 # 
-# table(rowData(sce.mm.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+# table(rowData(sce.mm.sub)$HomoloGene.ID == rowData(sce.hsap.sub)$HomoloGene.ID)  # all TRUE - dope
 # # (see above - these are the intersecting homologs)
 # 
 # ## However!
-# table(rownames(ts.mmMeA) %in% rownames(sce.mm.PBsub)) # not all - so will need to get union
-# rm(sce.mm.PBsub, sce.hsap.PBsub, Readme)
+# table(rownames(ts.mmMeA) %in% rownames(sce.mm.sub)) # not all - so will need to get union
+# rm(sce.mm.sub, sce.hsap.sub, Readme)
 
 ## HomoloGene.ID for all human genes ====
     hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
@@ -323,22 +308,22 @@ rownames(ts.amy) <- fixTo
           #                ^ filter SCE's on this
     
     # Human (by Entrez)
-    rowData(sce.amy)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
+    rowData(sce.amy)$JAX.geneID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
                                                                     hom_hs$EntrezGene.ID)]
     # end chunk ====
 
 
 # Intersection?
-table(rowData(sce.amy.mm)$HomoloGene.ID %in% rowData(sce.amy)$HomoloGene.ID)
+table(rowData(sce.amy.mm)$JAX.geneID %in% rowData(sce.amy)$JAX.geneID)
     # FALSE  TRUE
     #   665 13845
 
 
 # First give [human] ts.amy rownames their respective EnsemblID
-    #   (have to use the full sce bc rownames(sce.hsap.PBsub) is EnsemblID and we uniquified the $Symbol)
+    #   (have to use the full sce bc rownames(sce.hsap.sub) is EnsemblID and we uniquified the $Symbol)
 rownames(ts.amy) <- rowData(sce.amy)$ID[match(rownames(ts.amy), rownames(sce.amy))]
 # Then to HomoloGene.ID
-rownames(ts.amy) <- rowData(sce.amy)$HomoloGene.ID[match(rownames(ts.amy), rowData(sce.amy)$ID)]
+rownames(ts.amy) <- rowData(sce.amy)$JAX.geneID[match(rownames(ts.amy), rowData(sce.amy)$ID)]
     # Btw half are NA
     table(is.na(rownames(ts.amy)))
         # FALSE  TRUE
@@ -350,7 +335,7 @@ ts.amy <- ts.amy[!is.na(rownames(ts.amy)), ]
 
 
 # Mouse - can just go to HomoloGene.ID
-rownames(ts.mmMeA) <- rowData(sce.amy.mm)$HomoloGene.ID[match(rownames(ts.mmMeA), rownames(sce.amy.mm))]
+rownames(ts.mmMeA) <- rowData(sce.amy.mm)$JAX.geneID[match(rownames(ts.mmMeA), rownames(sce.amy.mm))]
 
 # Intersecting?
 table(rownames(ts.mmMeA) %in% rownames(ts.amy))
