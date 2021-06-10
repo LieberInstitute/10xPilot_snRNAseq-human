@@ -212,186 +212,95 @@ rowData(sce.hsap.sub)$gene_name[duplicated(rowData(sce.hsap.sub)$JAX.geneID)]
   # Added MNT 14May2020 - UPDATED 22May2020 to compare to 2019 dataset
   # (previously only 2017 neuronal subclusters), now with neuronal subcluster info
 
-# Load mouse stats
-# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/markers-stats_mouseMeA-2017-neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.mmMeAneu.t.1vAll
+# Load mouse stats - can still use these (revision 2021)
 load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
     # markers.mmMeA.t.1vAll
-
-# Load mouse SCE
-# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2017Neuron/SCE_mouse-MeA-2017_neuronalSubclusters_HVGs_MNT.rda", verbose=T)
-#     # sce.amy.mm17hvgs
-load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mouse-MeA_downstream-processing_MNT.rda", verbose=T)
-    # sce.amy.mm, chosen.hvgs.amy.mm
+    table(rownames(sce.mm.sub) %in% rownames(markers.mmMeA.t.1vAll[[1]]))
+        # all 13668 (of 14510 entries) TRUE
+        
+# Load SCEs
+load("rdas/revision/SCE_mm-MeA_matched2_Hsap-Amyg_JAX.geneIDs_MNT2021.rda", verbose=T)
+    # sce.mm.sub, sce.hsap.sub, Readme
 
 ## Calculate and add t-statistic (= std.logFC * sqrt(N)) for mouse clusters
-#      and fix row order to the first entry "Astrocyte"
-fixTo <- rownames(markers.mmMeA.t.1vAll[[1]])
+#      and fix row order to the first entry "AS"
+fixTo <- rownames(sce.mm.sub)
 for(x in names(markers.mmMeA.t.1vAll)){
-  markers.mmMeA.t.1vAll[[x]]$t.stat <- markers.mmMeA.t.1vAll[[x]]$std.logFC * sqrt(ncol(sce.amy.mm))
+  markers.mmMeA.t.1vAll[[x]]$t.stat <- markers.mmMeA.t.1vAll[[x]]$std.logFC * sqrt(ncol(sce.mm.sub))
   markers.mmMeA.t.1vAll[[x]] <- markers.mmMeA.t.1vAll[[x]][fixTo, ]
 }
 
 # Pull out the t's
 ts.mmMeA <- sapply(markers.mmMeA.t.1vAll, function(x){x$t.stat})
-rownames(ts.mmMeA) <- fixTo
+rownames(ts.mmMeA) <- rowData(sce.mm.sub)$JAX.geneID[match(fixTo, rownames(sce.mm.sub))]
 
 
 
 ## Human t stats subset/re-ordering ===
 # Bring in human stats; create t's
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
-    rm(markers.amy.t.design, markers.amy.wilcox.block)
-
-# Need to add t's with N nuclei used in constrasts
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    #sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
-    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy,ref.sampleInfo)
-
-# First drop "Ambig.lowNtrxts" (50 nuclei)
-sce.amy <- sce.amy[ ,sce.amy$cellType.split != "Ambig.lowNtrxts"]
-sce.amy$cellType.split <- droplevels(sce.amy$cellType.split)
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
+    rm(markers.amy.t.pw, markers.amy.wilcox.block)
 
 ## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
 #      and fix row order to the first entry "Astro"
-fixTo <- rownames(markers.amy.t.1vAll[["Astro"]])
+fixTo <- rownames(sce.hsap.sub)
 
-for(s in names(markers.amy.t.1vAll)){
-  markers.amy.t.1vAll[[s]]$t.stat <- markers.amy.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.amy))
-  markers.amy.t.1vAll[[s]] <- markers.amy.t.1vAll[[s]][fixTo, ]
+## These stats have both an '_enriched' & '_depleted' result - take the '_enriched'
+markers.amy.enriched <- lapply(markers.amy.t.1vAll, function(x){x[[2]]})
+
+# Compute t-stat
+for(s in names(markers.amy.enriched)){
+  markers.amy.enriched[[s]]$t.stat <- markers.amy.enriched[[s]]$std.logFC * sqrt(ncol(sce.hsap.sub))
+  markers.amy.enriched[[s]] <- markers.amy.enriched[[s]][fixTo, ]
 }
 
 # Pull out the t's
-ts.amy <- sapply(markers.amy.t.1vAll, function(x){x$t.stat})
-rownames(ts.amy) <- fixTo
+ts.amy <- sapply(markers.amy.enriched, function(x){x$t.stat})
+rownames(ts.amy) <- rowData(sce.hsap.sub)$JAX.geneID[match(fixTo, rownames(sce.hsap.sub))]
 
-
-
-## Bring in HomoloGene.ID info to subset/match order
-# load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mm-MeA-PBd_w_matchingHsap-Amyg-PBd_HomoloGene.IDs_MNT.rda",
-#      verbose=T)
-#     # sce.mm.sub, sce.hsap.sub, Readme
-# 
-# table(rowData(sce.mm.sub)$HomoloGene.ID == rowData(sce.hsap.sub)$HomoloGene.ID)  # all TRUE - dope
-# # (see above - these are the intersecting homologs)
-# 
-# ## However!
-# table(rownames(ts.mmMeA) %in% rownames(sce.mm.sub)) # not all - so will need to get union
-# rm(sce.mm.sub, sce.hsap.sub, Readme)
-
-## HomoloGene.ID for all human genes ====
-    hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
-                     as.is=TRUE)
-    
-    hom_hs <- hom[hom$Common.Organism.Name == "human", ]
-    # of 19,124 entries
-    
-    # First Add EntrezID for human
-    hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.amy)$ID, 
-                           column="ENTREZID", keytype="ENSEMBL")
-    # "'select()' returned 1:many mapping between keys and columns"
-    table(!is.na(hs.entrezIds))
-        # 22,818 valid entries (remember this is already subsetted for those non-zero genes only)
-    
-    # Add to rowData
-    rowData(sce.amy) <- cbind(rowData(sce.amy), hs.entrezIds)
-    
-    # Now how many in JAX db?
-    table(rowData(sce.amy)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
-        # 18,865
-    table(rowData(sce.amy)$Symbol %in% hom_hs$Symbol)
-        # 18,472 - not a bad difference
-    
-          # So for mapping === === ===
-          # human.entrez > HomoloGene.ID < mm.Symbol
-          #                ^ filter SCE's on this
-    
-    # Human (by Entrez)
-    rowData(sce.amy)$JAX.geneID <- hom_hs$HomoloGene.ID[match(rowData(sce.amy)$hs.entrezIds,
-                                                                    hom_hs$EntrezGene.ID)]
-    # end chunk ====
-
-
-# Intersection?
-table(rowData(sce.amy.mm)$JAX.geneID %in% rowData(sce.amy)$JAX.geneID)
-    # FALSE  TRUE
-    #   665 13845
-
-
-# First give [human] ts.amy rownames their respective EnsemblID
-    #   (have to use the full sce bc rownames(sce.hsap.sub) is EnsemblID and we uniquified the $Symbol)
-rownames(ts.amy) <- rowData(sce.amy)$ID[match(rownames(ts.amy), rownames(sce.amy))]
-# Then to HomoloGene.ID
-rownames(ts.amy) <- rowData(sce.amy)$JAX.geneID[match(rownames(ts.amy), rowData(sce.amy)$ID)]
-    # Btw half are NA
-    table(is.na(rownames(ts.amy)))
-        # FALSE  TRUE
-        # 17261 11203
-    
-# So subset for those with HomoloGene.ID
-ts.amy <- ts.amy[!is.na(rownames(ts.amy)), ]
-
-
-
-# Mouse - can just go to HomoloGene.ID
-rownames(ts.mmMeA) <- rowData(sce.amy.mm)$JAX.geneID[match(rownames(ts.mmMeA), rownames(sce.amy.mm))]
-
-# Intersecting?
-table(rownames(ts.mmMeA) %in% rownames(ts.amy))
-    # FALSE  TRUE
-    #   985 13525   - so we'll be running correlation across these genes
-
-# Subset and match order
-ts.mmMeA <- ts.mmMeA[rownames(ts.mmMeA) %in% rownames(ts.amy), ]
-ts.amy <- ts.amy[rownames(ts.mmMeA), ]
+# Do they all intersect?
+table(rownames(ts.amy) == rownames(ts.mmMeA))
+     # 13668 TRUE
 
 cor_t_amy <- cor(ts.amy, ts.mmMeA)
 rownames(cor_t_amy) = paste0(rownames(cor_t_amy),"_","H")
 colnames(cor_t_amy) = paste0(colnames(cor_t_amy),"_","M")
 range(cor_t_amy)
-    #[1] -0.2203968  0.5023080      (previously {-0.2557751, 0.2577207} on only 2017 neuronal subsets)
+    # [1] -0.2857217  0.5872299      (previously {-0.2203968, 0.5023080 } w preprint pops)
 
 ### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
 theSeq.all = seq(-.6, .6, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-# Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
-cor_t_amy <- cor_t_amy[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+# Re-order mouse labels - move MG/MU to after neuronal subclusters
+cor_t_amy <- cor_t_amy[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
 
-# #pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2017-neuSubs_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
-# pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
-# pheatmap(cor_t_amy,
-#          color=my.col.all,
-#          cluster_cols=F, cluster_rows=F,
-#          breaks=theSeq.all,
-#          fontsize=11, fontsize_row=15, fontsize_col=12,
-#          #main="Correlation of cluster-specific t's for mouse MeA neuronal subclusters \n (Wu et al., Neuron 2017)")
-#          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# # Version with mouse glial cell types 'missing' in LIBD data dropped:
-# pheatmap(cor_t_amy_sub,
-#          color=my.col.all,
-#          cluster_cols=F, cluster_rows=F,
-#          breaks=theSeq.all,
-#          fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-#          main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# 
-# dev.off()
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_MNT2021.pdf")
+pheatmap(cor_t_amy,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+         main="Correlation of cluster-specific t's to mouse MeA \n subclusters (Chen-Hu-Wu et al., Cell 2019)")
+dev.off()
 
-
-## Version with mouse glial cell types 'missing' in LIBD data dropped:
-cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "OPC.OL_M"))]
-    ## Actually just print as second page to the above - will probably get some suggested edits
 
 
 
 ## Iteration with top N spp:subcluster-specific genes: ========
- #   Added MNT 25May2020
  #   -> Basically just run through line 488, under ("Subset and match order")
 
 # Save the ts matrices to reduce work next time
-Readme <- "These t-statistic matrices are subsetted and matched for shared 'HomoloGene.ID', so `cor()` can simply be run or other gene subsets applied first."
-save(ts.amy, ts.mmMeA, Readme, file="rdas/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_25May2020.rda")
+homologInfo <- data.frame(JAX.geneID = rownames(ts.amy),
+                          H.sap.ID = rowData(sce.hsap.sub)$Symbol.uniq[
+                            match(rownames(ts.amy), rowData(sce.hsap.sub)$JAX.geneID)],
+                          M.mus.ID = rowData(sce.mm.sub)$Symbol[
+                            match(rownames(ts.amy), rowData(sce.mm.sub)$JAX.geneID)]
+                          )
+
+Readme <- "These t-statistic matrices are subsetted and matched for shared 'JAX.geneID', so `cor()` can simply be run or other gene subsets applied first."
+save(ts.amy, ts.mmMeA, homologInfo, Readme, file="rdas/revision/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_MNT2021.rda")
 
 
     
@@ -403,12 +312,15 @@ hsap_specific_indices = mapply(function(t) {
 as.data.frame(ts.amy)
 )
 hsap_ind = unique(as.numeric(hsap_specific_indices))
-length(hsap_ind)  # so of 1200 (100 x 12 cellType.split), 919 unique
+length(hsap_ind)  # so of 1900 (100 x 19 cellType), 1399 unique
 
 cor_t_hsap = cor(ts.amy[hsap_ind, ],
                  ts.mmMeA[hsap_ind, ])
+rownames(cor_t_hsap) = paste0(rownames(cor_t_hsap),"_","H")
+colnames(cor_t_hsap) = paste0(colnames(cor_t_hsap),"_","M")
 range(cor_t_hsap)
-    #[1] -0.2738376  0.6612352
+    # [1] -0.3881377  0.7220732
+        # (previously [1] -0.2738376  0.6612352)
 
 
 ## On just mouse cluster-specific homologous genes ===
@@ -422,55 +334,74 @@ length(mouse_ind)  # so of 2300 (100 x 23 subCluster), 1543 unique
 
 cor_t_mouse = cor(ts.amy[mouse_ind, ],
                  ts.mmMeA[mouse_ind, ])
+rownames(cor_t_mouse) = paste0(rownames(cor_t_mouse),"_","H")
+colnames(cor_t_mouse) = paste0(colnames(cor_t_mouse),"_","M")
 range(cor_t_mouse)
-    # [1] -0.2731605  0.6113445
+    # [1] -0.4078769  0.6786080
+        # (previously [1] -0.2731605  0.6113445)
+
+## Between these gene spaces:
+length(intersect(rownames(ts.amy)[hsap_ind], rownames(ts.mmMeA)[mouse_ind]))
+    # 480
+
+toptop.genes <- intersect(rownames(ts.amy)[hsap_ind], rownames(ts.mmMeA)[mouse_ind])
+cor_t_top <- cor(ts.amy[toptop.genes, ],
+                 ts.mmMeA[toptop.genes, ])
+rownames(cor_t_top) = paste0(rownames(cor_t_top),"_","H")
+colnames(cor_t_top) = paste0(colnames(cor_t_top),"_","M")
+range(cor_t_top)
+    # [1] -0.4681437  0.7896791
 
 ## UPDATED heatmap:
-theSeq.all = seq(-.65, .65, by = 0.01)
+theSeq.all = seq(-.70, .70, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-# Re-order mouse labels - move EN/MG/MU to after neuronal subclusters
-cor_t_hsap <- cor_t_hsap[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
-    # Then treshold this one to 0.65 max (max is 0.6612)
-    cor_t_hsap <- ifelse(cor_t_hsap >= 0.65, 0.65, cor_t_hsap)
-    # (and)
-    cor_t_amy_sub <- cor_t_amy[ ,-which(colnames(cor_t_amy) %in% c("EN_M", "MU_M", "OPC.OL_M"))]
-cor_t_mouse <- cor_t_mouse[ ,c(1, 5,13:20,6:12, 3,2,4, 21,23,22)]
+# Re-order mouse labels - move MG/MU to after neuronal subclusters
+cor_t_hsap <- cor_t_hsap[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
 
-#pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_May2020.pdf")
-    # or
-    pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_numbersPrinted_May2020.pdf")
+cor_t_mouse <- cor_t_mouse[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
+
+cor_t_top <- cor_t_top[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
+
+# Print all four iterations
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_wValues_MNT2021.pdf")
 pheatmap(cor_t_amy,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
-         fontsize=11, fontsize_row=15, fontsize_col=12,
-            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
-         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# Version with mouse glial cell types 'missing' in LIBD data dropped:
-pheatmap(cor_t_amy_sub,
-         color=my.col.all,
-         cluster_cols=F, cluster_rows=F,
-         breaks=theSeq.all,
-         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
-         main="Correlation of cluster-specific t's to mouse MeA \n complete subclusters (Chen-Hu-Wu et al., Cell 2019)")
-# On human-specific genes (slightly thresholded)
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+            display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.7,0.7,by=0.35)),
+         main="Correlation of cluster-specific t's to mouse MeA \n subclusters (Chen-Hu-Wu et al., Cell 2019)")
+# On human-specific genes
 pheatmap(cor_t_hsap,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
-         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
-         main="Correlation of top-100 cluster-specific t's to \n (Chen-Hu-Wu et al., Cell 2019) subclusters")
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+            display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.7,0.7,by=0.35)),
+         main="Correlation of top-100 cluster-specific t's (1399) to \n (Chen-Hu-Wu et al., Cell 2019) subclusters")
 # On mm-MeA-specific genes
 pheatmap(cor_t_mouse,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
          breaks=theSeq.all,
-         fontsize=11.5, fontsize_row=15, fontsize_col=13.5,
-            display_numbers=T, number_format="%.2f", fontsize_number=6.5,
-         main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) top-100 subcluster t's")
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+            display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.7,0.7,by=0.35)),
+         main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) subcluster top-100 t's (1543)")
+# On intersection between the top spp.-specific genes (480 genes)
+theSeq.new = seq(-.80, .80, by = 0.01)
+my.col.new <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.new)-1)
+pheatmap(cor_t_top,
+         color=my.col.new,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.new,
+         fontsize=9.5, fontsize_row=13, fontsize_col=12,
+         display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.8,0.8,by=0.4)),
+         main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) subcluster t's (shared top 100's, 480)")
 dev.off()
 
 
@@ -608,7 +539,7 @@ plotExpression(sce.amy, exprs_values="logcounts", x="cellType.split", colour_by=
 
 
 ### FINAL GRANT VERSION ===
-  # Remove EN, MU, OPC.OL, N.12 & N.15
+  # Remove EN, MU, OPC.OL, N.12 & N.15 (the latter two bc < 50 cells)
 load("rdas/zTsMats_libd-AMY_and_ucla-mouseMeA-2019Cell_sharedGenes_25May2020.rda", verbose=T)
     # ts.amy, ts.mmMeA, Readme
 
