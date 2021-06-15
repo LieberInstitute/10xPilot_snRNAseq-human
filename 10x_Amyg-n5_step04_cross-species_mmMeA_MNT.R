@@ -17,6 +17,8 @@ library(lattice)
 library(RColorBrewer)
 library(pheatmap)
 
+source('plotExpressionCustom.R')
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -217,7 +219,8 @@ load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mo
     # markers.mmMeA.t.1vAll
     table(rownames(sce.mm.sub) %in% rownames(markers.mmMeA.t.1vAll[[1]]))
         # all 13668 (of 14510 entries) TRUE
-        
+    
+            
 # Load SCEs
 load("rdas/revision/SCE_mm-MeA_matched2_Hsap-Amyg_JAX.geneIDs_MNT2021.rda", verbose=T)
     # sce.mm.sub, sce.hsap.sub, Readme
@@ -403,6 +406,76 @@ pheatmap(cor_t_top,
          legend_breaks=c(seq(-0.8,0.8,by=0.4)),
          main="Correlation of LIBD-AMY subclusters to \n (Chen-Hu-Wu et al., Cell 2019) subcluster t's (shared top 100's, 480)")
 dev.off()
+
+
+### Unmapped [-across species] markers ======
+  # I.e. 'What are significantly enriched but weren't kept in the homology mapping?'
+
+## Human vs. shared homology space ===
+markerList.1vAll <- lapply(markers.amy.enriched, function(x){rownames(x)[x$log.FDR < log(0.05) & x$non0median==TRUE]})
+length(unique(unlist(markerList.1vAll)))
+    # 8483
+length(setdiff(unique(unlist(markerList.1vAll)), rownames(sce.hsap.sub)))
+    # 1154 - wow so ~1/8th of these markers were 'missing' in homology
+
+    # of PW markers?
+    markerList.pw <- lapply(markers.amy.t.pw, function(x){rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]})
+    length(unique(unlist(markerList.pw)))
+        # 2461
+    length(setdiff(unique(unlist(markerList.pw)), rownames(sce.hsap.sub)))
+        # 388
+
+## By cell type?
+sapply(markerList.1vAll, function(x){length(setdiff(x, rownames(sce.hsap.sub)))})
+    # Astro_A Astro_B    Endo Excit_A Excit_B Excit_C Inhib_A Inhib_B Inhib_C Inhib_D 
+    #     169       8      38     662     131     317     517     330     266     298 
+    # Inhib_E Inhib_F Inhib_G Inhib_H   Micro   Mural   Oligo     OPC   Tcell 
+    #     238     316      86     129      59      51      78     121      30 
+
+# % 'not conserved'?
+round(sapply(markerList.1vAll, function(x){length(setdiff(x, rownames(sce.hsap.sub)))}) / lengths(markerList.1vAll) * 100, 3)
+    # Astro_A Astro_B    Endo Excit_A Excit_B Excit_C Inhib_A Inhib_B Inhib_C Inhib_D 
+    #  11.388   9.756   7.170  13.749  11.245  16.374  11.471   9.169  10.666   8.851 
+    # Inhib_E Inhib_F Inhib_G Inhib_H   Micro   Mural   Oligo     OPC   Tcell 
+    #  14.050  10.701  14.651   9.656   6.191   8.472   8.657   7.511   7.371
+    # - mean 10.4%
+
+        # PW results:
+        sapply(markerList.pw, function(x){length(setdiff(x, rownames(sce.hsap.sub)))})
+            # Astro_A Astro_B    Endo Excit_A Excit_B Excit_C Inhib_A Inhib_B Inhib_C Inhib_D 
+            #      50       0      11      15      32      63       8      14       2       9 
+            # Inhib_E Inhib_F Inhib_G Inhib_H   Micro   Mural   Oligo     OPC   Tcell 
+            #      37      14       1       7      30      16      38      24      17
+        
+        # % 'not conserved'?
+        round(sapply(markerList.pw, function(x){length(setdiff(x, rownames(sce.hsap.sub)))}) / lengths(markerList.pw) * 100, 3)
+            #  Astro_A Astro_B    Endo Excit_A Excit_B Excit_C Inhib_A Inhib_B Inhib_C Inhib_D 
+            #   15.337   0.000   6.111  25.424  18.497  44.366  30.769  15.909  14.286   6.870 
+            #  Inhib_E Inhib_F Inhib_G Inhib_H   Micro   Mural   Oligo     OPC   Tcell 
+            #   25.170  32.558  25.000   8.861  10.563   9.302  12.418  13.953  15.179 
+
+
+## What are some of those genes?
+sapply(markerList.1vAll, function(x){head(setdiff(x, rownames(sce.hsap.sub)))})
+
+
+
+### Mouse MeA vs shared homology space
+markerList.mm <- lapply(markers.mmMeA.t.1vAll, function(x){rownames(x)[x$log.FDR < log(0.05)]})
+length(unique(unlist(markerList.mm)))
+    # 14478
+length(setdiff(unique(unlist(markerList.mm)), rownames(sce.mm.sub)))  # 838; 5.8% of genes
+
+sapply(markerList.mm, head)
+
+# Checking out a handful of these ('N.11' markers)
+plotExpressionCustom(sce.mm.sub, anno_name="subCluster", features=c("Neurod6", "Olfm1", "Synpr", "Slc30a3", "Snap25", "Slc17a7"),
+                     ncol=3, features_name="mmMeA custom-selected")
+
+  # Observation - the 'markers' of these mouse clusters have quite sparse expression, that
+  #               a lot of them don't exhibit optimal distribution patterns (Slc7a7)...
+  #               In other words the results from the 'cluster-vs-all-others' marker
+  #               test is heavily noise-driven (see Slc30a3, Neurod6)
 
 
 
