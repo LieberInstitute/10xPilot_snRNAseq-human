@@ -479,136 +479,201 @@ plotExpressionCustom(sce.mm.sub, anno_name="subCluster", features=c("Neurod6", "
 
 
 
-## Intersecting some of the top markers =====================
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.amy.t.1vAll, markers.amy.t.design, markers.amy.wilcox.block
-    rm(markers.amy.t.design, markers.amy.wilcox.block)
+## Intersecting some of the top ('1vAll') markers =====================
+load("rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
+    rm(markers.amy.t.pw, markers.amy.wilcox.block, medianNon0.amy)
 
 # Take top 100
 markerList.t.hsap <- lapply(markers.amy.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(1e-6)]
+  rownames(x[[2]])[x[[2]]$log.FDR < log(1e-6) & x[[2]]$non0median==TRUE]
   }
 )
 genes.top100.hsap <- lapply(markerList.t.hsap, function(x){head(x, n=100)})
 
 
+## mm MeA ===
 load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
     # markers.mmMeA.t.1vAll
 
-# Just `toupper()` it
+## MNT 15Jun2021 - let's add the same marker restriction as applying to revision human data:
+ #                 i.e. for any given subCluster, a marker must have non-0 median expression of that gene
+load("/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/SCE_mouse-MeA_downstream-processing_MNT.rda", verbose=T)
+    # sce.amy.mm, chosen.hvgs.amy.mm
+
+cellSubtype.idx <- splitit(sce.amy.mm$subCluster)
+medianNon0.amy.mm <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.amy.mm, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+sapply(medianNon0.amy.mm, table)
+    #          AS    EN    MG    MU   N.1   N.2   N.3   N.4   N.5   N.6   N.7   N.8
+    # FALSE 14417 14400 14382 14420 14406 14401 14408 14373 14339 14371 14077 14330
+    # TRUE     93   110   128    90   104   109   102   137   171   139   433   180
+    
+    #         N.9  N.10  N.11  N.12  N.13  N.14  N.15  N.16    OL   OPC OPC.OL
+    # FALSE 14400 14493 14254 14234 14495 14485 14486 14392 14088 14250  14110
+    # TRUE    110    17   256   276    15    25    24   118   422   260    400
+
+# Add this to the markers stats object
+for(i in names(markers.mmMeA.t.1vAll)){
+  markers.mmMeA.t.1vAll[[i]] <- cbind(markers.mmMeA.t.1vAll[[i]],
+                                           medianNon0.amy.mm[[i]][match(rownames(markers.mmMeA.t.1vAll[[i]]),
+                                                                     names(medianNon0.amy.mm[[i]]))])
+  colnames(markers.mmMeA.t.1vAll[[i]])[5] <- "non0median"
+}
+
+# Go ahead and save that into that markers .rda
+save(markers.mmMeA.t.1vAll, medianNon0.amy.mm,
+     file="/dcl01/ajaffe/data/lab/singleCell/ucla_mouse-MeA/2019Cell/markers-stats_mouseMeA-2019-with-16neuSubs_findMarkers-SN-LEVEL_MNTMay2020.rda")
+
+
+
+# Map through the 'homologInfo' [if it exists in the shared space]
 markerList.t.mm <- lapply(markers.mmMeA.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(1e-6)]
+  rownames(x)[x$log.FDR < log(1e-6) & x$non0median==TRUE]
   }
 )
-genes.top100.mm <- lapply(markerList.t.mm, function(x){toupper(head(x, n=100))})
+    # MNT comment: this may be too strict, given the technology and that looking at
+    #              mean expression looks more somewhat convincing
+    #            - Will leave the below numbers from the iteration without `non0median==TRUE`,
+    #              unless otherwise specified
+genes.top100.mm <- lapply(markerList.t.mm, function(x){head(x, n=100)})
+
+# Convert to H. sap homolog [if applicable]
+for(i in names(genes.top100.mm)){ 
+  homolog.space.idx <- which(genes.top100.mm[[i]] %in% homologInfo$M.mus.ID)
+  genes.top100.mm[[i]] <- c(genes.top100.mm[[i]][setdiff(1:100, homolog.space.idx)],
+                            homologInfo$H.sap.ID[match(genes.top100.mm[[i]][homolog.space.idx],
+                                                       homologInfo$M.mus.ID)])
+}
+  
+
 genes.top100.mm <- sapply(genes.top100.mm, cbind)
 
 ## sapply
 sapply(genes.top100.hsap, function(x){
   apply(genes.top100.mm,2,function(y){length(intersect(x,y))})
 })
-    #        Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo OPC
-    # AS        20       0       1       0       0       1       0       0       1     0     0   1
-    # EN         2       1       1       0       1       2       1       0       0     0     0   2
-    # MG         0       0       0       1       0       0       0       0       0    19     0   0
-    # MU         2       1       0       1       0       0       1       1       0     0     0   0
-    # N.1        1       4       2       0      14       8       3       4       9     0     1   1
-    # N.10       0       6       1       4       7       7       2       0       6     0     0   0
-    # N.11       1      10       5       2       8       3       4       6       8     0     0   4
-    # N.12       2       7       4       3       7       5       2       3       5     0     2   2
-    # N.13       1       2       1       3       1       1       0       0       5     1     0   1
-    # N.14       0       7       2       4       9       6       0       4       7     1     1   2
-    # N.15       0       7       1       6       0       1       1       0       1     0     0   1
-    # N.16       1       3       4       1       7       3       3       6       4     0     0   4
-    # N.2        2       6       2       1       9       5       2       3       6     0     0   3
-    # N.3        2       3       1       4       0       3       0       0       2     0     0   0
-    # N.4        2       5       3       1      10       7       3      10       6     1     1   3
-    # N.5        0       4       3       2       4       4       1       2       5     0     0   2
-    # N.6        1       2       3       0      13      10       6       8       9     0     3   2
-    # N.7        0       4      10       1       1       3       1       2       2     0     0   1
-    # N.8        1       7       4       4       6       6       2       3      19     1     1   3
-    # N.9        0       3       1       1      10       5       2       5       4     0     0   1
-    # OL         0       0       2       0       0       0       0       0       0     0    19   0
-    # OPC        0       0       0       0       0       1       0       0       0     0     0  26
-    # OPC.OL     0       0       0       1       0       0       0       0       1     0     5   7
+    #        Astro_A Astro_B Endo Excit_A Excit_B Excit_C Inhib_A Inhib_B Inhib_C
+    # AS          19       8    0       0       1       0       1       0       0
+    # EN           3       1   34       1       1       0       2       1       0
+    # MG           0       0    1       0       0       0       0       0       0
+    # MU           1       0    3       0       0       0       0       2       0
+    # N.1          1       1    0       3       3       2       3       5       7
+    # N.10         0       0    0       5       1       3       3       3       8
+    # N.11         1       1    0      14       8       6       5       6       8
+    # N.12         2       2    0      11       5       5       2       4       6
+    # N.13         1       1    0       3       1       2       1       1       7
+    # N.14         0       0    0       8       2       4       3       6      10
+    # N.15         1       0    1       6       1       5       3       0       4
+    # N.16         1       1    0       5       6       3       2       6       1
+    # N.2          2       2    0       7       4       4       3       4       5
+    # N.3          2       1    0       2       6       1       1       0       5
+    # N.4          2       2    0       9       5       6       3      12       6
+    # N.5          0       0    0       1       2       1       3       2       6
+    # N.6          1       0    1       1       2       0       0       9       5
+    # N.7          0       0    0       6       8       2       2       3       3
+    # N.8          1       1    0       5       6       4       4       4      17
+    # N.9          0       0    0       1       2       1       1       4       4
+    # OL           0       0    0       0       0       0       0       0       0
+    # OPC          0       0    2       0       0       0       2       0       1
+    # OPC.OL       0       0    2       0       0       0       1       0       1
 
+    #        Inhib_D Inhib_E Inhib_F Inhib_G Inhib_H Micro Mural Oligo OPC Tcell
+    # AS           2       0       0       0       0     0     1     0   1     0
+    # EN           2       1       0       0       2     0     4     0   1     3
+    # MG           0       0       0       0       1    19     2     0   0     4
+    # MU           1       0       1       0       0     0    28     0   0     0
+    # N.1          3       1       5       3       5     0     0     1   1     1
+    # N.10         5       0       4       4       2     0     0     0   0     0
+    # N.11         4       2       5       4       5     0     0     0   4     0
+    # N.12         5       3       4       4       2     0     2     2   1     1
+    # N.13         0       3       1       4       3     1     0     0   1     0
+    # N.14         5       3       4       7       2     1     0     1   2     0
+    # N.15         0       3       1       2       4     0     0     0   1     1
+    # N.16         2       2       5       4       5     0     0     0   4     0
+    # N.2          2       2       2       2       5     0     0     0   3     1
+    # N.3          2       1       0       2       1     0     1     0   0     0
+    # N.4          9       2       2       2       2     1     0     1   2     0
+    # N.5          1       2       1       4       6     0     0     0   2     0
+    # N.6          8       1       9       3       4     0     0     3   2     0
+    # N.7          1       4       2       3       1     0     2     0   0     1
+    # N.8          6       4       2       5       4     0     0     1   3     0
+    # N.9          1       2       2       3       2     0     1     0   0     1
+    # OL           0       0       2       0       0     0     0    23   0     0
+    # OPC          1       0       2       1       0     0     0     0  26     0
+    # OPC.OL       0       0       0       0       0     0     0     5   7     0
+
+
+
+# Inhib_C : N.8 genes ==
+  intersect(genes.top100.hsap[["Inhib_C"]], genes.top100.mm[ ,"N.8"])
+    # [1] "NPFFR2"  "FOXP2"   "OLFM3"   "OTOF"    "EPHA6"   "SV2C"    "ANO3"   
+    # [8] "RASGRP1" "SYT1"    "VSTM2A"  "KCNJ3"   "CACNA1E" "GRIA1"   "CPNE5"  
+    # [15] "PLPPR4"  "KCNH5"   "GABRB3"
   
-  
-## Amonst top 40 ===
-genes.top40.hsap <- lapply(markerList.t.hsap, function(x){head(x, n=40)})
+      # # (also closely correlating across t's)
+      # printThese <- intersect(genes.top100.hsap[["Inhib_C"]], genes.top100.mm[ ,"N.5"])
+      #     # "NELL2"  "SYT1"   "GRIA1"  "PLPPR4" "GABRB3"
+      #     # Oh well these are just a subset of what's shared b/tw 'N.8' & Inhib_C...
+      # 
+      # plotExpressionCustom(sce.amy.mm, anno_name="subCluster", features_name="subCluster", ncol=3,
+      #                      features=homologInfo$M.mus.ID[match(printThese, homologInfo$H.sap.ID)])
+      #     # These aren't 'N.5'-specific/most-expressing...
 
-genes.top40.mm <- lapply(markerList.t.mm, function(x){toupper(head(x, n=40))})
-genes.top40.mm <- sapply(genes.top40.mm, cbind)
-
-sapply(genes.top40.hsap, function(x){
-  apply(genes.top40.mm,2,function(y){length(intersect(x,y))})
-})
-    #       Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5 Micro Oligo OPC
-    # AS         7       0       0       0       0       0       0       0       0     0     0   0
-    # EN         1       0       0       0       0       0       0       0       0     0     0   0
-    # MG         0       0       0       0       0       0       0       0       0     4     0   0
-    # MU         0       0       0       0       0       0       0       0       0     0     0   0
-    # N.1        0       0       1       0       1       0       0       0       0     0     0   0
-    # N.10       0       0       0       0       1       2       0       0       2     0     0   0
-    # N.11       0       4       0       0       2       0       0       2       0     0     0   1
-    # N.12       1       2       2       0       0       1       0       0       2     0     0   1
-    # N.13       0       0       0       1       0       0       0       0       1     0     0   0
-    # N.14       0       2       0       1       0       1       0       0       1     1     0   0
-    # N.15       0       3       0       0       0       0       0       0       1     0     0   0
-    # N.16       0       1       1       0       0       1       0       0       1     0     0   2
-    # N.2        0       1       1       0       1       0       0       0       1     0     0   0
-    # N.3        0       1       0       0       0       2       0       0       0     0     0   0
-    # N.4        0       1       1       0       3       3       0       1       0     0     0   1
-    # N.5        0       0       0       0       1       0       0       0       0     0     0   1
-    # N.6        0       1       0       0       2       2       0       0       0     0     0   0
-    # N.7        0       0       2       0       0       1       0       1       0     0     0   0
-    # N.8        0       1       0       0       1       1       1       2       1     0     0   0
-    # N.9        0       0       0       0       0       1       0       1       1     0     0   0
-    # OL         0       0       1       0       0       0       0       0       0     0     7   0
-    # OPC        0       0       0       0       0       0       0       0       0     0     0  10
-    # OPC.OL     0       0       0       0       0       0       0       0       0     0     1   1
-
-# Inhib.5 : N.8 genes ==
-  intersect(genes.top40.hsap[["Inhib.5"]], genes.top100.mm[ ,"N.8"])
-      # [1] "NPFFR2" "SV2C"   "OTOF"   "GRM8"   "OLFM3"  "FOXP2"
-
-  # round(ts.mmMeA["49202", ],3)  # (Tll1 - looking because a highlighted gene in text)
-  #     # AS      EN      MG      MU     N.1    N.10    N.11    N.12    N.13    N.14    N.15    N.16
-  #     # -5.939  -5.932  -6.699   1.698   8.835   2.691 107.521  -5.323  20.345  86.122  -5.484  -5.423
-  #     # N.2     N.3     N.4     N.5     N.6     N.7     N.8     N.9      OL     OPC  OPC.OL
-  #     # 13.117  -5.297  33.339  16.283  -6.203  -5.520 108.310  22.783  -5.886  -4.273  -5.318
-  # 
-  plotExpression(sce.amy.mm, exprs_values="logcounts", x="subCluster", colour_by="subCluster", features="Tll1")
-  #     # ahh nothing but a few outliers
-  
-  sce.amy.mm.sub <- sce.amy.mm[ ,grep("N.", sce.amy.mm$subCluster)]
-  sce.amy.mm.sub$subCluster <- droplevels(sce.amy.mm.sub$subCluster)
-  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
-                 features=c("Npffr2","Sv2c","Otof","Grm8","Olfm3","Foxp2"))
+  plotExpressionCustom(sce.mm.sub, anno_name="subCluster", features_name="subCluster", ncol=3,
+                       features=c('Npffr2','Foxp2','Olfm3','Otof','Epha6','Sv2c'))
       # Actually nothing suuuper convicing - mostly outlier.  These just happen to have _more_ lol
   
-  # N.8 top genes include Pcdh8 & Lamp5
-  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
+  # N.8 top genes include Pcdh8 & Lamp5 - these are way more convincing
+  plotExpressionCustom(sce.mm.sub, anno_name="subCluster", features_name="subCluster", ncol=3,
                  features=c("Pcdh8","Lamp5"))
 
-  # N.12 reported marker genes (reported in supplementals "mmc2.xlsx" with paper)
-  plotExpression(sce.amy.mm.sub, exprs_values="logcounts", x="subCluster", colour_by="subCluster",
-                 features=c("Eomes","Dsp","Nhlh2","Samd3","Trpc3","Cdhr1","Lhx1"))
-      # Oh six of these were of the top 10 from my own test and plotted lol.  Well good.
+      # Employing a non0median Boolean like with the human data:
+      printThese <- intersect(genes.top100.hsap[["Inhib_C"]], genes.top100.mm[ ,"N.8"])
+          # [1] "NELL2"  "SYT1"   "VSTM2A" "GRIA1"  "PLPPR4" "KCNH5"  "GABRB3"
+      plotExpressionCustom(sce.amy.mm, anno_name="subCluster", features_name="subCluster", ncol=3,
+                           features=homologInfo$M.mus.ID[match(printThese, homologInfo$H.sap.ID)])
+          # These look good.  Kcnh5 is the most 'N.8' defining
+          which(genes.top100.hsap[["Inhib_C"]] == "KCNH5")  # 90, nice
+      
   
-  
+
 # (and btw) ===
-table(sce.amy$cellType.split, sce.amy$donor)
+# Human AMY (n=5)
+table(sce.amy$cellType, sce.amy$donor)
+    #         br5161 br5212 br5276 br5400 br5701
+    # Astro_A    484    350    230    111    380
+    # Astro_B      7     10     49     12      5
+    # Endo         0      0     21      7      3
+    # Excit_A    106    203      5     14     16
+    # Excit_B      0     39      0      0      5
+    # Excit_C      5     43      0      7      0
+    # Inhib_A      0      0    366    362      0
+    # Inhib_B     36    115     71    245     74
+    # Inhib_C    128     17    284     85     11
+    # Inhib_D     36     75    124    271     49
+    # Inhib_E      0      0    405      7      2
+    # Inhib_F     24     68     36     81      7
+    # Inhib_G      0      0     76      9      1
+    # Inhib_H      0      0     50      2      0
+    # Micro      411    304     14    117    355
+    # Mural        2      0     24      7      6
+    # Oligo     1688   1736    304    309   2043
+    # OPC        340    290    199     93    537
+    # Tcell        3      7      3      3     15
 
-
-# Glucocorticoid receptors? (in relation to TLL1, as per https://doi.org/10.1016/j.molbrainres.2005.09.016)
-plotExpression(sce.amy, exprs_values="logcounts", x="cellType.split", colour_by="cellType.split",
-               features=c("NR3C1","NR3C2")) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                          geom = "crossbar", width = 0.3,
-                                                          colour=rep(tableau20[1:12], 2)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
-    # No particular high/specific expression in Inhib.5
-
+# mm MeA (n=13)
+table(sce.amy.mm$subCluster)
+    #    AS     EN     MG     MU    N.1    N.2    N.3    N.4    N.5    N.6    N.7 
+    # 12640   2467   6366   1114   2376   1586    694    594    234    291    235 
+    #   N.8    N.9   N.10   N.11   N.12   N.13   N.14   N.15   N.16     OL    OPC 
+    #   196    176   1768    176     43   1440    195     38     81   4770   5226 
+    #OPC.OL 
+    #   639
 
 
 ### FINAL GRANT VERSION ===
@@ -705,8 +770,8 @@ pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
          fontsize_row = 18, fontsize_col=16)
 
-dat <- assay(sce.amy.mm.sub, "logcounts")
-cell.idx <- splitit(sce.amy.mm.sub$subCluster)
+dat <- assay(sce.mm.sub, "logcounts")
+cell.idx <- splitit(sce.mm.sub$subCluster)
 current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes2print, ii])))
 pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 1, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
@@ -714,4 +779,69 @@ pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0
 dev.off()
 
 
-
+### Session info for 16Jun2021 ===============
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
+# 
+# other attached packages:
+#   [1] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
+# [4] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
+# [7] DropletUtils_1.10.3         batchelor_1.6.2             scran_1.18.5               
+# [10] scater_1.18.6               ggplot2_3.3.3               org.Hs.eg.db_3.12.0        
+# [13] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [16] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
+# [19] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
+# [22] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
+# [25] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
+# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
+# [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
+# [16] sparseMatrixStats_1.2.1   cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
+# [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1          Matrix_1.3-2             
+# [28] fastmap_1.1.0             lazyeval_0.2.2            BiocSingular_1.6.0       
+# [31] prettyunits_1.1.1         tools_4.0.4               rsvd_1.0.3               
+# [34] igraph_1.2.6              gtable_0.3.0              glue_1.4.2               
+# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5               rappdirs_0.3.3           
+# [40] Rcpp_1.0.6                vctrs_0.3.6               Biostrings_2.58.0        
+# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
+# [46] stringr_1.4.0             beachmat_2.6.4            lifecycle_1.0.0          
+# [49] irlba_2.3.3               statmod_1.4.35            XML_3.99-0.6             
+# [52] edgeR_3.32.1              zlibbioc_1.36.0           scales_1.1.1             
+# [55] hms_1.0.0                 ProtGenerics_1.22.0       rhdf5_2.34.0             
+# [58] curl_4.3                  memoise_2.0.0             gridExtra_2.3            
+# [61] segmented_1.3-3           biomaRt_2.46.3            stringi_1.5.3            
+# [64] RSQLite_2.2.7             BiocParallel_1.24.1       rlang_0.4.10             
+# [67] pkgconfig_2.0.3           bitops_1.0-7              purrr_0.3.4              
+# [70] Rhdf5lib_1.12.1           labeling_0.4.2            GenomicAlignments_1.26.0 
+# [73] cowplot_1.1.1             bit_4.0.4                 tidyselect_1.1.1         
+# [76] magrittr_2.0.1            R6_2.5.0                  generics_0.1.0           
+# [79] DelayedArray_0.16.3       DBI_1.1.1                 pillar_1.6.0             
+# [82] withr_2.4.2               RCurl_1.98-1.3            tibble_3.1.1             
+# [85] crayon_1.4.1              utf8_1.2.1                BiocFileCache_1.14.0     
+# [88] viridis_0.6.0             progress_1.2.2            locfit_1.5-9.4           
+# [91] grid_4.0.4                blob_1.2.1                digest_0.6.27            
+# [94] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
+# [97] beeswarm_0.3.1            viridisLite_0.4.0         vipor_0.4.5              
+# [100] askpass_1.1 
