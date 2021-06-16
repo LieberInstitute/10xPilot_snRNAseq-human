@@ -389,7 +389,8 @@ table(rownames(ts.nac) == rownames(ts.rat)) # all 14121 TRUE (well duh)
 cor_t_nac <- cor(ts.nac, ts.rat)
 rownames(cor_t_nac) = paste0(rownames(cor_t_nac),"_H")
 colnames(cor_t_nac) = paste0(colnames(cor_t_nac),"_R")
-
+range(cor_t_nac)
+    # [1] -0.3791969  0.6132932
 
 ### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
 theSeq.all = seq(-.65, .65, by = 0.01)
@@ -425,8 +426,9 @@ pheatmap(cor_t_nac.th,
 
 # Manually re-order rat labels
 apply(cor_t_nac, 1, which.max)
-cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
-cor_t_nac.th <- cor_t_nac.th[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)]
+#cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)] # oops - duplicated col (6)
+cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
+cor_t_nac.th <- cor_t_nac.th[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
 
 pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_SN-LEVEL-stats_allGenes_v2_May2020.pdf")
 ## no cutoff
@@ -472,6 +474,106 @@ pheatmap(cor_t_nac.th,
          main="Correlation of cluster-specific t's \n (all shared expressed genes, thresholded)")
 
 dev.off()
+
+
+
+### A few more iterations (These looked great with the mm MeA revision analyses) ======
+## On just hsap cluster-specific homologous genes ===
+hsap_specific_indices = mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]
+  },
+as.data.frame(ts.nac)
+)
+hsap_ind = unique(as.numeric(hsap_specific_indices))
+length(hsap_ind)  # so of 1400 (100 x 14 cellType), 1077 unique
+
+cor_t_hsap = cor(ts.nac[hsap_ind, ],
+                 ts.rat[hsap_ind, ])
+rownames(cor_t_hsap) = paste0(rownames(cor_t_hsap),"_","H")
+colnames(cor_t_hsap) = paste0(colnames(cor_t_hsap),"_","R")
+range(cor_t_hsap)
+    # [1] -0.3872332  0.7588219
+
+
+## On just rat cluster-specific homologous genes ===
+rat_specific_indices = mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]
+},
+as.data.frame(ts.rat)
+)
+rat_ind = unique(as.numeric(rat_specific_indices))
+length(rat_ind)  # so of 1600 (100 x 16 subCluster), 1210 unique
+
+cor_t_rat = cor(ts.nac[rat_ind, ],
+                  ts.rat[rat_ind, ])
+rownames(cor_t_rat) = paste0(rownames(cor_t_rat),"_","H")
+colnames(cor_t_rat) = paste0(colnames(cor_t_rat),"_","R")
+range(cor_t_rat)
+    # [1] -0.4604021  0.7284520
+
+## Between these gene spaces:
+length(intersect(rownames(ts.nac)[hsap_ind], rownames(ts.rat)[rat_ind]))
+    # 476
+
+toptop.genes <- intersect(rownames(ts.nac)[hsap_ind], rownames(ts.rat)[rat_ind])
+cor_t_top <- cor(ts.nac[toptop.genes, ],
+                 ts.rat[toptop.genes, ])
+rownames(cor_t_top) = paste0(rownames(cor_t_top),"_","H")
+colnames(cor_t_top) = paste0(colnames(cor_t_top),"_","R")
+range(cor_t_top)
+    # [1] -0.4404794  0.8510041
+
+# Print these
+theSeq.all = seq(-.75, .75, by = 0.01)
+my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
+
+# Reorder, as before
+#cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 6,8, 2,5,4,3,11,12,14)] OOPS
+cor_t_nac <- cor_t_nac[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
+cor_t_hsap <- cor_t_hsap[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
+cor_t_rat <- cor_t_rat[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
+cor_t_top <- cor_t_top[ ,c(1,16, 7,15,6, 9,10, 8, 2,5,4,3,11:14)]
+
+pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/overlap-DayLab-ratNAc_with_LIBD-10x-NAc-n5_top-X-iterations_MNT2021.pdf")
+pheatmap(cor_t_nac,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+         display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.75,0.75,by=0.375)),
+         main="Correlation of cluster-specific t's to rat NAc \n subclusters (Savell et al., Sci Adv 2020)")
+# On human-specific genes
+pheatmap(cor_t_hsap,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+         display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.75,0.75,by=0.375)),
+         main="Correlation of top-100 cluster-specific t's (1077) to \n (Savell et al., Sci Adv 2020) subclusters")
+# On rat-NAc-specific genes
+pheatmap(cor_t_rat,
+         color=my.col.all,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.all,
+         fontsize=11, fontsize_row=13, fontsize_col=12,
+         display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.75,0.75,by=0.375)),
+         main="Correlation of LIBD-NAc subclusters to \n (Savell et al., Sci Adv 2020) subcluster top-100 t's (1210)")
+# On intersection between the top spp.-specific genes (476 genes)
+theSeq.new = seq(-.85, .85, by = 0.01)
+my.col.new <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.new)-1)
+pheatmap(cor_t_top,
+         color=my.col.new,
+         cluster_cols=F, cluster_rows=F,
+         breaks=theSeq.new,
+         fontsize=9.5, fontsize_row=13, fontsize_col=12,
+         display_numbers=T, number_format="%.2f", fontsize_number=6,
+         legend_breaks=c(seq(-0.85,0.85,by=0.425)),
+         main="Correlation of LIBD-NAc subclusters to \n (Savell et al., Sci Adv 2020) subcluster t's (shared top 100's, 476)")
+dev.off()
+
 
 
 
