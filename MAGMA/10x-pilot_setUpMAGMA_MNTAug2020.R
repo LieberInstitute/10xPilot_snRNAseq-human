@@ -209,6 +209,20 @@ write.table(sumStats.CAD, file="./GWAS_Results/CoronaryArteryDisease_Nikpay2015_
 rm(list=ls(pattern=".CAD"))
 
 
+## GWAS for ADHD (PGC x iPSYCH
+#     added MNT Jun2021
+sumStats.ADHD <- read.table("./GWAS_Results/daner_adhd_meta_filtered_NA_iPSYCH23_PGC11_sigPCs_woSEX_2ell6sd_EUR_Neff_70.meta", header=T)
+class(sumStats.ADHD)
+dim(sumStats.ADHD)
+head(sumStats.ADHD)
+unique(sumStats.ADHD$CHR)  # 1:22 as well
+snploc.ADHD <- sumStats.ADHD[ ,c(2,1,3)]
+#colnames(snploc.ADHD) <- c("SNP", "CHR", "BP")
+write.table(snploc.ADHD, file="./GWAS_Results/ADHD_PGC2018.snploc",
+            sep="\t", col.names=T, row.names=F, quote=F)
+rm(list=ls(pattern=".ADHD"))
+
+
 
 ### Gene marker sets (analagous to layer marker setup) ==============
   # We'll just use the 'enriched' stats--i.e. '1vAll'
