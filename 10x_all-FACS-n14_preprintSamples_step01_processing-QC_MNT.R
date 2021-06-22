@@ -44,6 +44,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
         # Make list of paths
         paths.rawCounts <- c(paste0("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/premRNA/",
                                     samples.prepr,"/outs/raw_feature_bc_matrix"))
+        path.alt.5182nac <- "/dcl01/ajaffe/data/lab/singleCell/10x_pilot/premRNA/Br5182_NAc_NeuN_reseq/outs/raw_feature_bc_matrix"
         # Make sure works
         sapply(paths.rawCounts, list.files) # good
         
@@ -55,7 +56,10 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
         pilot.data <- lapply(paths.rawCounts, function(x){ read10xCounts(x, col.names=TRUE) })
         names(pilot.data) <- names(paths.rawCounts)
         
-        
+            # MNT 21Jun: 'pilot.data.alt' will be the stand-in for the re-sequenced Br5182-NAc sample,
+            #            which we only realized in revision that had incorrectly been adapter-trimmed,
+            #            scrambling all the R1 lengths
+            br5182.nac.neun <- read10xCounts(path.alt.5182nac, col.names=TRUE)
         
         ### Gene annotation (from scater) ===
         # Pull in GTF information
@@ -76,9 +80,18 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
           rowData(pilot.data[[i]])$Symbol.uniq <- rownames(pilot.data[[i]])
         }
         
+            # And for re-seq'd 5182-NAc:
+            rowRanges(br5182.nac.neun) <- gtf
+            # Because some gene names are the same:
+            rownames(br5182.nac.neun) <- uniquifyFeatureNames(rowData(br5182.nac.neun)$gene_id, rowData(br5182.nac.neun)$gene_name)
+            rowData(br5182.nac.neun)$Symbol.uniq <- rownames(br5182.nac.neun)
+        
+        # store into List, just to reflect the other objects
+        pilot.data.alt <- list(br5182.nac.neun)
         
         # Preliminary save
-        save(pilot.data, file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
+        save(pilot.data, pilot.data.alt,
+             file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
         
         
         ### Quality control ============================================================
@@ -125,7 +138,7 @@ for(i in 1:length(e.out)){
   print(table(Signif = e.out[[i]]$FDR <= 0.001, Limited = e.out[[i]]$Limited))
   cat("\n")
 }
-        ##[1] "amy.5161"
+        ##[1] "br5161.amy"
         #       Limited
         # Signif  FALSE TRUE
         # FALSE  1019    0
