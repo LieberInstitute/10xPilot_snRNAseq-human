@@ -1,7 +1,7 @@
 ### MNT 10x snRNA-seq workflow: step 02
-###   **Region-specific analyses**
-###     - (3x) NAc samples from: Br5161 & Br5212 & Br5287
-###     - (2x) NeuN-sorted samples from: Br5207 & Br5182
+###   **Region-specific analyses: nucleus accumbens (NAc)**
+###     - Preprint: (3x) un-selected samples + (2x) NeuN-sorted samples
+###     - Revision: (3x) samples (2 female, 1 NeuN-sorted)
 ### Initiated MNT 04Mar2020
 #####################################################################
 
@@ -15,6 +15,8 @@ library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
 
+source('plotExpression.R')
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -27,84 +29,58 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 
-## Bring in (2x) NeuN-sorted NAc samples
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/NeuN-sortedNAc_n2_processing-QC_MNTMar2020.rda",
+# Load 'pilot' samples
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
-    # pilot.neun, pilot.neun.unfiltered, e.out
-    rm(e.out, pilot.neun.unfiltered)
+    # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
+    rm(pilot.data.unfiltered, e.out)
 
-## Also load in homogenate NAc samples
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_processing-QC_MNTJan2020.rda",
-     verbose=T)
-    # pilot.data, pilot.data.unfiltered, e.out
-    rm(e.out, pilot.data.unfiltered)
-
+# Load 2021 expansion set
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda", verbose=T)
+    # pilot.data.2, pilot.data.2.unfiltered, e.out.2, ref.sampleInfo.rev
+    rm(pilot.data.2.unfiltered, e.out.2)
 
 
 ### MNT comment: At this point, each sample (which is a SCE object in the list, 'pilot.data') has been
 #              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
-
+#   Additionally, there have been a computed 'doubletScore', which will QC with, after
+#   clustering (e.g. that there are no doublet-driven clusters, etc.)
 
 ### Merging shared-region samples ============================================
-  # Newest iterations for normalization: cbind, THEN take scaled LSFs computed on all nuclei
-  # (i.e. no more MBN, because batch is so confounded with sample)
+# Newest iterations for normalization: multiBatchNorm-alize
+
+# Order as will do for `fastMNN()` (this shouldn't matter here)
+sce.nac <- cbind(pilot.data[["br5161.nac"]], pilot.data[["br5212.nac"]], pilot.data[["br5287.nac"]],
+                 pilot.data[["br5207.nac.neun"]],
+                 # Re-sequenced Br5182-NAc sample:
+                 pilot.data.alt[["br5182.nac.neun"]],
+                 # Revision samples:
+                 pilot.data.2[["br5400.nac"]], pilot.data.2[["br5276.nac"]], pilot.data.2[["br5701.nac.neun"]]
+                 )
+
+sce.nac
 
 
-# Add $sample identity
-names(pilot.data)
-for(i in 1:length(pilot.data)){
-  pilot.data[[i]]$sample <- names(pilot.data)[i]
-}
-# Neun couple
-for(i in 1:length(pilot.neun)){
-  pilot.neun[[i]]$sample <- names(pilot.neun)[i]
-}
+# Use `multiBatchNorm()` to compute log-normalized counts, matching the scaling across samples
+sce.amy <- multiBatchNorm(sce.amy, batch=sce.amy$sampleID)
 
-# Remove $logcounts in pilot.data
-for(i in 1:length(pilot.data)){
-  assay(pilot.data[[i]], "logcounts") <- NULL
-}
-
-# Since these were processed separately, make sure rownames are same
-table(rownames(pilot.data[["nac.5161"]]) == rownames(pilot.neun[["nac.neun.5207"]]))  # all TRUE
-
-# Also remove internal colData, bc 'pilot.data' had size factors previously generated
-for(i in 1:length(pilot.data)){
-  int_colData(pilot.data[[i]])$size_factor <- NULL
-}
-
-
-sce.nac.all <- cbind(pilot.data[["nac.5161"]], pilot.data[["nac.5212"]], pilot.data[["nac.5287"]], 
-                     pilot.neun[["nac.neun.5182"]], pilot.neun[["nac.neun.5207"]])
-
-    # For reference
-    table(sce.nac.all$sample)
-        #nac.5161      nac.5212      nac.5287 nac.neun.5182 nac.neun.5207
-        #    2067          1774           707          4267          4426
-
-
-# Remove any potential sizeFactors first, kept from previous processing (of 'pilot.data' set)
-# (but removing that column from the internal colData should have done this job)
-sizeFactors(sce.nac.all) <- NULL
-
-# Generate log-normalized counts
-sce.nac.all <- logNormCounts(sce.nac.all)
-
-geneVar.nac.all <- modelGeneVar(sce.nac.all)
-chosen.hvgs.nac.all <- geneVar.nac.all$bio > 0
-sum(chosen.hvgs.nac.all)
-    # [1] 12407
+# Use the simple `modelGeneVar` - this makes more sense over `combineVar`, since the
+#   cell composition is already known to be quite different (with NeuN selection)
+geneVar.nac <- modelGeneVar(sce.nac)
+chosen.hvgs.nac <- geneVar.nac$bio > 0
+sum(chosen.hvgs.nac)
+    # [1] 
 
 
 ### Dimensionality reduction ================================================================
 
 # Run PCA, taking top 100 (instead of default 50 PCs)
 set.seed(109)
-sce.nac.all <- runPCA(sce.nac.all, subset_row=chosen.hvgs.nac.all, ncomponents=100,
+sce.nac <- runPCA(sce.nac, subset_row=chosen.hvgs.nac, ncomponents=100,
                   BSPARAM=BiocSingular::RandomParam())
 
 # Save into a new data file, which will dedicate for pan-brain-analyses
-save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda")
+save(sce.nac, chosen.hvgs.nac, file="rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda")
 
 
 
@@ -113,8 +89,8 @@ save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-comb
     #    --> saved into same .rda
 
     ## MNT 06Mar2020: skipping this step for now - just work in top 100 PCs
-    sum(attr(reducedDim(sce.nac.all), "percentVar")[1:50])  # 45.24% what would be by default
-    sum(attr(reducedDim(sce.nac.all), "percentVar")[1:100]) # 46.92% - not much more
+    sum(attr(reducedDim(sce.nac), "percentVar")[1:50])  # 45.24% what would be by default
+    sum(attr(reducedDim(sce.nac), "percentVar")[1:100]) # 46.92% - not much more
 
     ## *** FIND THIS PCA_opt-skip STEP IN "side-Rscript_exploringALL-NAc-samples_100PCs_MNT06Mar.R"
     ## === === === === === === === ==
@@ -123,21 +99,21 @@ save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-comb
     ### skip ==============
     ## Explore that $chosen PC space: "rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda" MNT 23Mar2020
     load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-        # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all
+        # sce.nac, chosen.hvgs.nac, pc.choice.nac
     
-    metadata(pc.choice.nac.all) # 87
-    rm(list=setdiff(ls(), "pc.choice.nac.all"))
+    metadata(pc.choice.nac) # 87
+    rm(list=setdiff(ls(), "pc.choice.nac"))
     
     # Bring in explored object(s) with clustering, etc. at 100 PCs
     load("rdas/zref_NeuN-sortedNAc-with-homs_exploreTop100pcs_MNT_06Mar2020.rda", verbose=T)
-        # sce.nac.all, sce.nac.10pcs, chosen.hvgs.nac.all, ref.sampleInfo, clusterRefTab.nac.all
+        # sce.nac, sce.nac.10pcs, chosen.hvgs.nac, ref.sampleInfo, clusterRefTab.nac
     
     
     # Add into new reducedDim entry 
-    reducedDim(sce.nac.all, "PCA_opt") <- reducedDim(sce.nac.all, "PCA")[ ,1:(metadata(pc.choice.nac.all)$chosen)]
+    reducedDim(sce.nac, "PCA_opt") <- reducedDim(sce.nac, "PCA")[ ,1:(metadata(pc.choice.nac)$chosen)]
     
     # Run clustering to compare prelimClusters-on-100 PCs
-    snn.gr.87 <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
+    snn.gr.87 <- buildSNNGraph(sce.nac, k=20, use.dimred="PCA_opt")
     clusters.k20.87 <- igraph::cluster_walktrap(snn.gr.87)$membership
     table(clusters.k20.87)
         ## Previously (w/ 100 PCs):
@@ -155,12 +131,12 @@ save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-comb
     
     # To test if same/similar to the above, may have to pseudo-bulk-HC, then compare assignments
     
-    sce.nac.all$prelimCluster.87 <- factor(clusters.k20.87)
-    table(sce.nac.all$prelimCluster, sce.nac.all$prelimCluster.87)
+    sce.nac$prelimCluster.87 <- factor(clusters.k20.87)
+    table(sce.nac$prelimCluster, sce.nac$prelimCluster.87)
         ## Kind of an identity line
-    table(sce.nac.all$prelimCluster.87, sce.nac.all$lessCollapsed)
+    table(sce.nac$prelimCluster.87, sce.nac$lessCollapsed)
         ## For the most part they assign to a unique 'lessCollapsed' cluster
-    table(sce.nac.all$prelimCluster.87, sce.nac.all$collapsedCluster)
+    table(sce.nac$prelimCluster.87, sce.nac$collapsedCluster)
         ## same here
     
         ## Seems like 'prelimCluster.87' 18 & 20 pertain to the 'ambig.lowNtrxts' cluster in the
@@ -175,44 +151,44 @@ save(sce.nac.all, chosen.hvgs.nac.all, file="rdas/NeuN-sortedNAc_n2_cleaned-comb
 
 ### Resume work in optimal PC space
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac
 
 ## How many PCs is optimal?:
-metadata(pc.choice.nac.all)$chosen
+metadata(pc.choice.nac)$chosen
     # 87
 
 # Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.nac.all, "PCA_opt") <- reducedDim(sce.nac.all, "PCA")[ ,1:(metadata(pc.choice.nac.all)$chosen)]
+reducedDim(sce.nac, "PCA_opt") <- reducedDim(sce.nac, "PCA")[ ,1:(metadata(pc.choice.nac)$chosen)]
 
 
 ## t-SNE
 set.seed(109)
-sce.nac.all <- runTSNE(sce.nac.all, dimred="PCA_opt")
+sce.nac <- runTSNE(sce.nac, dimred="PCA_opt")
 
 
 ## UMAP
 set.seed(109)
-sce.nac.all <- runUMAP(sce.nac.all, dimred="PCA_opt")
+sce.nac <- runUMAP(sce.nac, dimred="PCA_opt")
 
 
 ### Add some colData - use "rdas/REFERENCE_sampleInfo_n14.rda" previously generated in explore phase
 load("rdas/REFERENCE_sampleInfo_n14.rda", verbose=T)
     # ref.sampleInfo 
 
-# Add to sce.nac.all colData
-sce.nac.all$region <- ss(sce.nac.all$sample,"\\.", 1)
-sce.nac.all$donor <- paste0("Br",substr(sce.nac.all$sample, start=nchar(sce.nac.all$sample)-3, stop=nchar(sce.nac.all$sample)))
-sce.nac.all$processDate <- ref.sampleInfo$realBatch[match(sce.nac.all$sample, ref.sampleInfo$sampleID)]
-sce.nac.all$protocol <- ref.sampleInfo$protocol[match(sce.nac.all$sample, ref.sampleInfo$sampleID)]
+# Add to sce.nac colData
+sce.nac$region <- ss(sce.nac$sample,"\\.", 1)
+sce.nac$donor <- paste0("Br",substr(sce.nac$sample, start=nchar(sce.nac$sample)-3, stop=nchar(sce.nac$sample)))
+sce.nac$processDate <- ref.sampleInfo$realBatch[match(sce.nac$sample, ref.sampleInfo$sampleID)]
+sce.nac$protocol <- ref.sampleInfo$protocol[match(sce.nac$sample, ref.sampleInfo$sampleID)]
 
-table(sce.nac.all$protocol, sce.nac.all$donor)
+table(sce.nac$protocol, sce.nac$donor)
     #           Br5161 Br5182 Br5207 Br5212 Br5287
     #Frank           0      0      0      0    707
     #Frank.NeuN      0   4267   4426      0      0
     #pseudoSort   2067      0      0   1774      0
 
 # Save for now
-save(sce.nac.all, chosen.hvgs.nac.all, ref.sampleInfo, pc.choice.nac.all,
+save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
 
 
@@ -220,7 +196,7 @@ save(sce.nac.all, chosen.hvgs.nac.all, ref.sampleInfo, pc.choice.nac.all,
 ### Clustering: Two-step ======================================================
 ### Step 1: Perform graph-based clustering in this optimal PC space
 #         - take k=20 NN to build graph
-snn.gr <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
+snn.gr <- buildSNNGraph(sce.nac, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
     ##   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
@@ -229,7 +205,7 @@ table(clusters.k20)
     #  384   31  139   62  100   25   (as above)
 
 # Assign as 'prelimCluster'
-sce.nac.all$prelimCluster <- factor(clusters.k20)
+sce.nac$prelimCluster <- factor(clusters.k20)
 
 
 ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
@@ -241,10 +217,10 @@ sce.nac.all$prelimCluster <- factor(clusters.k20)
 ## Preliminary cluster index for pseudo-bulking
 # Will need to split out by single-vs-multiple-nuclei-containing prelimClusters bc
 #`rowSums()` doesn't like the former
-clusIndexes = splitit(sce.nac.all$prelimCluster)
+clusIndexes = splitit(sce.nac$prelimCluster)
 
 prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
-  rowSums(assays(sce.nac.all)$counts[ ,ii])
+  rowSums(assays(sce.nac)$counts[ ,ii])
  }
 )
     ## of dim 33538    22
@@ -269,7 +245,7 @@ myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=5) prelim-kNN-clu
           cex.main=1, cex.lab=0.8, cex=0.6)
 
 # 18 and 20 clear outliers (as predicted earlier)
-sapply(clusIndexes, function(x) {quantile(sce.nac.all[ ,x]$sum)})
+sapply(clusIndexes, function(x) {quantile(sce.nac[ ,x]$sum)})
   # yep they're driven by low transcript capture
 
 
@@ -296,7 +272,7 @@ dev.off()
 
 
 ## After deciding to make a lessCollapsed partitioning of these (below):
-clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.nac.all$merged.man.b
+clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.nac$merged.man.b
 
 pdf("pdfs/regionSpecific_NAc-ALL-n5_HC-prelimCluster-relationships_lessCollapsedCols_Mar2020.pdf")
 par(cex=1.2, font=2)
@@ -305,33 +281,33 @@ myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
 dev.off()
 
 # Make reference for new cluster assignment
-clusterRefTab.nac.all <- data.frame(origClust=order.dendrogram(dend),
+clusterRefTab.nac <- data.frame(origClust=order.dendrogram(dend),
                                     merged=clust.treeCut[order.dendrogram(dend)])
 
 # Add more manual merging/partitioning of these prelim clusters - mainly in collapsedCluster 1/2...
-clusterRefTab.nac.all$merged.man <- clusterRefTab.nac.all$merged
-clusterRefTab.nac.all$merged.man[clusterRefTab.nac.all$merged %in% c(1:2)] <-  c(1, rep(2,5), 8:14)
+clusterRefTab.nac$merged.man <- clusterRefTab.nac$merged
+clusterRefTab.nac$merged.man[clusterRefTab.nac$merged %in% c(1:2)] <-  c(1, rep(2,5), 8:14)
     ## Justification for these, generally, is looking at how do samples separate by
      # prelimCluster - if sample-specific, merging is more liberal.
 
 # A less-less-collapsed version to separate D1/D2 prelim clusters
-clusterRefTab.nac.all$merged.man.b <- clusterRefTab.nac.all$merged.man
-clusterRefTab.nac.all$merged.man.b[5:8] <- c(15,16,15,16)
+clusterRefTab.nac$merged.man.b <- clusterRefTab.nac$merged.man
+clusterRefTab.nac$merged.man.b[5:8] <- c(15,16,15,16)
 
 
 ## Assign as 'collapsedCluster' or 'lessCollapsed'
-sce.nac.all$collapsedCluster <- factor(clusterRefTab.nac.all$merged[match(sce.nac.all$prelimCluster,
-                                                                          clusterRefTab.nac.all$origClust)])
+sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster,
+                                                                          clusterRefTab.nac$origClust)])
 
-#sce.nac.all$lessCollapsed <- factor(clusterRefTab.nac.all$merged.man[match(sce.nac.all$prelimCluster,
-#                                                                           clusterRefTab.nac.all$origClust)])
+#sce.nac$lessCollapsed <- factor(clusterRefTab.nac$merged.man[match(sce.nac$prelimCluster,
+#                                                                           clusterRefTab.nac$origClust)])
 
 # Go with this:
-sce.nac.all$lessCollapsed <- factor(clusterRefTab.nac.all$merged.man.b[match(sce.nac.all$prelimCluster,
-                                                                               clusterRefTab.nac.all$origClust)])
+sce.nac$lessCollapsed <- factor(clusterRefTab.nac$merged.man.b[match(sce.nac$prelimCluster,
+                                                                               clusterRefTab.nac$origClust)])
 
 
-table(sce.nac.all$collapsedCluster, sce.nac.all$sample)
+table(sce.nac$collapsedCluster, sce.nac$sample)
     #   nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
     # 1      257      299       86          4012          4182
     # 2       18       19       14           248           241
@@ -341,7 +317,7 @@ table(sce.nac.all$collapsedCluster, sce.nac.all$sample)
     # 6       19       42       22             7             3
     # 7       72       72       37             0             0
 
-table(sce.nac.all$lessCollapsed, sce.nac.all$sample)
+table(sce.nac$lessCollapsed, sce.nac$sample)
     # nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
     # 1         2        0        0           117            13
     # 2         0      266        0             0             0
@@ -361,7 +337,7 @@ table(sce.nac.all$lessCollapsed, sce.nac.all$sample)
     # 16       41       14        5          1602          1870
 
 ## original prelim cluster
-table(sce.nac.all$prelimCluster, sce.nac.all$sample)
+table(sce.nac$prelimCluster, sce.nac$sample)
     #    nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
     # 1       153        0       66          1395           233
     # 2         7        7        9            86           167
@@ -390,14 +366,14 @@ table(sce.nac.all$prelimCluster, sce.nac.all$sample)
 
 # Print some visualizations:
 pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Mar2020.pdf")
-plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="processDate", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac.all, colour_by="sample", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac.all, colour_by="lessCollapsed", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac.all, colour_by="sum", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotReducedDim(sce.nac, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="processDate", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac, colour_by="sample", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac, colour_by="lessCollapsed", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
+plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
 # UMAP
-plotUMAP(sce.nac.all, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("UMAP on opt PCs", )
+plotUMAP(sce.nac, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("UMAP on opt PCs", )
 dev.off()
 
 
@@ -421,7 +397,7 @@ markers.mathys.custom = list(
 #pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="lessCollapsed", colour_by="lessCollapsed", point_alpha=0.5, point_size=.7,
                    add_legend=F) +
       stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
@@ -432,8 +408,8 @@ for(i in 1:length(markers.mathys.custom)){
 
 
 # Check nuclear library sizes for annotation of 'lessCollapsed' cluster 6:
-clusIndexes <- splitit(sce.nac.all$lessCollapsed)
-sapply(clusIndexes, function(x) {quantile(sce.nac.all[ ,x]$sum)})
+clusIndexes <- splitit(sce.nac$lessCollapsed)
+sapply(clusIndexes, function(x) {quantile(sce.nac[ ,x]$sum)})
     #             1        2       3     4       5    6     7     8        9      10
     # 0%    1422.00  2471.00   365.0   635  1379.0  101  1247  2371  1197.00  2739.0
     # 25%  12988.75 19138.00  3618.5  6305  6937.5  133  3205 12217 19541.50 16635.5
@@ -449,7 +425,7 @@ sapply(clusIndexes, function(x) {quantile(sce.nac.all[ ,x]$sum)})
 
 
 ## Add annotations for 'lessCollapsed' clusters, looking at marker gene expression
-annotationTab.nac.all <- data.frame(cluster=c(1, 2, 3, 4, 5,
+annotationTab.nac <- data.frame(cluster=c(1, 2, 3, 4, 5,
                                               6, 7, 8, 9, 10,
                                               11, 12, 13, 14, 15,
                                               16),
@@ -463,23 +439,23 @@ annotationTab.nac.all <- data.frame(cluster=c(1, 2, 3, 4, 5,
                                                      "MSN.D2")
 )
 
-# Add info to clusterRefTab.nac.all
-clusterRefTab.nac.all$cellType.broad <- annotationTab.nac.all$cellType.broad[match(clusterRefTab.nac.all$merged.man.b,
-                                                                                   annotationTab.nac.all$cluster)]
-clusterRefTab.nac.all$cellType.split <- annotationTab.nac.all$cellType.split[match(clusterRefTab.nac.all$merged.man.b,
-                                                                                   annotationTab.nac.all$cluster)]
+# Add info to clusterRefTab.nac
+clusterRefTab.nac$cellType.broad <- annotationTab.nac$cellType.broad[match(clusterRefTab.nac$merged.man.b,
+                                                                                   annotationTab.nac$cluster)]
+clusterRefTab.nac$cellType.split <- annotationTab.nac$cellType.split[match(clusterRefTab.nac$merged.man.b,
+                                                                                   annotationTab.nac$cluster)]
 
 
 ## Then add to SCE - like for DLPFC, give 'cellType' & 'cellType.split'
-sce.nac.all$cellType <- annotationTab.nac.all$cellType.broad[match(sce.nac.all$lessCollapsed,
-                                                                annotationTab.nac.all$cluster)]
+sce.nac$cellType <- annotationTab.nac$cellType.broad[match(sce.nac$lessCollapsed,
+                                                                annotationTab.nac$cluster)]
 
-sce.nac.all$cellType.split <- annotationTab.nac.all$cellType.split[match(sce.nac.all$lessCollapsed,
-                                                                 annotationTab.nac.all$cluster)]
+sce.nac$cellType.split <- annotationTab.nac$cellType.split[match(sce.nac$lessCollapsed,
+                                                                 annotationTab.nac$cluster)]
 
 
 ## Save
-save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo, 
+save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo, 
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
 
 
@@ -487,13 +463,13 @@ save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,
 table(sce.dlpfc$cellType.split)
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.split != "ambig.lowNtrxts"]
-sce.nac.all$cellType.split <- droplevels(sce.nac.all$cellType.split)
+sce.nac <- sce.nac[ ,sce.nac$cellType.split != "ambig.lowNtrxts"]
+sce.nac$cellType.split <- droplevels(sce.nac$cellType.split)
 
 pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
                    x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
                    add_legend=F) +
       stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
@@ -508,16 +484,16 @@ dev.off()
 ## Re-print some reducedDims with this information
 #pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Apr2020.pdf")
 pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-cellType.final_Apr2020.pdf")
-plotReducedDim(sce.nac.all, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.nac.all, colour_by="processDate", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac.all, colour_by="sample", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac.all, colour_by="cellType", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-#plotTSNE(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac.all, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac.all, colour_by="sum", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotReducedDim(sce.nac, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="processDate", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac, colour_by="sample", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac, colour_by="cellType", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+#plotTSNE(sce.nac, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
+plotTSNE(sce.nac, colour_by="sum", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
 # UMAP
-#plotUMAP(sce.nac.all, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
-plotUMAP(sce.nac.all, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+#plotUMAP(sce.nac, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+plotUMAP(sce.nac, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
 dev.off()
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
@@ -530,10 +506,10 @@ dev.off()
   # -> revisit SNN clsutering - see if `cut_at()` can tease these differences out
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 
-table(sce.nac.all$cellType.split, sce.nac.all$sample)
+table(sce.nac$cellType.split, sce.nac$sample)
     #                 nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
     # ambig.lowNtrxts       19       42       22             7             3
     # Astro                149      384       12             0             0
@@ -557,7 +533,7 @@ table(sce.nac.all$cellType.split, sce.nac.all$sample)
 
 ## Trying `igraph::cut_at` ===============
 library(igraph)
-snn.gr <- buildSNNGraph(sce.nac.all, k=20, use.dimred="PCA_opt")
+snn.gr <- buildSNNGraph(sce.nac, k=20, use.dimred="PCA_opt")
 #clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 clusters.k20.comms <- cluster_walktrap(snn.gr)
 # Store the initial assignment
@@ -571,7 +547,7 @@ table(og.membership.nac)
 is_hierarchical(clusters.k20.comms) # TRUE
     
     # Btw: it's 'prelimCluster' 3 (== "MSN.broad"; 266 nuclei) that we want to break up
-    table(sce.nac.all$prelimCluster, sce.nac.all$cellType)
+    table(sce.nac$prelimCluster, sce.nac$cellType)
 
 # "`cut_at()` returns a numeric vector, the membership vector of the vertices."
 test.membership <- cut_at(clusters.k20.comms, no=23)
@@ -595,51 +571,51 @@ for(i in c(23:30)){
     table(new.membership.5212msn, og.membership.nac)  # good
     
     # Check order
-    table(sce.nac.all$prelimCluster == og.membership.nac) # all TRUE
+    table(sce.nac$prelimCluster == og.membership.nac) # all TRUE
 
 # Add this new level, first pushing to 'high' factor so isn't accidentally added to another
-sce.nac.all$prelimCluster.split <- ifelse(sce.nac.all$prelimCluster==3,
+sce.nac$prelimCluster.split <- ifelse(sce.nac$prelimCluster==3,
                                           new.membership.5212msn[og.membership.nac==3]+22,
-                                          sce.nac.all$prelimCluster)
+                                          sce.nac$prelimCluster)
 #    # 38, then 45
 #
 #    # Actually when tabulate it's unexpected...
-#    table(sce.nac.all$prelimCluster.split)  # 165 + 101, instead of 167 + 99 ......
+#    table(sce.nac$prelimCluster.split)  # 165 + 101, instead of 167 + 99 ......
 #                                            # also when took this approach (proceeded with
 #                                            # 'Reassign to 23, 24' chunk), it doesn't look
 #                                            # properly separated by D1-vs-D2...
     
         # Just add new info as is and check 'new clusters' 16 + 23
-        sce.nac.all$prelimCluster.temp <- factor(new.membership.5212msn)
+        sce.nac$prelimCluster.temp <- factor(new.membership.5212msn)
             # Then plotted.  This showed this `cut_at()` approach works actually.
-        sce.nac.all$prelimCluster.temp <- NULL
+        sce.nac$prelimCluster.temp <- NULL
         
         
 # Try this way:
 new.membership.5212msn[og.membership.nac==3] <- new.membership.5212msn[og.membership.nac==3] + 22
 # Now apply as'prelimCluster.split'
-sce.nac.all$prelimCluster.split <- ifelse(sce.nac.all$prelimCluster==3,
+sce.nac$prelimCluster.split <- ifelse(sce.nac$prelimCluster==3,
                                           new.membership.5212msn,
-                                          sce.nac.all$prelimCluster)
+                                          sce.nac$prelimCluster)
     
     
 # Reassign to 23, 24
-sce.nac.all$prelimCluster.split[sce.nac.all$prelimCluster.split==38] <- 23
-sce.nac.all$prelimCluster.split[sce.nac.all$prelimCluster.split==45] <- 24
-table(sce.nac.all$prelimCluster.split)
+sce.nac$prelimCluster.split[sce.nac$prelimCluster.split==38] <- 23
+sce.nac$prelimCluster.split[sce.nac$prelimCluster.split==45] <- 24
+table(sce.nac$prelimCluster.split)
 
-sce.nac.all$cellType.moreSplit <- ifelse(sce.nac.all$prelimCluster.split %in% c(23,24),
-                                       paste0(sce.nac.all$cellType.split,".",sce.nac.all$prelimCluster.split),
-                                       as.character(sce.nac.all$cellType.split))
+sce.nac$cellType.moreSplit <- ifelse(sce.nac$prelimCluster.split %in% c(23,24),
+                                       paste0(sce.nac$cellType.split,".",sce.nac$prelimCluster.split),
+                                       as.character(sce.nac$cellType.split))
 
-sce.nac.all$cellType.moreSplit <- factor(sce.nac.all$cellType.moreSplit)
+sce.nac$cellType.moreSplit <- factor(sce.nac$cellType.moreSplit)
 
-table(sce.nac.all$cellType.moreSplit, sce.nac.all$cellType.split)
+table(sce.nac$cellType.moreSplit, sce.nac$cellType.split)
     # good.
 
 
 ## Check
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[["MSNs.D1"]]),
+plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[["MSNs.D1"]]),
                x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
@@ -649,12 +625,12 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathy
 
 
       # Driven by low n transcripts?
-      cc_idx <- splitit(sce.nac.all$cellType.moreSplit)
-      sapply(cc_idx, function(x){quantile(sce.nac.all[ ,x]$sum)})
+      cc_idx <- splitit(sce.nac$cellType.moreSplit)
+      sapply(cc_idx, function(x){quantile(sce.nac[ ,x]$sum)})
           ## doesn't seem to be
       
       
-      sce.nac.5212msns <- sce.nac.all[ ,sce.nac.all$cellType.split=="MSN.broad"]
+      sce.nac.5212msns <- sce.nac[ ,sce.nac$cellType.split=="MSN.broad"]
       
       pheatmap::pheatmap(assay(sce.nac.5212msns,"logcounts")[c(markers.mathys.custom[["MSNs.D1"]],
                                                                markers.mathys.custom[["MSNs.D2"]],
@@ -685,19 +661,19 @@ plotExpression(sce.nac.5212msns, features=c("DRD1", "DRD2", "BCL11B"),
 
 
 # First save
-save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo,
+save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
      file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.moreSplit != "ambig.lowNtrxts"]
-sce.nac.all$cellType.moreSplit <- droplevels(sce.nac.all$cellType.moreSplit)
+sce.nac <- sce.nac[ ,sce.nac$cellType.moreSplit != "ambig.lowNtrxts"]
+sce.nac$cellType.moreSplit <- droplevels(sce.nac$cellType.moreSplit)
 
 ## Print broad cell type markers
 #pdf("pdfs/ztemp_regionSpecific_NAc-ALL-n5_marker-logExprs_cellType.moreSplit_MNTApr2020.pdf", height=6, width=12)
 pdf("pdfs/regionSpecific_NAc-ALL-n5_marker-logExprs_cellType.final_MNTApr2020.pdf", height=6, width=12)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
+    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
 #                   x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
                    x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                    add_legend=F) +
@@ -716,7 +692,7 @@ dev.off()
 
 # Pseudo-bulk across JUST this cellType.moreSplit and run some correlation to re-assign
 
-sce.nac.PB <- aggregateAcrossCells(sce.nac.all, ids=sce.nac.all$cellType.moreSplit,
+sce.nac.PB <- aggregateAcrossCells(sce.nac, ids=sce.nac$cellType.moreSplit,
                                    use_exprs_values="counts")
 # Drop genes with all 0's
 sce.nac.PB <- sce.nac.PB[!rowSums(assay(sce.nac.PB, "counts"))==0, ]
@@ -746,25 +722,25 @@ cor(assay(sce.nac.PB, "logcounts"))[grep("broad", colnames(sce.nac.PB)),grep("MS
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
 
 ## We'll reassign as such then, calling a new 'cellType.final':
-sce.nac.all$cellType.final <- sce.nac.all$cellType.moreSplit
+sce.nac$cellType.final <- sce.nac$cellType.moreSplit
 
-sce.nac.all$cellType.final[sce.nac.all$cellType.moreSplit=="MSN.broad.23"] <- "MSN.D1.4"
-sce.nac.all$cellType.final[sce.nac.all$cellType.moreSplit=="MSN.broad.24"] <- "MSN.D2.2"
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac$cellType.final[sce.nac$cellType.moreSplit=="MSN.broad.23"] <- "MSN.D1.4"
+sce.nac$cellType.final[sce.nac$cellType.moreSplit=="MSN.broad.24"] <- "MSN.D2.2"
+sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
 
-table(sce.nac.all$cellType.moreSplit, sce.nac.all$cellType.final) # dope.
+table(sce.nac$cellType.moreSplit, sce.nac$cellType.final) # dope.
 
 # Save
-save(sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo,
+save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
      file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
 
 
 
 ### Some checks
-plotTSNE(sce.nac.all, colour_by="cellType.split", point_alpha=0.5, point_size=3.5, text_by="cellType.split")
+plotTSNE(sce.nac, colour_by="cellType.split", point_alpha=0.5, point_size=3.5, text_by="cellType.split")
 
 ## MSN.D1.3-specific top [pt-coding] genes: 
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("DRD1", "CASZ1", "CRHR2", "RXFP1"),
+plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "CASZ1", "CRHR2", "RXFP1"),
                x="cellType.moreSplit", colour_by="cellType.moreSplit", point_alpha=0.5, point_size=.7,
                add_legend=F) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
@@ -780,11 +756,11 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("DRD1", "CASZ
 ## Added MNT 12May2020: tSNE in lower dims ===
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 
 # How many PCs?
-head(attr(reducedDim(sce.nac.all, "PCA"), "percentVar"), n=50)
+head(attr(reducedDim(sce.nac, "PCA"), "percentVar"), n=50)
     # [1] 27.87823928  4.31556377  2.28210852  1.53394544  1.34230365  0.84148529
     # [7]  0.80660587  0.68569439  0.60321278  0.46073112  0.43747455  0.32713745
     # [13]  0.30032199  0.29464166  0.28570101  0.21158092  0.18735573  0.16784829
@@ -795,32 +771,32 @@ head(attr(reducedDim(sce.nac.all, "PCA"), "percentVar"), n=50)
 
 
 # 0.05% var or greater
-reducedDim(sce.nac.all, "PCA_38") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:38)]
+reducedDim(sce.nac, "PCA_38") <- reducedDim(sce.nac, "PCA")[ ,c(1:38)]
 # 0.1% var or greater
-reducedDim(sce.nac.all, "PCA_24") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:24)]
+reducedDim(sce.nac, "PCA_24") <- reducedDim(sce.nac, "PCA")[ ,c(1:24)]
 # 0.25% var or greater
-reducedDim(sce.nac.all, "PCA_15") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:15)]
+reducedDim(sce.nac, "PCA_15") <- reducedDim(sce.nac, "PCA")[ ,c(1:15)]
 # Top 10 (as Mathys, et al)
-reducedDim(sce.nac.all, "PCA_10") <- reducedDim(sce.nac.all, "PCA")[ ,c(1:10)]
+reducedDim(sce.nac, "PCA_10") <- reducedDim(sce.nac, "PCA")[ ,c(1:10)]
 
 # First remove this reducedDim bc this has caused trouble previously
-reducedDim(sce.nac.all, "TSNE") <- NULL
+reducedDim(sce.nac, "TSNE") <- NULL
 
 ## 38 PCs tsNE === 
 set.seed(109)
-sce.all.tsne.38pcs <- runTSNE(sce.nac.all, dimred="PCA_38")
+sce.all.tsne.38pcs <- runTSNE(sce.nac, dimred="PCA_38")
 
 ## 24 PCs tSNE ===    (not much different)
 # set.seed(109)
-# sce.all.tsne.24pcs <- runTSNE(sce.nac.all, dimred="PCA_24")
+# sce.all.tsne.24pcs <- runTSNE(sce.nac, dimred="PCA_24")
 
 ## 15 PCs tsNE ===
 set.seed(109)
-sce.all.tsne.15pcs <- runTSNE(sce.nac.all, dimred="PCA_15")
+sce.all.tsne.15pcs <- runTSNE(sce.nac, dimred="PCA_15")
 
 ## 10 PCs tsNE ===
 set.seed(109)
-sce.all.tsne.10pcs <- runTSNE(sce.nac.all, dimred="PCA_10")
+sce.all.tsne.10pcs <- runTSNE(sce.nac, dimred="PCA_10")
 
 
 
@@ -968,14 +944,14 @@ dev.off()
 
 ## Heatmap of broad marker genes (leaving out defined markers/subcluster for now) ===
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType.final != "ambig.lowNtrxts"]
+sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
 
-cell.idx <- splitit(sce.nac.all$cellType.final)
-dat <- as.matrix(assay(sce.nac.all, "logcounts"))
+cell.idx <- splitit(sce.nac$cellType.final)
+dat <- as.matrix(assay(sce.nac, "logcounts"))
 
 pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_mean-broadMarkers_MNT21May2020.pdf', useDingbats=TRUE, height=6, width=6)
 #pdf('pdfs/pubFigures/heatmap-geneExprs_all-NAc-n5_cellType.final_median-broadMarkers_MNT21May2020.pdf', height=6, width=6)
@@ -997,12 +973,12 @@ dev.off()
 
 ## For Day Lab ( & Keri's requests) - MNT 03Apr2020 ========================
 # First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType.final != "ambig.lowNtrxts"]
+sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
 
 ## AFTER re-assigning MSN.broad (and added all DRD genes for kicks)
 pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.pdf", width=7, height=9)
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH",
+plotExpression(sce.nac, exprs_values = "logcounts", features=c("PVALB", "KIT", "CHAT", "RELN", "TH",
                                                                    paste0("DRD", 1:5)),
                x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                add_legend=F, ncol=3) +
@@ -1015,7 +991,7 @@ dev.off()
 
 # Added 27Apr2020
 pdf("pdfs/exploration/zref_logExprs_gene-requests_Martinowich.2.pdf", width=7, height=5)
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("NGFR","NTRK1","NTRK2","NTRK3","BDNF"),
+plotExpression(sce.nac, exprs_values = "logcounts", features=c("NGFR","NTRK1","NTRK2","NTRK3","BDNF"),
                x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                add_legend=F, ncol=3) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
@@ -1024,10 +1000,10 @@ plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("NGFR","NTRK1
 dev.off()
 
 
-c("NGFR", "NTRK1", "NTRK2", "NTRK3", "BDNF") %in% rownames(sce.nac.all)
+c("NGFR", "NTRK1", "NTRK2", "NTRK3", "BDNF") %in% rownames(sce.nac)
 
 # Other checks by request - not to print
-plotExpression(sce.nac.all, exprs_values = "logcounts", features="HTR7",
+plotExpression(sce.nac, exprs_values = "logcounts", features="HTR7",
                x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
                add_legend=F, ncol=3) +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
