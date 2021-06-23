@@ -30,7 +30,7 @@ load(here("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rd
 # ref.sampleInfo
 # annotationTab.dlpfc
 # cell_colors
-    
+
 ########################
 ### broad clusters #####      - well actually 'prelim' clusters
 ########################
@@ -302,3 +302,60 @@ print(
   )
 )
 #dev.off()
+
+
+#### Compare with findMarkers ####
+load(here("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda"), verbose = TRUE)
+
+n_nuc <- table(sce.dlpfc$cellType)
+
+logFC_fm <- sapply(markers.t.1vAll, function(x) {
+  x <- x[, "std.logFC", drop = FALSE]
+  x <- x[rownames(markers.t.1vAll[["Astro"]]),]
+  return(x)
+})
+t0_fm_cell <- t(t(as.data.frame(logFC_fm)) * as.vector(n_nuc))
+
+rownames(t0_fm_cell) <- rowData(sce_pseudobulk[rownames(t0_fm_cell)])$gene_id
+common_genes2 <- intersect(common_genes, rownames(t0_fm_cell))
+
+t0_fm_cell <- t0_fm_cell[common_genes2, ]
+t0_contrasts_cell2 <- t0_contrasts_cell[common_genes2,]
+
+## Marker Finding Corelation 
+cor_t_cells = cor(t0_contrasts_cell2, t0_fm_cell)
+signif(cor_t_cells, 2)
+
+t0_contrasts2 <- t0_contrasts[common_genes2,]
+cor_t_fm = cor(t0_fm_cell, t0_contrasts2)
+signif(cor_t_fm, 2)
+
+layer_specific_indices2 <- mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]},
+  as.data.frame(t0_contrasts2))
+
+layer_ind2 = unique(as.numeric(layer_specific_indices2))
+cor_t_layer_fm = cor(t0_fm_cell[layer_ind2, ],
+                  t0_contrasts[layer_ind2, ])
+signif(cor_t_layer_fm, 2)
+
+cor_fm <- list(cor_t_cells, cor_t_fm[, c(1, 7:2)], cor_t_layer_fm[, c(1, 7:2)])
+titles <- list("manual vs. findMarkers", "All Genes" , "Top 100 Layer Specific Genes")
+pdf(here("pdfs/revision/exploration/overlap-ST-dlpfc_with_10x-snRNA-DLPFC-n3_findMarkers_LAH2021.pdf"),
+    height=5)
+for(i in 1:3){
+  print(
+    levelplot(
+      cor_fm[[i]],
+      aspect = "fill",
+      at = theSeq,
+      col.regions = my.col,
+      ylab = "",
+      xlab = "",
+      scales = list(x = list(rot = 90, cex = 0.9), y = list(cex = 1.5)),
+      main = list(titles[[i]],side=1,line=0.5)
+    )
+  )
+}
+dev.off()
+
