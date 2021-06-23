@@ -17,6 +17,7 @@ library(DropletUtils)
 library(jaffelab)
 library(Rtsne)
 library(gridExtra)
+library(rtracklayer)
 
 
 ### Palette taken from `scater`
@@ -88,9 +89,12 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
         
         # store into List, just to reflect the other objects
         pilot.data.alt <- list(br5182.nac.neun)
+        names(pilot.data.alt) <- "br5182.nac.neun"
         
         # Preliminary save
         save(pilot.data, pilot.data.alt,
+             # Created/stored in this .rda downstream:
+             pilot.data.unfiltered, e.out, ref.sampleInfo,
              file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
         
         
@@ -123,9 +127,14 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
         }
         
         names(e.out) <- names(pilot.data)
-        
-        save(pilot.data, e.out, file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
-        
+
+# This one done interactively:        
+e.out.alt <- list(br5182.nac.neun = emptyDrops(counts(pilot.data.alt[["br5182.nac.neun"]]), niters=20000))
+  
+  save(pilot.data, pilot.data.alt, e.out, e.out.alt,
+       # Created/stored in this .rda downstream:
+       pilot.data.unfiltered, ref.sampleInfo,file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
+  
         #### ** END JOB - pick up interactive assessment, below ** ====
 
 
@@ -222,6 +231,7 @@ for(i in 1:length(e.out)){
         #   FALSE  3552    0
         #   TRUE     23 4579        - all are good and not lower-p-value-bound-limited
 
+
 # Subset in for-loop:
 for(i in 1:length(pilot.data)){
   pilot.data[[i]] <- pilot.data[[i]][ ,which(e.out[[i]]$FDR <= 0.001)]
@@ -229,9 +239,20 @@ for(i in 1:length(pilot.data)){
 # Check
 sapply(pilot.data, dim)
 
+# For re-sequenced sample:
+    i <- "br5182.nac.neun"
+    print(table(Signif = e.out.alt[[i]]$FDR <= 0.001, Limited = e.out.alt[[i]]$Limited))
+        #       Limited
+        # Signif  FALSE TRUE
+        #   FALSE  6506    0
+        #   TRUE     25 4560
+    pilot.data.alt[[i]] <- pilot.data.alt[[i]][ ,which(e.out.alt[[i]]$FDR <= 0.001)]
 
 # Save 
-save(pilot.data, e.out, file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
+save(pilot.data, pilot.data.alt, e.out, e.out.alt,
+     # Created/stored in this .rda downstream:
+     pilot.data.unfiltered, ref.sampleInfo,
+     file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
 
 
 
