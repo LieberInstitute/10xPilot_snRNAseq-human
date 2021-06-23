@@ -540,6 +540,9 @@ for(i in names(pilot.data)){
   pilot.data[[i]]$sequencer <- ref.sampleInfo[i, "sequencer"]
 }
 
+# Fix the re-seq'd NAc, due to nomenclature
+pilot.data.alt[["br5182.nac.neun"]]$sequencer <- ref.sampleInfo["br5182.nac.neun.reseq", "sequencer"]
+
 # Check
 colnames(colData(pilot.data.alt[[1]])) == colnames(colData(pilot.data[[13]]))
     ## all TRUE
