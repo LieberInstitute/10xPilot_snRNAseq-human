@@ -257,6 +257,7 @@ save(pilot.data, pilot.data.alt, e.out, e.out.alt,
 
 
 ### Mito rate QC ==================
+  # MNT comment 23Jun: QC for the re-seq'd sample done interactively
 table(rownames(pilot.data[[1]])==rownames(pilot.data[[6]]))  # and checked various other pairs
 
 location <- mapIds(EnsDb.Hsapiens.v86, keys=rowData(pilot.data[[1]])$gene_id, 
@@ -301,7 +302,11 @@ test.stats <- stats
         #            0.124                0.067                0.118                0.146 
         #  br5287.nac.TRUE br5182.nac.neun.TRUE 
         #            0.116                0.073
-    
+        
+        # Re-sequenced br5182.nac.neun:
+        #br5182.nac.neun.TRUE 
+        #               0.072 
+        
     # Thresholds
     sapply(pseudo.high.mito, function(x){round(attributes(x)[["thresholds"]]["higher"], 4)})
         #  br5161.amy.higher    br5161.dlpfc.higher      br5161.hpc.higher      br5161.nac.higher 
@@ -312,6 +317,10 @@ test.stats <- stats
         #             0.2072                 3.2164                 0.0704                 0.2527 
         #  br5287.nac.higher br5182.nac.neun.higher 
         #             0.1160                 0.3161
+    
+        # Re-sequenced br5182.nac.neun:
+        #br5182.nac.neun.higher 
+        #                0.3216
 
 # Bind [true] stats to colData
 for(i in 1:length(pilot.data)){
@@ -354,9 +363,10 @@ median(mitoCutoffs)
     # [1] 0.1594075
 mitoCutoffs <- round(mitoCutoffs, 3)
 
-#dir.create("pdfs/")
+#dir.create("pdfs/revision")
 #pdf("pdfs/revision/all-FACS-n14_preprint_QCmetrics_high-mitoColored_MNT.pdf", height=4)
-pdf("pdfs/revision/all-FACS-n14_preprint_QCmetrics_high-mitoColored_wPseudoMTcount_MNT.pdf", height=4)
+#pdf("pdfs/revision/all-FACS-n14_preprint_QCmetrics_high-mitoColored_wPseudoMTcount_MNT.pdf", height=4)
+pdf("pdfs/revision/all-FACS-n14_preprint_QCmetrics_high-mitoColored_wPseudoMTcount_reseqdSample_MNT.pdf", height=4)
 for(i in 1:length(pilot.data.unfiltered)){
   grid.arrange(
     plotColData(pilot.data.unfiltered[[i]], y="sum", colour_by="high.mito") +
@@ -374,7 +384,7 @@ for(i in 1:length(pilot.data.unfiltered)){
       ggtitle(paste0("Sample: ", names(pilot.data.unfiltered)[[i]],
                      ";   pre-QC nNuclei: ", ncol(pilot.data.unfiltered[[i]]),";    ",
                      "nNuclei kept: ", ncol(pilot.data[[i]])," (",
-                     round(ncol(pilot.data[[i]]) / ncol(pilot.data.unfiltered[[i]]), 2), "%)"
+                     round(ncol(pilot.data[[i]]) / ncol(pilot.data.unfiltered[[i]]) * 100, 2), "%)"
       ))
   )
   # Detected features vs total count
@@ -384,7 +394,7 @@ for(i in 1:length(pilot.data.unfiltered)){
       ggtitle(paste0("Sample: ", names(pilot.data.unfiltered)[[i]],
                      ";   pre-QC nNuclei: ", ncol(pilot.data.unfiltered[[i]]),";    ",
                      "nNuclei kept: ", ncol(pilot.data[[i]])," (",
-                     round(ncol(pilot.data[[i]]) / ncol(pilot.data.unfiltered[[i]]), 2), "%)"
+                     round(ncol(pilot.data[[i]]) / ncol(pilot.data.unfiltered[[i]]) * 100, 2), "%)"
       ))
   )
 }
@@ -513,6 +523,12 @@ ref.sampleInfo$sequencer <- "NextSeq"
 
 rownames(ref.sampleInfo) <- ref.sampleInfo$sampleID
 
+# With re-seq'd Br5182-NAc:
+ref.sampleInfo <- rbind(ref.sampleInfo,
+                        c("br5182.nac.neun","nac","br5182","M","R4.25Sep2019","Frank.NeuN.enriched",
+                          "NovaSeq"))
+rownames(ref.sampleInfo)[15] <- "br5182.nac.neun.reseq"
+
 ## Add those to the colData:
 for(i in names(pilot.data)){
   pilot.data[[i]]$sampleID <- i
@@ -524,17 +540,25 @@ for(i in names(pilot.data)){
   pilot.data[[i]]$sequencer <- ref.sampleInfo[i, "sequencer"]
 }
 
+# Check
+colnames(colData(pilot.data.alt[[1]])) == colnames(colData(pilot.data[[13]]))
+    ## all TRUE
+
 ## Save:
 save(pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo,
+     # And the new reseq'd sample (don't need the unfiltered SCE):
+     pilot.data.alt, e.out.alt,
      file="rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda")
+
+
 
     # === === === === === === === === === === ===
     # And end here -> proceed to 'step02' scripts
     # === === === === === === === === === === ===
 
 
+## session info for 23Jun2021 =================================
 sessionInfo()
-## session info =================================
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
 # Running under: CentOS Linux 7 (Core)
@@ -556,76 +580,71 @@ sessionInfo()
 # [8] methods   base     
 # 
 # other attached packages:
-#   [1] gridExtra_2.3               Rtsne_0.15                 
-# [3] jaffelab_0.99.30            rafalib_1.0.0              
-# [5] DropletUtils_1.10.3         uwot_0.1.10                
-# [7] Matrix_1.3-2                scran_1.18.5               
-# [9] scater_1.18.6               ggplot2_3.3.3              
-# [11] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.0           
-# [13] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
-# [15] AnnotationDbi_1.52.0        batchelor_1.6.2            
-# [17] scRNAseq_2.4.0              SingleCellExperiment_1.12.0
-# [19] SummarizedExperiment_1.20.0 Biobase_2.50.0             
-# [21] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
-# [23] IRanges_2.24.1              S4Vectors_0.28.1           
-# [25] BiocGenerics_0.36.0         MatrixGenerics_1.2.1       
-# [27] matrixStats_0.58.0         
+#   [1] scDblFinder_1.4.0           gridExtra_2.3              
+# [3] dynamicTreeCut_1.63-1       dendextend_1.14.0          
+# [5] jaffelab_0.99.30            rafalib_1.0.0              
+# [7] DropletUtils_1.10.3         batchelor_1.6.2            
+# [9] scran_1.18.5                scater_1.18.6              
+# [11] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
+# [13] ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [15] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [17] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [19] Biobase_2.50.0              GenomicRanges_1.42.0       
+# [21] GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [23] S4Vectors_0.28.1            BiocGenerics_0.36.1        
+# [25] MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
-#   [1] AnnotationHub_2.22.0          BiocFileCache_1.14.0         
-# [3] igraph_1.2.6                  lazyeval_0.2.2               
-# [5] splines_4.0.4                 BiocParallel_1.24.1          
-# [7] digest_0.6.27                 htmltools_0.5.1.1            
-# [9] viridis_0.6.0                 fansi_0.4.2                  
-# [11] magrittr_2.0.1                memoise_2.0.0                
-# [13] limma_3.46.0                  Biostrings_2.58.0            
-# [15] R.utils_2.10.1                askpass_1.1                  
-# [17] prettyunits_1.1.1             colorspace_2.0-0             
-# [19] blob_1.2.1                    rappdirs_0.3.3               
-# [21] dplyr_1.0.5                   crayon_1.4.1                 
-# [23] RCurl_1.98-1.3                glue_1.4.2                   
-# [25] gtable_0.3.0                  zlibbioc_1.36.0              
-# [27] XVector_0.30.0                DelayedArray_0.16.3          
-# [29] BiocSingular_1.6.0            Rhdf5lib_1.12.1              
-# [31] HDF5Array_1.18.1              scales_1.1.1                 
-# [33] DBI_1.1.1                     edgeR_3.32.1                 
-# [35] Rcpp_1.0.6                    viridisLite_0.4.0            
-# [37] xtable_1.8-4                  progress_1.2.2               
-# [39] dqrng_0.2.1                   bit_4.0.4                    
-# [41] rsvd_1.0.3                    ResidualMatrix_1.0.0         
-# [43] httr_1.4.2                    RColorBrewer_1.1-2           
-# [45] ellipsis_0.3.1                pkgconfig_2.0.3              
-# [47] XML_3.99-0.6                  R.methodsS3_1.8.1            
-# [49] scuttle_1.0.4                 dbplyr_2.1.1                 
-# [51] locfit_1.5-9.4                utf8_1.2.1                   
-# [53] tidyselect_1.1.0              rlang_0.4.10                 
-# [55] later_1.1.0.1                 munsell_0.5.0                
-# [57] BiocVersion_3.12.0            tools_4.0.4                  
-# [59] cachem_1.0.4                  generics_0.1.0               
-# [61] RSQLite_2.2.6                 ExperimentHub_1.16.0         
-# [63] stringr_1.4.0                 fastmap_1.1.0                
-# [65] yaml_2.2.1                    bit64_4.0.5                  
-# [67] purrr_0.3.4                   sparseMatrixStats_1.2.1      
-# [69] mime_0.10                     R.oo_1.24.0                  
-# [71] xml2_1.3.2                    biomaRt_2.46.3               
-# [73] compiler_4.0.4                rstudioapi_0.13              
-# [75] beeswarm_0.3.1                curl_4.3                     
-# [77] interactiveDisplayBase_1.28.0 tibble_3.1.0                 
-# [79] statmod_1.4.35                stringi_1.5.3                
-# [81] lattice_0.20-41               bluster_1.0.0                
-# [83] ProtGenerics_1.22.0           vctrs_0.3.6                  
-# [85] pillar_1.6.0                  lifecycle_1.0.0              
-# [87] rhdf5filters_1.2.0            BiocManager_1.30.12          
-# [89] BiocNeighbors_1.8.2           bitops_1.0-6                 
-# [91] irlba_2.3.3                   httpuv_1.5.5                 
-# [93] rtracklayer_1.50.0            R6_2.5.0                     
-# [95] promises_1.2.0.1              vipor_0.4.5                  
-# [97] assertthat_0.2.1              rhdf5_2.34.0                 
-# [99] openssl_1.4.3                 withr_2.4.1                  
-# [101] GenomicAlignments_1.26.0      Rsamtools_2.6.0              
-# [103] GenomeInfoDbData_1.2.4        hms_1.0.0                    
-# [105] grid_4.0.4                    beachmat_2.6.4               
-# [107] DelayedMatrixStats_1.12.3     googledrive_1.0.1            
-# [109] segmented_1.3-3               shiny_1.6.0                  
-# [111] ggbeeswarm_0.6.0
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
+# [3] colorspace_2.0-0          ellipsis_0.3.2           
+# [5] scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2      
+# [9] rstudioapi_0.13           farver_2.1.0             
+# [11] bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4            
+# [15] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
+# [17] cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1             
+# [21] R.oo_1.24.0               HDF5Array_1.18.1         
+# [23] compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1         
+# [27] Matrix_1.3-2              fastmap_1.1.0            
+# [29] lazyeval_0.2.2            limma_3.46.0             
+# [31] BiocSingular_1.6.0        prettyunits_1.1.1        
+# [33] tools_4.0.4               rsvd_1.0.3               
+# [35] igraph_1.2.6              gtable_0.3.0             
+# [37] glue_1.4.2                GenomeInfoDbData_1.2.4   
+# [39] dplyr_1.0.5               rappdirs_0.3.3           
+# [41] Rcpp_1.0.6                vctrs_0.3.6              
+# [43] Biostrings_2.58.0         rhdf5filters_1.2.0       
+# [45] rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
+# [47] stringr_1.4.0             beachmat_2.6.4           
+# [49] lifecycle_1.0.0           irlba_2.3.3              
+# [51] statmod_1.4.35            XML_3.99-0.6             
+# [53] edgeR_3.32.1              zlibbioc_1.36.0          
+# [55] scales_1.1.1              hms_1.0.0                
+# [57] ProtGenerics_1.22.0       rhdf5_2.34.0             
+# [59] RColorBrewer_1.1-2        curl_4.3                 
+# [61] memoise_2.0.0             segmented_1.3-3          
+# [63] biomaRt_2.46.3            stringi_1.5.3            
+# [65] RSQLite_2.2.7             BiocParallel_1.24.1      
+# [67] rlang_0.4.10              pkgconfig_2.0.3          
+# [69] bitops_1.0-7              lattice_0.20-41          
+# [71] purrr_0.3.4               Rhdf5lib_1.12.1          
+# [73] labeling_0.4.2            GenomicAlignments_1.26.0 
+# [75] cowplot_1.1.1             bit_4.0.4                
+# [77] tidyselect_1.1.1          magrittr_2.0.1           
+# [79] R6_2.5.0                  generics_0.1.0           
+# [81] DelayedArray_0.16.3       DBI_1.1.1                
+# [83] pillar_1.6.0              withr_2.4.2              
+# [85] RCurl_1.98-1.3            tibble_3.1.1             
+# [87] crayon_1.4.1              xgboost_1.3.2.1          
+# [89] utf8_1.2.1                BiocFileCache_1.14.0     
+# [91] viridis_0.6.0             progress_1.2.2           
+# [93] locfit_1.5-9.4            grid_4.0.4               
+# [95] data.table_1.14.0         blob_1.2.1               
+# [97] digest_0.6.27             R.utils_2.10.1           
+# [99] openssl_1.4.3             munsell_0.5.0            
+# [101] beeswarm_0.3.1            viridisLite_0.4.0        
+# [103] vipor_0.4.5               askpass_1.1
 
