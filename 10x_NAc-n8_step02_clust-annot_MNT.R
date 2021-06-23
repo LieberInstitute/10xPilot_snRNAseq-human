@@ -15,7 +15,7 @@ library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
 
-source('plotExpression.R')
+source('plotExpressionCustom.R')
 
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
@@ -32,8 +32,8 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # Load 'pilot' samples
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
-    # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
-    rm(pilot.data.unfiltered, e.out)
+    # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo, pilot.data.alt, e.out.alt
+    rm(pilot.data.unfiltered, e.out, e.out.alt)
 
 # Load 2021 expansion set
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda", verbose=T)
@@ -51,106 +51,75 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revisio
 
 # Order as will do for `fastMNN()` (this shouldn't matter here)
 sce.nac <- cbind(pilot.data[["br5161.nac"]], pilot.data[["br5212.nac"]], pilot.data[["br5287.nac"]],
+                 # Revision un-selected samples:
+                 pilot.data.2[["br5400.nac"]], pilot.data.2[["br5276.nac"]],
+                 # NeuN-enriched:
                  pilot.data[["br5207.nac.neun"]],
                  # Re-sequenced Br5182-NAc sample:
                  pilot.data.alt[["br5182.nac.neun"]],
-                 # Revision samples:
-                 pilot.data.2[["br5400.nac"]], pilot.data.2[["br5276.nac"]], pilot.data.2[["br5701.nac.neun"]]
+                 pilot.data.2[["br5701.nac.neun"]]  # (revision, NeuN-enriched)
                  )
 
 sce.nac
+    # class: SingleCellExperiment 
+    # dim: 33538 20571 
+    # metadata(8): Samples Samples ... Samples Samples
+    # assays(1): counts
+    # rownames(33538): MIR1302-2HG FAM138A ... AC213203.1 FAM231C
+    # rowData names(6): gene_id gene_version ... gene_biotype Symbol.uniq
+    # colnames(20571): AAACCCACATCGAACT-1 AAACCCATCCAACCAA-1 ...
+    #   TTTGGTTAGCAGCACA-1 TTTGGTTAGGTCACAG-1
+    # colData names(16): Sample Barcode ... protocol sequencer
+    # reducedDimNames(0):
+    # altExpNames(0):
 
 
 # Use `multiBatchNorm()` to compute log-normalized counts, matching the scaling across samples
-sce.amy <- multiBatchNorm(sce.amy, batch=sce.amy$sampleID)
+sce.nac <- multiBatchNorm(sce.nac, batch=sce.nac$sampleID)
 
 # Use the simple `modelGeneVar` - this makes more sense over `combineVar`, since the
 #   cell composition is already known to be quite different (with NeuN selection)
 geneVar.nac <- modelGeneVar(sce.nac)
 chosen.hvgs.nac <- geneVar.nac$bio > 0
 sum(chosen.hvgs.nac)
-    # [1] 
+    # [1] 11372
 
 
 ### Dimensionality reduction ================================================================
 
-# Run PCA, taking top 100 (instead of default 50 PCs)
+# Run `fastMNN` (internally uses `multiBatchPCA`), taking top 100 (instead of default 50 PCs)
 set.seed(109)
-sce.nac <- runPCA(sce.nac, subset_row=chosen.hvgs.nac, ncomponents=100,
-                  BSPARAM=BiocSingular::RandomParam())
+mnn.hold <-  fastMNN(sce.nac, batch=sce.nac$sampleID,
+                     merge.order=c("br5161.nac","br5212.nac","br5287.nac",
+                                   "br5400.nac","br5276.nac",
+                                   "br5207.nac.neun","br5182.nac.neun",
+                                   "br5701.nac.neun"),
+                     subset.row=chosen.hvgs.nac, d=100,
+                     correct.all=TRUE, get.variance=TRUE,
+                     BSPARAM=BiocSingular::IrlbaParam())
+    # This temp file just used for getting batch-corrected components (drops a variety of entries)
+
+table(colnames(mnn.hold) == colnames(sce.nac))  # all TRUE
+table(mnn.hold$batch == sce.nac$sampleID) # all TRUE
+
+# Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+reducedDim(sce.nac, "PCA_corrected") <- reducedDim(mnn.hold, "corrected") # 100 components
+metadata(sce.nac) <- metadata(mnn.hold)
+
+# rbind the ref.sampleInfo[.rev]
+ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
 
 # Save into a new data file, which will dedicate for pan-brain-analyses
-save(sce.nac, chosen.hvgs.nac, file="rdas/NeuN-sortedNAc_n2_cleaned-combined_MNTMar2020.rda")
+save(sce.nac, chosen.hvgs.nac, ref.sampleInfo,
+     file="rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
-
-    # === === === === === === === ===
-    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_panBrain_optimalPCselxn_MNTMar2020.R')
+    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_Amyg-n2_optimalPCselxn_MNTFeb2020.R')
     #    --> saved into same .rda
-
-    ## MNT 06Mar2020: skipping this step for now - just work in top 100 PCs
-    sum(attr(reducedDim(sce.nac), "percentVar")[1:50])  # 45.24% what would be by default
-    sum(attr(reducedDim(sce.nac), "percentVar")[1:100]) # 46.92% - not much more
-
-    ## *** FIND THIS PCA_opt-skip STEP IN "side-Rscript_exploringALL-NAc-samples_100PCs_MNT06Mar.R"
-    ## === === === === === === === ==
-
-
-    ### skip ==============
-    ## Explore that $chosen PC space: "rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda" MNT 23Mar2020
-    load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-        # sce.nac, chosen.hvgs.nac, pc.choice.nac
-    
-    metadata(pc.choice.nac) # 87
-    rm(list=setdiff(ls(), "pc.choice.nac"))
-    
-    # Bring in explored object(s) with clustering, etc. at 100 PCs
-    load("rdas/zref_NeuN-sortedNAc-with-homs_exploreTop100pcs_MNT_06Mar2020.rda", verbose=T)
-        # sce.nac, sce.nac.10pcs, chosen.hvgs.nac, ref.sampleInfo, clusterRefTab.nac
-    
-    
-    # Add into new reducedDim entry 
-    reducedDim(sce.nac, "PCA_opt") <- reducedDim(sce.nac, "PCA")[ ,1:(metadata(pc.choice.nac)$chosen)]
-    
-    # Run clustering to compare prelimClusters-on-100 PCs
-    snn.gr.87 <- buildSNNGraph(sce.nac, k=20, use.dimred="PCA_opt")
-    clusters.k20.87 <- igraph::cluster_walktrap(snn.gr.87)$membership
-    table(clusters.k20.87)
-        ## Previously (w/ 100 PCs):
-        #    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
-        #  279 1732  275 1948 1948  718  300  293  161  188 1588 1845  133   27   56  857
-        #   17   18   19   20   21   22
-        #  184  384  136  103   25   61
-    
-        ## in this "PCA_opt"
-        #clusters.k20.87
-        #   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
-        #1847  276  266  300 1925 1739  719  161  301 1619 1913  181  132   56  882  183
-        #  17   18   19   20   21   22
-        # 384   31  139   62  100   25
-    
-    # To test if same/similar to the above, may have to pseudo-bulk-HC, then compare assignments
-    
-    sce.nac$prelimCluster.87 <- factor(clusters.k20.87)
-    table(sce.nac$prelimCluster, sce.nac$prelimCluster.87)
-        ## Kind of an identity line
-    table(sce.nac$prelimCluster.87, sce.nac$lessCollapsed)
-        ## For the most part they assign to a unique 'lessCollapsed' cluster
-    table(sce.nac$prelimCluster.87, sce.nac$collapsedCluster)
-        ## same here
-    
-        ## Seems like 'prelimCluster.87' 18 & 20 pertain to the 'ambig.lowNtrxts' cluster in the
-         # 100-PC analysis (collapsedCluster 6, or prelimCluster 14 & 22)
-    
-         # --> Nevertheless, proceed taking the $chosen dimensions for due diligence
-         # === === === ===
-    
-    rm(list=ls())
-    # end skip/explore ========================
 
 
 ### Resume work in optimal PC space
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac
 
 ## How many PCs is optimal?:
@@ -189,7 +158,7 @@ table(sce.nac$protocol, sce.nac$donor)
 
 # Save for now
 save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
 
@@ -456,7 +425,7 @@ sce.nac$cellType.split <- annotationTab.nac$cellType.split[match(sce.nac$lessCol
 
 ## Save
 save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo, 
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
 # Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
@@ -504,7 +473,7 @@ dev.off()
 
 ### MNT 06Apr2020: Further dive into 'MSN.broad' cluster, which is entirely Br5212 =============
   # -> revisit SNN clsutering - see if `cut_at()` can tease these differences out
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
      verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
@@ -662,7 +631,7 @@ plotExpression(sce.nac.5212msns, features=c("DRD1", "DRD2", "BCL11B"),
 
 # First save
 save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
-     file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+     file="rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
 sce.nac <- sce.nac[ ,sce.nac$cellType.moreSplit != "ambig.lowNtrxts"]
@@ -719,7 +688,7 @@ cor(assay(sce.nac.PB, "logcounts"))[grep("broad", colnames(sce.nac.PB)),grep("MS
     # MSN.broad.24 0.9171996 0.9504078*
 
 # Re-load actually, bc had dropped "ambig.lowNtrxts" actually
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
 
 ## We'll reassign as such then, calling a new 'cellType.final':
 sce.nac$cellType.final <- sce.nac$cellType.moreSplit
@@ -732,7 +701,7 @@ table(sce.nac$cellType.moreSplit, sce.nac$cellType.final) # dope.
 
 # Save
 save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
-     file="rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda")
+     file="rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
 
@@ -754,7 +723,7 @@ plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "CASZ1", 
 
 
 ## Added MNT 12May2020: tSNE in lower dims ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
      verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
@@ -943,7 +912,7 @@ dev.off()
 
 
 ## Heatmap of broad marker genes (leaving out defined markers/subcluster for now) ===
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 # First drop "Ambig.lowNtrxts" (93 nuclei)
@@ -1011,11 +980,72 @@ plotExpression(sce.nac, exprs_values = "logcounts", features="HTR7",
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-### What does expression of these 0-looking genes look like from the kb-python output? ===
-  #   - wondering if exist in the exonic counts, such as spanning splice jxns
-  #   -> go to 'side-Rscript_comparing-kb-python_vs_CellRanger_all-NAc-n5_MNTApr2020.R'
 
-
-
-
+## Session info for 23Jun2021 =============================================
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
+# 
+# other attached packages:
+#   [1] scDblFinder_1.4.0           gridExtra_2.3               dynamicTreeCut_1.63-1      
+# [4] dendextend_1.14.0           jaffelab_0.99.30            rafalib_1.0.0              
+# [7] DropletUtils_1.10.3         batchelor_1.6.2             scran_1.18.5               
+# [10] scater_1.18.6               ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
+# [13] ensembldb_2.14.1            AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
+# [16] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [19] Biobase_2.50.0              GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
+# [22] IRanges_2.24.1              S4Vectors_0.28.1            BiocGenerics_0.36.1        
+# [25] MatrixGenerics_1.2.1        matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
+# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
+# [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
+# [16] sparseMatrixStats_1.2.1   cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
+# [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1          Matrix_1.3-2             
+# [28] fastmap_1.1.0             lazyeval_0.2.2            limma_3.46.0             
+# [31] BiocSingular_1.6.0        prettyunits_1.1.1         tools_4.0.4              
+# [34] rsvd_1.0.3                igraph_1.2.6              gtable_0.3.0             
+# [37] glue_1.4.2                GenomeInfoDbData_1.2.4    dplyr_1.0.5              
+# [40] rappdirs_0.3.3            Rcpp_1.0.6                vctrs_0.3.6              
+# [43] Biostrings_2.58.0         rhdf5filters_1.2.0        rtracklayer_1.50.0       
+# [46] DelayedMatrixStats_1.12.3 stringr_1.4.0             beachmat_2.6.4           
+# [49] lifecycle_1.0.0           irlba_2.3.3               statmod_1.4.35           
+# [52] XML_3.99-0.6              edgeR_3.32.1              zlibbioc_1.36.0          
+# [55] scales_1.1.1              hms_1.0.0                 ProtGenerics_1.22.0      
+# [58] rhdf5_2.34.0              RColorBrewer_1.1-2        curl_4.3                 
+# [61] memoise_2.0.0             segmented_1.3-3           biomaRt_2.46.3           
+# [64] stringi_1.5.3             RSQLite_2.2.7             BiocParallel_1.24.1      
+# [67] rlang_0.4.10              pkgconfig_2.0.3           bitops_1.0-7             
+# [70] lattice_0.20-41           purrr_0.3.4               Rhdf5lib_1.12.1          
+# [73] labeling_0.4.2            GenomicAlignments_1.26.0  cowplot_1.1.1            
+# [76] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
+# [79] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+# [82] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+# [85] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+# [88] xgboost_1.3.2.1           utf8_1.2.1                BiocFileCache_1.14.0     
+# [91] viridis_0.6.0             progress_1.2.2            locfit_1.5-9.4           
+# [94] grid_4.0.4                data.table_1.14.0         blob_1.2.1               
+# [97] digest_0.6.27             R.utils_2.10.1            openssl_1.4.3            
+# [100] munsell_0.5.0             beeswarm_0.3.1            viridisLite_0.4.0        
+# [103] vipor_0.4.5               askpass_1.1 
 
