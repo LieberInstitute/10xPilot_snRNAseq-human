@@ -277,9 +277,12 @@ dev.off()
 g = c("SNAP25", "CAMK2A", "GAD2", "SOX11",
       "FOXP2", "PDGFRA", "MBP", "PLP1",
       "AQP4", "GFAP", "CD74")
-t0_contrasts_cell_markers = t0_contrasts_cell[g,]
+g2 = rowData(sce.dlpfc)[g,]$gene_id
+
+t0_contrasts_cell_markers = t0_contrasts_cell[g2,]
 
 cc_cell_layer = cor(t(t0_contrasts_cell_markers), cor_t_layer)
+rownames(cc_cell_layer) <- g
 signif(cc_cell_layer,3)
 
 ### heatmap
@@ -307,14 +310,14 @@ print(
 #### Compare with findMarkers ####
 load(here("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda"), verbose = TRUE)
 
-n_nuc <- table(sce.dlpfc$cellType)
-
+## fix
 logFC_fm <- sapply(markers.t.1vAll, function(x) {
   x <- x[, "std.logFC", drop = FALSE]
   x <- x[rownames(markers.t.1vAll[["Astro"]]),]
   return(x)
 })
-t0_fm_cell <- t(t(as.data.frame(logFC_fm)) * as.vector(n_nuc))
+
+t0_fm_cell <- logFC_fm * ncol(sce.dlpfc)
 
 rownames(t0_fm_cell) <- rowData(sce_pseudobulk[rownames(t0_fm_cell)])$gene_id
 common_genes2 <- intersect(common_genes, rownames(t0_fm_cell))
