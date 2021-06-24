@@ -114,20 +114,20 @@ save(sce.nac, chosen.hvgs.nac, ref.sampleInfo,
      file="rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
-    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_Amyg-n2_optimalPCselxn_MNTFeb2020.R')
+    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_NAc-n8_optimalPCselxn_MNT2021.R')
     #    --> saved into same .rda
 
 
 ### Resume work in optimal PC space
 load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
-    # sce.nac, chosen.hvgs.nac, pc.choice.nac
+    # sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac
 
 ## How many PCs is optimal?:
 metadata(pc.choice.nac)$chosen
-    # 87
+    # 94
 
-# Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.nac, "PCA_opt") <- reducedDim(sce.nac, "PCA")[ ,1:(metadata(pc.choice.nac)$chosen)]
+# Assign this chosen (94 PCs) to 'PCA_opt'
+reducedDim(sce.nac, "PCA_opt") <- reducedDim(sce.nac, "PCA_corrected")[ ,1:(metadata(pc.choice.nac)$chosen)]
 
 
 ## t-SNE
@@ -140,25 +140,10 @@ set.seed(109)
 sce.nac <- runUMAP(sce.nac, dimred="PCA_opt")
 
 
-### Add some colData - use "rdas/REFERENCE_sampleInfo_n14.rda" previously generated in explore phase
-load("rdas/REFERENCE_sampleInfo_n14.rda", verbose=T)
-    # ref.sampleInfo 
+# How do these look?
+plotReducedDim(sce.nac, dimred="TSNE", colour_by="sampleID")
+plotReducedDim(sce.nac, dimred="UMAP", colour_by="sampleID")
 
-# Add to sce.nac colData
-sce.nac$region <- ss(sce.nac$sample,"\\.", 1)
-sce.nac$donor <- paste0("Br",substr(sce.nac$sample, start=nchar(sce.nac$sample)-3, stop=nchar(sce.nac$sample)))
-sce.nac$processDate <- ref.sampleInfo$realBatch[match(sce.nac$sample, ref.sampleInfo$sampleID)]
-sce.nac$protocol <- ref.sampleInfo$protocol[match(sce.nac$sample, ref.sampleInfo$sampleID)]
-
-table(sce.nac$protocol, sce.nac$donor)
-    #           Br5161 Br5182 Br5207 Br5212 Br5287
-    #Frank           0      0      0      0    707
-    #Frank.NeuN      0   4267   4426      0      0
-    #pseudoSort   2067      0      0   1774      0
-
-# Save for now
-save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
 
@@ -168,33 +153,53 @@ save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
 snn.gr <- buildSNNGraph(sce.nac, k=20, use.dimred="PCA_opt")
 clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
 table(clusters.k20)
-    ##   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
-    # 1847  276  266  300 1925 1739  719  161  301 1619 1913  181  132   56  882  183
-    #   17   18   19   20   21   22
-    #  384   31  139   62  100   25   (as above)
+    #    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+    # 3927 4262  239  251  988  283  285  718   40 5146  314  638  529   63   98   99 
+    #   17   18   19   20   21   22   23   24   25   26   27   28   29 
+    # 1000  651   22   58   86  429   36   52  240   41   37   21   18
 
 # Assign as 'prelimCluster'
 sce.nac$prelimCluster <- factor(clusters.k20)
+table(sce.nac$prelimCluster, sce.nac$donor)
+
+# Save for now
+save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
-### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
-#         (as determined in: 'side-Rscript_testingStep2_HC-normalizn-approaches_wAmygData_MNTJan2020.R')
+### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts
 #           ** That is, to pseudo-bulk (aka 'cluster-bulk') on raw counts, on all [non-zero] genes,
 #              normalize with `librarySizeFactors()`, log2-transform, then perform HC'ing
 
 
 ## Preliminary cluster index for pseudo-bulking
-# Will need to split out by single-vs-multiple-nuclei-containing prelimClusters bc
-#`rowSums()` doesn't like the former
 clusIndexes = splitit(sce.nac$prelimCluster)
-
 prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
   rowSums(assays(sce.nac)$counts[ ,ii])
  }
 )
-    ## of dim 33538    22
 
-
+    # Btw: prelimCluster 23, 24, 26 may be doublet-driven:
+    round(sapply(clusIndexes, function(x){quantile(sce.nac$doubletScore[x])}), 3)
+        #           1      2     3     4     5     6      7     8     9     10    11     12    13
+        # 0%    0.000  0.000 0.017 0.000 0.000 0.000  0.027 0.000 0.366  0.000 0.000  0.000 0.000
+        # 25%   0.230  0.248 0.094 0.027 0.194 0.060  0.213 0.205 0.530  0.125 0.018  0.060 0.095
+        # 50%   0.435  0.443 0.119 0.043 0.436 0.121  0.305 0.332 0.890  0.358 0.043  0.102 0.302
+        # 75%   0.843  0.823 0.182 1.330 0.781 0.204  0.613 0.587 1.413  0.830 0.075  0.204 0.594
+        # 100% 20.479 11.620 2.213 3.736 4.856 2.315 11.178 8.403 3.119 11.355 5.496 14.674 9.045
+        #         14    15    16    17    18    19    20     21    22     23     24    25     26
+        # 0%   0.000 0.017 0.008 0.000 0.000 0.008 0.034  0.009 0.000  2.269  2.028 0.000  3.550
+        # 25%  0.021 0.053 0.058 0.079 0.047 0.025 0.131  0.036 0.025  4.380  8.185 0.026 13.219
+        # 50%  0.028 0.080 0.095 0.145 0.089 0.059 0.234  0.060 0.053  7.026 12.780 0.044 16.139
+        # 75%  0.049 1.136 0.127 0.294 0.131 0.102 0.406  0.478 0.105  8.306 15.285 0.112 18.726
+        # 100% 0.089 2.919 1.871 6.723 4.215 1.328 1.856 17.153 1.517 12.332 25.141 4.006 24.444
+        #         27     28    29
+        # 0%   0.362  0.825 1.832
+        # 25%  0.936  2.701 3.478
+        # 50%  1.166  6.252 4.889   - tested findMarkers interactively on these and there are indeed
+        # 75%  1.956  6.918 5.006     no real PW markers for prelimClusters 23, 24, 26, 28; can drop
+        # 100% 6.708 10.558 5.225   - 29 actually has real markers, including SOX4, BCAN, GPR17, TNS3 (OPC_COP)
+    
 # Compute LSFs at this level
 sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
 
@@ -205,146 +210,61 @@ geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFac
 ## Perform hierarchical clustering
 dist.clusCollapsed <- dist(t(geneExprs.temp))
 tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
-#tree.clusCollapsed$labels
 
 dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 
 # Just for observation
-myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=5) prelim-kNN-cluster relationships",
+myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=8) prelim-kNN-cluster relationships",
           cex.main=1, cex.lab=0.8, cex=0.6)
 
-# 18 and 20 clear outliers (as predicted earlier)
-sapply(clusIndexes, function(x) {quantile(sce.nac[ ,x]$sum)})
-  # yep they're driven by low transcript capture
-
+sapply(clusIndexes, function(x) {quantile(sce.nac$sum[x])})
+    # prelimCluster 13 is definitely a 'drop.lowNTx_'
 
 clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=400)
-
+                               minClusterSize=2, deepSplit=1, cutHeight=220)
 
 table(clust.treeCut)
 unname(clust.treeCut[order.dendrogram(dend)])
-    ## cutHeight at [400] looks best; proceed with this
+
+    ## Cut at 220, but manually merge others based on other 'cutHeight's
+     #    (225, 300, 425--for glial)
 
 ## Add new labels to those prelimClusters cut off
-#    - going to just put 18 & 20 together (see above)
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1,1,2)
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <-
+  max(clust.treeCut)+c(1:3, 4,4,4, 5:6, 7:9, 10,10,10, 11,11,12,12,13,rep(14,4))
 
-labels_colors(dend) <- tableau10medium[clust.treeCut[order.dendrogram(dend)]]
+## Define color pallet
+cluster_colors <- unique(c(tableau20, tableau10medium)[clust.treeCut[order.dendrogram(dend)]])
+names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
+labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
 
 # Print for future reference
-pdf("pdfs/regionSpecific_NAc-ALL-n5_HC-prelimCluster-relationships_Mar2020.pdf")
+pdf("pdfs/revision/regionSpecific_NAc-n8_HC-prelimCluster-relationships_MNT2021.pdf")
 par(cex=1.2, font=2)
-myplclust(tree.clusCollapsed, lab.col=tableau10medium[clust.treeCut],
-          main="All NAc (n=5) prelim-kNN-cluster relationships")
+plot(dend, main="All NAc (n=8) prelim-kNN-cluster relationships")
 dev.off()
 
-
-## After deciding to make a lessCollapsed partitioning of these (below):
-clust.treeCut[order.dendrogram(dend)] <- clusterRefTab.nac$merged.man.b
-
-pdf("pdfs/regionSpecific_NAc-ALL-n5_HC-prelimCluster-relationships_lessCollapsedCols_Mar2020.pdf")
-par(cex=1.2, font=2)
-myplclust(tree.clusCollapsed, lab.col=tableau20[clust.treeCut],
-          main="All NAc (n=5) prelim-kNN-cluster relationships")
-dev.off()
 
 # Make reference for new cluster assignment
 clusterRefTab.nac <- data.frame(origClust=order.dendrogram(dend),
-                                    merged=clust.treeCut[order.dendrogram(dend)])
-
-# Add more manual merging/partitioning of these prelim clusters - mainly in collapsedCluster 1/2...
-clusterRefTab.nac$merged.man <- clusterRefTab.nac$merged
-clusterRefTab.nac$merged.man[clusterRefTab.nac$merged %in% c(1:2)] <-  c(1, rep(2,5), 8:14)
-    ## Justification for these, generally, is looking at how do samples separate by
-     # prelimCluster - if sample-specific, merging is more liberal.
-
-# A less-less-collapsed version to separate D1/D2 prelim clusters
-clusterRefTab.nac$merged.man.b <- clusterRefTab.nac$merged.man
-clusterRefTab.nac$merged.man.b[5:8] <- c(15,16,15,16)
+                                merged=clust.treeCut[order.dendrogram(dend)])
 
 
-## Assign as 'collapsedCluster' or 'lessCollapsed'
-sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster,
-                                                                          clusterRefTab.nac$origClust)])
-
-#sce.nac$lessCollapsed <- factor(clusterRefTab.nac$merged.man[match(sce.nac$prelimCluster,
-#                                                                           clusterRefTab.nac$origClust)])
-
-# Go with this:
-sce.nac$lessCollapsed <- factor(clusterRefTab.nac$merged.man.b[match(sce.nac$prelimCluster,
-                                                                               clusterRefTab.nac$origClust)])
-
-
-table(sce.nac$collapsedCluster, sce.nac$sample)
-    #   nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-    # 1      257      299       86          4012          4182
-    # 2       18       19       14           248           241
-    # 3     1454      854      499             0             0
-    # 4      149      384       12             0             0
-    # 5       98      104       37             0             0
-    # 6       19       42       22             7             3
-    # 7       72       72       37             0             0
-
-table(sce.nac$lessCollapsed, sce.nac$sample)
-    # nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-    # 1         2        0        0           117            13
-    # 2         0      266        0             0             0
-    # 3      1454      854      499             0             0
-    # 4       149      384       12             0             0
-    # 5        98      104       37             0             0
-    # 6        19       42       22             7             3
-    # 7        72       72       37             0             0
-    # 8        10        3        0           285             3
-    # 9         9        6        3           134           148
-    # 10       17        8        6           369           319
-    # 11        1        3        0            16             5
-    # 12        1        1        1            42            11
-    # 13        7        7        9            86           167
-    # 14        9        8        4           104            58
-    # 15      178        2       72          1505          1829
-    # 16       41       14        5          1602          1870
-
-## original prelim cluster
-table(sce.nac$prelimCluster, sce.nac$sample)
-    #    nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-    # 1       153        0       66          1395           233
-    # 2         7        7        9            86           167
-    # 3         0      266        0             0             0
-    # 4         9        6        3           134           148
-    # 5      1417       15      493             0             0
-    # 6        25        2        6           110          1596
-    # 7        17        8        6           369           319
-    # 8       149        0       12             0             0
-    # 9        10        3        0           285             3
-    # 10       32       13        5          1538            31
-    # 11        9        1        0            64          1839
-    # 12       72       72       37             0             0
-    # 13        2        0        0           117            13
-    # 14        1        1        1            42            11
-    # 15       37      839        6             0             0
-    # 16        9        8        4           104            58
-    # 17        0      384        0             0             0
-    # 18        1       30        0             0             0
-    # 19       98        4       37             0             0
-    # 20       18       12       22             7             3
-    # 21        0      100        0             0             0
-    # 22        1        3        0            16             5
-
-
+# Assign as 'collapsedCluster'
+sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster, clusterRefTab.nac$origClust)])
 
 # Print some visualizations:
-pdf("pdfs/regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Mar2020.pdf")
-plotReducedDim(sce.nac, dimred="PCA", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="processDate", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac, colour_by="sample", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac, colour_by="lessCollapsed", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5) + ggtitle("t-SNE on opt PCs", )
-# UMAP
-plotUMAP(sce.nac, colour_by="collapsedCluster", point_alpha=0.5) + ggtitle("UMAP on opt PCs", )
+pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-collapsedClusters_MNT2021.pdf")
+plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="protocol", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="collapsedCluster", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5)
+plotTSNE(sce.nac, colour_by="doubletScore", point_alpha=0.5)
+# And some more informative UMAPs
+plotUMAP(sce.nac, colour_by="sampleID", point_alpha=0.5)
+plotUMAP(sce.nac, colour_by="collapsedCluster", point_alpha=0.5)
 dev.off()
-
 
 ## Print marker genes for annotation
 markers.mathys.custom = list(
@@ -356,25 +276,47 @@ markers.mathys.custom = list(
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
   'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
+  'Tcell' = c('SKAP1', 'ITK', 'CD247'),
+  # Post-hoc: Some intersecting markers from mural cells in HPC, AMY
+  'Mural' = c('COL1A2', 'TBX18', 'RBPMS'),
   # Kristen's MSN markers - not printed for the broader collapsed clusters
+  'MSNs.pan' = c("PPP1R1B","BCL11B"),# "CTIP2")
   'MSNs.D1' = c("DRD1", "PDYN", "TAC1"),
-  'MSNs.D2' = c("DRD2", "PENK"),
-  'MSNs.pan' = c("PPP1R1B","BCL11B")# "CTIP2")
+  'MSNs.D2' = c("DRD2", "PENK")
 )
 
 ## Print broad cell type markers
-#pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+pdf("pdfs/revision/regionSpecific_NAc-n8_marker-logExprs_collapsedClusters_MNT2021.pdf", height=5, width=9)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="lessCollapsed", colour_by="lessCollapsed", point_alpha=0.5, point_size=.7,
-                   add_legend=F) +
-      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-                   width = 0.3, colour=rep(tableau20[1:16], length(markers.mathys.custom[[i]])))
+    plotExpressionCustom(sce = sce.nac,
+                         features = markers.mathys.custom[[i]], 
+                         features_name = names(markers.mathys.custom)[[i]], 
+                         anno_name = "collapsedCluster")# +
+      #scale_color_manual(values = cell_colors.nac)
   )
 }
-#dev.off()
+dev.off()
 
+# Do this for the prelimClusters too, since there's just 29
+    # First remove the will-be 'drop.lowNTx_' prelimCluster 13
+    # Post-hoc: also drop 24 & 26
+    sce.temp <- sce.nac
+    sce.temp <- sce.temp[ ,!(sce.temp$prelimCluster == 13)]
+    sce.temp <- sce.temp[ ,!(sce.temp$prelimCluster %in% c(24,26))]
+    sce.temp$prelimCluster <- droplevels(sce.temp$prelimCluster)
+    
+    pdf("pdfs/revision/regionSpecific_NAc-n8_marker-logExprs_prelimClusters_MNT2021.pdf", height=5, width=12)
+    for(i in 1:length(markers.mathys.custom)){
+      print(
+        plotExpressionCustom(sce = sce.temp,
+                             features = markers.mathys.custom[[i]], 
+                             features_name = names(markers.mathys.custom)[[i]], 
+                             anno_name = "prelimCluster") +
+        scale_color_manual(values = c(tableau10medium, tableau20))
+      )
+    }
+    dev.off()
 
 # Check nuclear library sizes for annotation of 'lessCollapsed' cluster 6:
 clusIndexes <- splitit(sce.nac$lessCollapsed)
