@@ -1,8 +1,8 @@
 ### MNT 10x snRNA-seq workflow: step 03 - marker detection
-###   **Region-specific analyses**
-###     - (3x) NAc samples from: Br5161 & Br5212 & Br5287
-###     - (2x) NeuN-sorted samples from: Br5207 & Br5182
-###   ** This final iteration includes the 5212-specific 'MSN.broad' resolved
+###   **Region-specific analyses: nucleus accumbens (NAc)**
+###     - Preprint: (3x) un-selected samples + (2x) NeuN-sorted samples
+###     - Revision: (3x) samples (2 female, 1 NeuN-sorted)
+### MNT 25Jun2021
 #####################################################################
 
 library(SingleCellExperiment)
@@ -17,6 +17,8 @@ library(lattice)
 library(RColorBrewer)
 library(pheatmap)
 
+source("plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -29,563 +31,145 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 
-### Cell type marker gene detection =======================================
-#   ** Approach - pseudo-bulk on sample:cellType stratification, then treat as SCE, so that
-#                 can use 'findMarkers()' function that utilizes different tests
 
-
-    ## MNT comment 02Apr2020 === === === === === ===
-    ## - run `findMarkers()` later - go for manual limma modeling for now
-    ## === === === === === === === === === === === =
-
-
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-
-###### Direct limma approach ####
-#################################
-table(sce.nac.all$cellType.final)
-table(sce.nac.all$cellType.final, sce.nac.all$sample) 
-    #                 nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-    # ambig.lowNtrxts       19       42       22             7             3
-    # Astro                149      384       12             0             0
-    # Inhib.1                1        3        0            16             5
-    # Inhib.2                1        1        1            42            11
-    # Inhib.3                7        7        9            86           167
-    # Inhib.4                9        8        4           104            58
-    # Micro                 72       72       37             0             0
-    # MSN.D1.1               2        0        0           117            13
-    # MSN.D1.2              10        3        0           285             3
-    # MSN.D1.3              17        8        6           369           319
-    # MSN.D1.4             178      169       72          1505          1829
-    # MSN.D2.1               9        6        3           134           148
-    # MSN.D2.2              41      113        5          1602          1870
-    # Oligo               1454      854      499             0             0
-    # OPC                   98      104       37             0             0
-
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
-
-# Then make the pseudo-bulked SCE
-sce.nac.all.PB <- aggregateAcrossCells(sce.nac.all, ids=paste0(sce.nac.all$sample,":",sce.nac.all$cellType.final),
-                                        use_exprs_values="counts")
-    ## of 33538 x 58 dims
-
-# Clean up colData
-colData(sce.nac.all.PB) <- colData(sce.nac.all.PB)[ ,c(13:17,19:25)]
-
-# Drop genes with all 0's
-sce.nac.all.PB <- sce.nac.all.PB[!rowSums(assay(sce.nac.all.PB, "counts"))==0, ]
-    ## keeps 29236 genes
-
-# Remove stored `sizeFactors()` because this will mess you up
-#     * Also, to be safe, can always provide manually-computed SFs:
-sizeFactors(sce.nac.all.PB) <- NULL
-LSFvec <- librarySizeFactors(sce.nac.all.PB)
-sce.nac.all.PB <- logNormCounts(sce.nac.all.PB, size_factors=LSFvec)
-
-## Extract the count data
-mat <- assays(sce.nac.all.PB)$logcounts
-
-## Build a group model * FOR THIS REGION ADDING 'processDate'
-mod <- with(colData(sce.nac.all.PB), model.matrix(~ 0 + cellType.final + processDate))
-colnames(mod) <- gsub('cellType.final', '', colnames(mod))
-
-corfit <- duplicateCorrelation(mat, mod, block = sce.nac.all.PB$donor)
-corfit$consensus.correlation
-    ## [1] 0.01500338
-
-## (other scripts have pairwise tests -- too many levels to test that here)
-
-
-## Then each cellType vs the rest
-cellType_idx <- splitit(sce.nac.all.PB$cellType.final)
-
-eb0_list <- lapply(cellType_idx, function(x) {
-  res <- rep(0, ncol(sce.nac.all.PB))
-  res[x] <- 1
-  m <- model.matrix(~ res + sce.nac.all.PB$processDate)
-  eBayes(
-    lmFit(
-      mat,
-      design = m,
-      block = sce.nac.all.PB$donor,
-      correlation = corfit$consensus.correlation
-    )
-  )
-})
-
-## Extract the p-values
-pvals0_contrasts <- sapply(eb0_list, function(x) {
-  x$p.value[, 2, drop = FALSE]
-})
-rownames(pvals0_contrasts) <- rownames(sce.nac.all.PB)
-
-fdrs0_contrasts = apply(pvals0_contrasts, 2, p.adjust, "fdr")
-
-## Extract the tstats
-t0_contrasts_cell <- sapply(eb0_list, function(x) {
-  x$t[, 2, drop = FALSE]
-})
-rownames(t0_contrasts_cell) <- rownames(sce.nac.all.PB)
-
-
-data.frame(
-  'FDRsig' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.05),
-  'Pval10-6sig' = colSums(pvals0_contrasts < 1e-6),
-  'Pval10-8sig' = colSums(pvals0_contrasts < 1e-8)
-)
-
-# For only (+) t-stats
-data.frame(
-  'FDRsig' = colSums(apply(pvals0_contrasts, 2, p.adjust, 'fdr') < 0.05 &
-                       t0_contrasts_cell > 0),
-  'Pval10-6sig' = colSums(pvals0_contrasts < 1e-6 &
-                            t0_contrasts_cell > 0),
-  'Pval10-8sig' = colSums(pvals0_contrasts < 1e-8 &
-                            t0_contrasts_cell > 0)
-)
-
-## Without t > 0 subset:
-    #         FDRsig Pval10.6sig Pval10.8sig
-    # Astro      1670         380         224
-    # Inhib.1     387          27           9
-    # Inhib.2    4983         604         243
-    # Inhib.3     351          78          41
-    # Inhib.4     430          95          48
-    # Micro      3356         966         675
-    # MSN.D1.1     93          13           2
-    # MSN.D1.2    188          16           0
-    # MSN.D1.3     79          18          11
-    # MSN.D1.4   1029         128          47
-    # MSN.D2.1    173          28          10
-    # MSN.D2.2    307          32           9
-    # Oligo      1707         412         246
-    # OPC         822         172         112
-
-
-## With t > 0
-    #          FDRsig Pval10.6sig Pval10.8sig
-    # Astro      1462         361         218
-    # Inhib.1      99          13           6
-    # Inhib.2     215           3           0
-    # Inhib.3     314          71          38
-    # Inhib.4     386          91          48
-    # Micro      2171         684         506
-    # MSN.D1.1     80          12           2
-    # MSN.D1.2     58          10           0
-    # MSN.D1.3     79          18          11
-    # MSN.D1.4   1027         128          47
-    # MSN.D2.1    122          23           9
-    # MSN.D2.2    300          32           9
-    # Oligo      1384         360         221
-    # OPC         771         170         111
-
-
-
-
-## Save for later
-#eb_contrasts.dlpfc.broad <- eb_contrasts
-eb_list.nac.all <- eb0_list
-corfit.nac.all <- corfit
-
-save(eb_list.nac.all, sce.nac.all.PB, corfit.nac.all,
-     file = 'rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda')
-
-
-
-
-### Top markers to print / potentially test with RNA-scope === === === ===
-load('/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda',
-     verbose=T)
-    # eb_list.nac.all, sce.nac.all.PB, corfit.nac.all
-
-# As above:
-    ## Extract the p-values
-    pvals0_contrasts <- sapply(eb_list.nac.all, function(x) {
-      x$p.value[, 2, drop = FALSE]
-    })
-    rownames(pvals0_contrasts) <- rownames(sce.nac.all.PB)
-    
-    fdrs0_contrasts = apply(pvals0_contrasts, 2, p.adjust, "fdr")
-    
-    ## Extract the tstats
-    t0_contrasts_cell <- sapply(eb_list.nac.all, function(x) {
-      x$t[, 2, drop = FALSE]
-    })
-    rownames(t0_contrasts_cell) <- rownames(sce.nac.all.PB)
-
-    
-# Let's take those with fdr < 0.05
-markerList.PB.manual <- lapply(colnames(fdrs0_contrasts), function(x){
-  rownames(fdrs0_contrasts)[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts_cell[ ,x] > 0]
-})
-names(markerList.PB.manual) <- colnames(fdrs0_contrasts)
-lengths(markerList.PB.manual)
-    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-    #     1462       99      215      314      386     2171       80       58
-    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-    #       79     1027      122      300     1384      771
-
-markerTs.fdr.05 <- lapply(colnames(fdrs0_contrasts), function(x){
-  as.matrix(t0_contrasts_cell[fdrs0_contrasts[ ,x] < 0.05 & t0_contrasts_cell[ ,x] > 0, x])
-})
-
-names(markerTs.fdr.05) <- colnames(fdrs0_contrasts)
-
-markerList.sorted <- lapply(markerTs.fdr.05, function(x){
-  x[,1][order(x, decreasing=TRUE)]
-})
-
-genes2plot <- lapply(markerList.sorted, function(x){head(x, n=20)})
-
-    ## MNT addition: print more for c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
-    genes2plot.more <- lapply(markerList.sorted, function(x){head(x, n=40)})
-    genes2plot.more <- list(genes2plot.more[["Inhib.2"]], genes2plot.more[["MSN.D1.3"]],
-                            genes2plot.more[["MSN.D1.4"]], genes2plot.more[["MSN.D2.2"]])
-    names(genes2plot.more) <- c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
-
-## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
-     verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-    rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo)
-
-# As before, first drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
-
-
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top20markers_logExprs_Apr2020.pdf", height=7.5, width=9.5)
-for(i in 1:length(genes2plot)){
-  print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot[[i]])),
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes2plot[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(genes2plot)[i], " top 20 markers"))
-  )
-}
-dev.off()
-
-
-    ## 'genes2plot.more' (added 10Apr2020):
-    library(grDevices)
-    for(i in names(genes2plot.more)){
-    png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
-      print(
-        plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.more[[i]])),
-                       x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                       add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                    geom = "crossbar", width = 0.3,
-                                                    colour=rep(tableau20[1:14], length(genes2plot.more[[i]]))) +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-          ggtitle(label=paste0(i, " top 40 markers"))
-      )
-    dev.off()
-    }
-    
-## What if just subset on protein-coding first?
-library(rtracklayer)
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/zref_genes-GTF-fromGRCh38-3.0.0_33538.rda", verbose=T)
-    # gtf
-
-table(gtf$gene_biotype)
-    #        antisense       IG_C_gene IG_C_pseudogene       IG_D_gene       IG_J_gene
-    #             5497              14               9              37              18
-    #  IG_J_pseudogene       IG_V_gene IG_V_pseudogene         lincRNA  protein_coding
-    #                3             144             188            7484           19912
-    #        TR_C_gene       TR_D_gene       TR_J_gene TR_J_pseudogene       TR_V_gene
-    #                6               4              79               4             106
-    #  TR_V_pseudogene
-    #               33
-
-table(rownames(sce.nac.all) %in% gtf$gene_name)
-    # FALSE  TRUE
-    #    48 33490    - probably because of the `uniquify`
-table(rowData(sce.nac.all)$Symbol %in% gtf$gene_name)
-    #  TRUE
-    # 33538
-
-# Are they the same order?
-table(rowData(sce.nac.all)$ID == gtf$gene_id) # all TRUE
-
-table(!rowSums(assay(sce.nac.all, "counts"))==0)  # 29236     - good
-keepVec <- !rowSums(assay(sce.nac.all, "counts"))==0
-
-gtf <- gtf[keepVec, ]
-# Then
-table(gtf$gene_id == rowData(sce.nac.all.PB)$ID)  # all 29236 TRUE      - good
-
-## Make pt-coding list
-markerList.sorted.pt <- lapply(markerList.sorted, function(x){
-  x[names(x) %in% gtf$gene_name[gtf$gene_biotype=="protein_coding"]]
-})
-
-lengths(markerList.sorted)
-
-lengths(markerList.sorted.pt)
-    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-    #      822       59      156      178      243     1583       28       32
-    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-    #       36      324       52      103      740      409
-
-
-
-genes2plot.pt <- lapply(markerList.sorted.pt, function(x){head(x, n=20)})
-
-    ## MNT addition: print more for c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
-    genes2plot.pt.more <- lapply(markerList.sorted.pt, function(x){head(x, n=40)})
-    genes2plot.pt.more <- list(genes2plot.pt.more[["Inhib.2"]], genes2plot.pt.more[["MSN.D1.3"]],
-                            genes2plot.pt.more[["MSN.D1.4"]], genes2plot.pt.more[["MSN.D2.2"]])
-    names(genes2plot.pt.more) <- c("Inhib.2","MSN.D1.3", "MSN.D1.4", "MSN.D2.2")
-
-# Plot these
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top20markers_logExprs_pt-coding_Apr2020.pdf", height=7.5, width=9.5)
-for(i in 1:length(genes2plot.pt)){
-  print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt[[i]])),
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes2plot.pt[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(genes2plot.pt)[i], " top 20 protein-coding markers"))
-  )
-}
-dev.off()
-
-    ## 'genes2plot.pt.more' (added 10Apr2020):
-    for(i in names(genes2plot.pt.more)){
-      png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/zold_regionSpecific_NAc-ALL-n5_top40markers-",i,"_logExprs_pt-coding_Apr2020.png"), height=1900, width=1200)
-      print(
-        plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(names(genes2plot.pt.more[[i]])),
-                       x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                       add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                    geom = "crossbar", width = 0.3,
-                                                    colour=rep(tableau20[1:14], length(genes2plot.pt.more[[i]]))) +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-          ggtitle(label=paste0(i, " top 40 protein-coding markers"))
-      )
-      dev.off()
-    }
-
-
-
-## How much they intersect with the top protein-coding-agnostic set?
-sapply(names(genes2plot), function(x){intersect(names(genes2plot[[x]]), names(genes2plot.pt[[x]]))})
-    #$Astro
-      # [1] "FEZF1"   "KCNJ8"   "RASL12"  "TFAP2C"  "GLI1"    "PRODH"   "S1PR1"
-      # [8] "TMPRSS3" "SLC2A4"  "IGFN1"   "IL33"
-      # 
-    # $Inhib.1
-      # [1] "NPY"        "PNOC"       "ST6GALNAC2" "SST"        "HDAC4"
-      # [6] "FBN2"       "KRTAP5-10"  "DDC"        "NOS1"       "DRD5"
-      # [11] "SLC27A6"    "GPR156"     "TLL2"       "PCDH18"     "GDPD2"
-      # 
-    # $Inhib.2
-      # [1] "NDUFB6" "PPP3CB" "SLC5A7" "SP8"    "BMP3"   "ACBD6"  "ACAT1"  "FCRL4"
-      # [9] "VIP"    "SPTLC1" "FRMD7"  "CDC5L"  "ECEL1"  "TTC37"  "CDK14"  "TNS4"
-      # [17] "KCNH5"  "ZRANB2"
-      # 
-    # $Inhib.3
-      # [1] "EXOC1L" "LMO7DN" "SP5"    "OR2I1P" "PTHLH"  "PLSCR5" "KMO"    "DOK7"
-      # 
-    # $Inhib.4
-      # [1] "CER1"    "TRH"     "RORC"    "CHRNA3"  "NPR3"    "COL2A1"  "GLP1R"
-      # [8] "CBLN1"   "TAC3"    "COL13A1" "RERGL"
-      # 
-    # $Micro
-      # [1] "SUCNR1"   "FCGR2B"   "HHEX"     "MPEG1"    "LILRA4"   "SERPINA1"
-      # [7] "TAL1"     "VSIG4"    "GAPT"     "GIMAP7"   "NCF4"     "CEBPE"
-      # [13] "CD300C"   "CCR1"     "LILRB2"   "RGS18"
-      # 
-    # $MSN.D1.1
-      # [1] "CAPSL"    "C15orf62" "HBD"      "CCIN"     "SHISA8"   "SCGB1D4"  "FOXD4L4"
-      # [8] "NPFFR2"   "GABRQ"
-      # 
-    # $MSN.D1.2
-      # [1] "TMEM131" "EBF1"    "UMODL1"  "PCDHB1"  "DIO3"    "DWORF"   "TAF1L"
-      # [8] "PDCD1"   "MAT1A"   "NCOA1"   "ASPG"    "TTC34"   "GIMAP5"
-      # 
-    # $MSN.D1.3
-      # [1] "XDH"     "GPR26"   "LRRC55"  "RXFP1"   "LECT2"   "CCDC172"
-      # 
-    # $MSN.D1.4
-      # [1] "OR51E2"  "IL17C"   "DLX4"    "CAVIN3"  "MINDY4B" "MCIDAS"  "MSLNL"
-      # 
-    # $MSN.D2.1
-      # [1] "TH"      "ATP10A"  "C3orf52" "TTN"     "MROH2A"
-      # 
-    # $MSN.D2.2
-      # [1] "SDR16C5"  "TMPRSS13"
-      # 
-    # $Oligo
-      # [1] "FFAR1"      "FCRLA"      "NGFR"       "TMEM88B"    "IFNA2"
-      # [6] "GPIHBP1"    "AC034102.2" "HOXD1"
-      # 
-    # $OPC
-      # [1] "CPXM1"   "DCAF4L2" "KCNG4"   "TM4SF1"  "KLF17"   "NR0B1"   "FMO3"
-      # [8] "TIMP4"   "GPR17"   "CYP2A13" "EMILIN3" "CSPG4"   "BGN"     "GDF6"
-      # [15] "HMX1"
-
-
-# Write 'genes2plot's to a csv
-names(genes2plot.pt) <- paste0(names(genes2plot.pt),"_pt")
-top20genes <- cbind(sapply(genes2plot, names), sapply(genes2plot.pt, names))
-top20genes <- top20genes[ ,sort(colnames(top20genes))]
-
-write.csv(top20genes, file="tables/top20genesLists_NAc-n5_cellType.final.csv")
-
-
-
-
-## Markers pulled from Gokce, et al (doi: 10.1016/j.celrep.2016.06.059) =========
-markers.gokce <- list(
-  "D1.MSN" = c("Tac1","Drd1","Asic4","Slc35d3","Pdyn","Sfxn1","Nrxn1"),
-                      # ^ edited from 'Drd1a', Accn4
-  "D2.MSN" = c("Penk","Adora2a","Drd2","Gpr6","Grik3","Gpr52","Gnas"),
-                      # ^ edited from 'A2a'
-  "D1.Pcdh8" = c("Pcdh8","Adarb2","Tacr1","Tac1" ,"Nrxn2","Sema3e","Sema4a","Sema5a","Sema5b",
-                 "Sema6d","Pcdh7","Ptprg","Ptprm","Ptpro","Ptpru","TAC3","Elavl4",
-                                                                  # ^ edited from 'Tac2'
-                 "Khdrbs3","Rbm20","Aff2","Lrpprc","Celf4",
-                 # Depleted set:
-                 "Nlgn1", "Calb1"),
-  "D1.Foxp1" = c("Foxp1","Camk4"),
-  "D2.Htr7" = c("Htr7","AGTR1","Penk","Tac1","Ptprt","Ngfr","Grik3","Cacng5",
-                        # ^ edited from 'Agtr1a'
-                "Tmeff2","Sox9","Sp8","Runx1","Mafb","Litaf",
-                # Depleted set:
-                "Cacna2d3","Synpr"),
-  "D2.Synpr" = c("Synpr"),
-  "gradient" = c("Dner","Cxcl14","Tnnt1","Meis2","Cartpt","Kcnip1","Calb1",
-                 "Crym","Cnr1","Nnat","Gfra1","Wfs1","Th")
-)
-
-markers.gokce <- lapply(markers.gokce, toupper)
-
-# Load SCE
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
-     verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-
-
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
-
-# Which are there?
-sapply(markers.gokce, function(x){x %in% rownames(sce.nac.all)})  # most of them
-
-lapply(sapply(markers.gokce, function(x){x %in% rownames(sce.nac.all)}),  # most of them
-       function(n){which(n==FALSE)})
-    # So 'Drd1a', 'Accn4', 'A2a',       'Tac2',       'Agtr1a'
-
-
-    # Exploring/identifying homologous gene names ====
-    load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
-    # sce.rat.PBsub, sce.hsap.PBsub, Readme
-    
-        # 'sce.hsap.PBsub' has 'HomoloGene.ID'
-
-    hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
-                     as.is=TRUE)
-    
-    hom_mm <- hom[hom$Common.Organism.Name == "mouse, laboratory", ]
-    
-    c('Drd1a', 'Accn4', 'A2a','Tac2','Agtr1a') %in% hom_mm$Symbol
-    # FALSE     FALSE   FALSE   TRUE    TRUE
-    # Drd1      Asic4  Adora2a
-    
-    # Then for 'Tac2'
-    hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Tac2")]  # 7560
-    rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==7560] # none...
-    
-    hom_hs <- hom[hom$Common.Organism.Name == "human", ]
-    hom_hs[hom_hs$HomoloGene.ID==7560, ]  # symbol is TAC3
-    'TAC3' %in% rowData(sce.nac.all)$Symbol # TRUE
-        # ahhh so this one just didn't have a shared homolog with rat, I guess
-    
-    
-    hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Agtr1a")]
-    rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==3556]
-        # AGTR1
-    # end find synonyms =======
-
-
-
-
-## Let's make a new dir and files for these graphics, since these are of various length
-#dir.create("pdfs/exploration/gokce-etal_markers/")
-
-for(i in names(markers.gokce)){
-  pdf(paste0("./pdfs/exploration/gokce-etal_markers/",i,"-mouseStriatum-markers_human-NAcExpression_Apr2020.pdf"), height=2.6, width=3)
-  # Print each gene's expression in its own page of the pdf
-  for(g in 1:length(markers.gokce[[i]])){
-    print(
-      plotExpression(sce.nac.all, exprs_values = "logcounts", features=c(markers.gokce[[i]][g]),
-                     x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
-                     add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                  geom = "crossbar", width = 0.3,
-                                                  colour=tableau20[1:14]) +
-        theme(axis.text.x = element_text(angle=90, hjust=1, size=5.5), axis.text.y = element_text(size=7.5),
-              plot.title = element_text(size=7)) +  
-        ggtitle(label=paste0(i, " markers in human NAc subclusters: ", markers.gokce[[i]][g]))
-    )
-  }
-  dev.off()
-}
-
-
-    
-    
-    ### ========================== ###
-    ### SINGLE-NUCLEUS-LEVEL TESTS ###
-    ### ========================== ###
-
-
-### Single-nucleus level marker detection? =========
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
-     verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
+
+table(sce.nac$cellType)
+    #  ambig.glial_A  ambig.glial_B        Astro_A        Astro_B drop.doublet_A drop.doublet_B 
+    #             63             22             99           1000             36             52 
+    # drop.doublet_C drop.doublet_D    drop.lowNTx        Inhib_A        Inhib_B        Inhib_C 
+    #             41             21            529            251             40             98 
+    #        Inhib_D        Inhib_E          Micro       MSN.D1_A       MSN.D1_B       MSN.D1_C 
+    #            240             37            429           3927            239            283 
+    #       MSN.D1_D       MSN.D1_E       MSN.D1_F       MSN.D2_A       MSN.D2_B       MSN.D2_C 
+    #            718            638             86           4262            285            314 
+    #       MSN.D2_D        Oligo_A        Oligo_B            OPC        OPC_COP 
+    #             58            988           5146            651             18 
+
+# First drop the "drop." clusters (669 nuclei, total)
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
     
 # Drop genes with all 0's
-sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]
-    ## keeps 29236 genes
+sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]
+    ## keeps 29680 genes
 
 
-## Traditional t-test with design as in PB'd/limma approach ===
-#mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
-    # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
-    # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
-mod <- with(colData(sce.nac.all), model.matrix(~ processDate))
-mod <- mod[ ,-1]
+## Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+# First 'hold' the MBN 'logcounts' for printing
+sce.hold <- sce.nac
 
-markers.nac.t.design <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
-                                    assay.type="logcounts", design=mod, test="t",
-                                    direction="up", pval.type="all", full.stats=T)
+assay(sce.nac, "logcounts") <- NULL
+sizeFactors(sce.nac) <- NULL
+sce.nac <- logNormCounts(sce.nac)
 
-sapply(markers.nac.t.design, function(x){table(x$FDR<0.05)})
-    #      Astro Inhib.1 Inhib.2 Inhib.3 Inhib.4 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3
-    # FALSE 28405   28896   29057   28980   28953 27819    29154    28941    29149
-    # TRUE    831     340     179     256     283  1417       82      295       87
-    #       MSN.D1.4 MSN.D2.1 MSN.D2.2 Oligo   OPC
-    # FALSE    29175    29006    29170 28743 28864
-    # TRUE        61      230       66   493   372
 
+### First make a list of Boolean param / cell subtype ===
+# Will use this to assess more 'valid', non-noise-driving markers
+cellSubtype.idx <- splitit(sce.nac$cellType)
+medianNon0.nac <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.nac, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+sapply(medianNon0.nac, table)
+
+
+## Traditional t-test implementation ===
+mod <- with(colData(sce.nac), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+# Run pairwise t-tests
+markers.nac.t.pw <- findMarkers(sce.nac, groups=sce.nac$cellType,
+                                assay.type="logcounts", design=mod, test="t",
+                                direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.nac.t.pw, function(x){table(x$FDR<0.05)})
+
+    ### Exploration: What are the 'ambig.glial's? ====
+    ## For identification/annotation of those 'ambig.glial' clusters, check out some top markers:
+    prelimMarkers <- lapply(markers.nac.t.pw, function(x){rownames(x)[x$FDR<0.05]})
+    lengths(prelimMarkers)
+    # ambig.glial_A ambig.glial_B       Astro_A       Astro_B       Inhib_A       Inhib_B 
+    #            43           509           444           419           183           164 
+    #       Inhib_C       Inhib_D       Inhib_E         Micro      MSN.D1_A      MSN.D1_B 
+    #           137            80           206           547            12            22 
+    #      MSN.D1_C      MSN.D1_D      MSN.D1_E      MSN.D1_F      MSN.D2_A      MSN.D2_B 
+    #            26            32            55            76            21            15 
+    #      MSN.D2_C      MSN.D2_D       Oligo_A       Oligo_B           OPC       OPC_COP 
+    #           156           127           256            62           102           169
+
+    # (ran interactively just for these 'ambig.glial' clusters)
+    sapply(medianNon0.nac, table)
+    #       ambig.glial_A ambig.glial_B
+    # FALSE         29581         28549
+    # TRUE             99          1131
+    
+    head(prelimMarkers[["ambig.glial_A"]],n=40)
+        # [1] "AC063949.2" "AC002480.3" "LINC00958"  "ASGR2"      "AC008687.4" "AC048383.1"
+        # [7] "AL139351.1" "AC007952.7" "FOSL1"      "AL359636.2" "OR3A2"      "SNX20"     
+        # [13] "SMG8"       "TGIF2"      "AC080078.1" "SH2D2A"     "HIST1H1B"   "FABP12"    
+        # [19] "LINCMD1"    "AC093627.7" "ZNF503"     "SENCR"      "TSPEAR-AS2" "ADGRF1"    
+        # [25] "IL6"        "SAGE1"      "OSM"        "AL359979.1" "CHAT"       "AP000977.1"
+        # [31] "AC006974.2" "LINC02422"  "C2orf91"    "ANKRD22"    "AL590764.1" "URAD"      
+        # [37] "Z84488.2"   "GRK1"       "FOXN4"      "KLK15"     
+            # None of these 99 non-0-median-expressing genes are pairwise-FDR<0.05 markers for this cluster...
+            i <- "ambig.glial_A"
+            table(markers.nac.t.pw[[i]]$FDR < 0.5 & markers.nac.t.pw[[i]]$non0median==TRUE)
+                # Even none here...
+            plotExpressionCustom(sce = sce.hold,
+                                 features = head(prelimMarkers[[i]][-c(grep("^AC", prelimMarkers[[i]]),
+                                                                       grep("^AL", prelimMarkers[[i]]))],n=12), 
+                                 features_name = i,
+                                 anno_name = "cellType",
+                                 ncol=4, point_alpha=0.4) +
+              scale_color_manual(values = cell_colors.nac)
+            
+      head(rownames(markers.nac.t.pw[[i]])[markers.nac.t.pw[[i]]$non0median==TRUE],n=12)
+          # [1] "AC244021.1" "FP236383.1" "FP671120.1" "FRMD4A"     "SYNDIG1"    "BACH1"     
+          # [7] "SSH2"       "SLC8A1"     "LDLRAD4"    "MAML2"      "PLXDC2"     "MAML3"
+              # Plot these:
+            plotExpressionCustom(sce = sce.hold,
+                                 features = head(rownames(markers.nac.t.pw[[i]])[markers.nac.t.pw[[i]]$non0median==TRUE],n=12), 
+                                 features_name = i,
+                                 anno_name = "cellType",
+                                 ncol=4, point_alpha=0.4) +
+              scale_color_manual(values = cell_colors.nac)
+            
+              # -> Since it's pretty unclear from the literature as to what these might be, and since
+              #    they're quite low in transcriptional activity, let's call 'Micro_resting'
+
+            
+    i <- "ambig.glial_B"
+    head(prelimMarkers[[i]],n=40)
+        # [1] "CD163"      "F13A1"      "MS4A4E"     "MS4A4A"     "LILRB5"     "TGFBI"     
+        # [7] "MS4A6A"     "CD209"      "SIGLEC1"    "MRC1"       "MARCO"      "STAB1"     
+        # [13] "HOXB-AS1"   "CD28"       "IQGAP2"     "FCGR2B"     "MS4A14"     "IFI44L"    
+        # [19] "ADGRG6"     "CCL8"       "AP000812.1" "CASP4"      "MAFB"       "LINC01839" 
+        # [25] "VSIG4"      "AP001636.3" "LINC00278"  "KIR2DL4"    "CD163L1"    "LYVE1"     
+        # [31] "LY96"       "JAML"       "MPEG1"      "MMP2-AS1"   "GYPC"       "FPR3"      
+        # [37] "MYO7A"      "CD200R1"    "TNFRSF14"   "FCMR"
+    plotExpressionCustom(sce = sce.hold,
+                         features = c("AIF1","SIGLEC1", "CD44","EGR3", "MPEG1","CD28",
+                                      # Broad microglial markers (used for annotation)
+                                      "CD74", "CSF1R"), 
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=4, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.nac)
+        # --> These are definitely a macrophage or microglia subtype; former: SIGLEC1 (aka CD169)
+        #     - is an infiltrating-Mphage-specific marker: https://doi.org/10.1038/s41583-018-0057-5
+        #     -> Call 'Macro_infilt'
+    # End prelim marker exploration ======
+    
 
 ## WMW: Blocking on sample (this test doesn't take 'design=' argument) ===
-markers.nac.wilcox.block <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
-                                        assay.type="logcounts", block=sce.nac.all$donor, test="wilcox",
+markers.nac.wilcox.block <- findMarkers(sce.nac, groups=sce.nac$cellType,
+                                        assay.type="logcounts", block=sce.nac$donor, test="wilcox",
                                         direction="up", pval.type="all", full.stats=T)
 
 
@@ -594,22 +178,32 @@ sapply(markers.nac.wilcox.block, function(x){table(x$FDR<0.05)})
 
 
 ## Binomial ===
-markers.nac.binom.block <- findMarkers(sce.nac.all, groups=sce.nac.all$cellType.final,
-                                       assay.type="logcounts", block=sce.nac.all$donor, test="binom",
+markers.nac.binom.block <- findMarkers(sce.nac, groups=sce.nac$cellType,
+                                       assay.type="logcounts", block=sce.nac$donor, test="binom",
                                        direction="up", pval.type="all", full.stats=T)
 
 
 sapply(markers.nac.binom.block, function(x){table(x$FDR<0.05)})
     ## even worse than WMW... basically none
 
+# Add respective 'non0median' column to the stats for each set of markers
+for(i in names(markers.nac.t.pw)){
+  markers.nac.t.pw[[i]] <- cbind(markers.nac.t.pw[[i]],
+                                 medianNon0.nac[[i]][match(rownames(markers.nac.t.pw[[i]]),
+                                                           names(medianNon0.nac[[i]]))])
+  colnames(markers.nac.t.pw[[i]])[27] <- "non0median"
+}
+
+sapply(markers.nac.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
+
 
 ## Save all these for future reference
-save(markers.nac.t.design, #markers.nac.wilcox.block, markers.nac.binom.block,
+save(markers.nac.t.pw, #markers.nac.wilcox.block, markers.nac.binom.block,
      file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
 
 
 ## Print these to PNGs
-markerList.t <- lapply(markers.nac.t.design, function(x){
+markerList.t <- lapply(markers.nac.t.pw, function(x){
     rownames(x)[x$FDR < 0.05]
   }
 )
@@ -621,7 +215,7 @@ genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
 for(i in names(genes.top40.t)){
   png(paste0("pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level-top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
                    x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
@@ -639,14 +233,14 @@ for(i in names(genes.top40.t)){
 ## Load SCE with new info
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 # First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 # Drop genes with all 0's
-sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]  ## keeps 29236 genes
+sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]  ## keeps 29236 genes
 
 
 ## Traditional t-test with design as in PB'd/limma approach ===
@@ -654,30 +248,30 @@ sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]  ## keep
 # mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
 
 
-#mod <- with(colData(sce.nac.all), model.matrix(~ processDate + donor))
+#mod <- with(colData(sce.nac), model.matrix(~ processDate + donor))
     # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
     # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
-mod <- with(colData(sce.nac.all), model.matrix(~ processDate))
+mod <- with(colData(sce.nac), model.matrix(~ processDate))
 mod <- mod[ ,-1]
 
 
 markers.nac.t.1vAll <- list()
-for(i in levels(sce.nac.all$cellType.final)){
+for(i in levels(sce.nac$cellType)){
   # Make temporary contrast
-  sce.nac.all$contrast <- ifelse(sce.nac.all$cellType.final==i, 1, 0)
+  sce.nac$contrast <- ifelse(sce.nac$cellType==i, 1, 0)
   # Test cluster vs. all
-  markers.nac.t.1vAll[[i]] <- findMarkers(sce.nac.all, groups=sce.nac.all$contrast,
+  markers.nac.t.1vAll[[i]] <- findMarkers(sce.nac, groups=sce.nac$contrast,
                                           assay.type="logcounts", design=mod, test="t",
                                           direction="up", pval.type="all", full.stats=T)
 }
 
     ## Then, temp set of stats to get the standardized logFC
     temp.1vAll <- list()
-    for(i in levels(sce.nac.all$cellType.final)){
+    for(i in levels(sce.nac$cellType)){
       # Make temporary contrast
-      sce.nac.all$contrast <- ifelse(sce.nac.all$cellType.final==i, 1, 0)
+      sce.nac$contrast <- ifelse(sce.nac$cellType==i, 1, 0)
       # Test cluster vs. all
-      temp.1vAll[[i]] <- findMarkers(sce.nac.all, groups=sce.nac.all$contrast,
+      temp.1vAll[[i]] <- findMarkers(sce.nac, groups=sce.nac$contrast,
                                      assay.type="logcounts", design=mod, test="t",
                                      std.lfc=TRUE,
                                      direction="up", pval.type="all", full.stats=T)
@@ -707,7 +301,7 @@ for(i in names(temp.1vAll)){
 
 
 ## Let's save this along with the previous pairwise results
-save(markers.nac.t.design, markers.nac.t.1vAll,
+save(markers.nac.t.pw, markers.nac.t.1vAll,
      file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
 
 
@@ -722,7 +316,7 @@ genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 for(i in names(genes.top40.t.1vAll)){
   png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
+    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
                    x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
@@ -761,14 +355,14 @@ write.csv(top40genes, file="tables/top40genesLists_NAc-n5_cellType.final_SN-LEVE
 
 ## Make marker array for Supp figure (MNT suggested panel A) ===========
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    #sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    #sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.design, markers.nac.t.1vAll
+    # markers.nac.t.pw, markers.nac.t.1vAll
 
 # First make interneuron subset
-sce.nac.int <- sce.nac.all[ ,grep("Inhib.", sce.nac.all$cellType.final)]
-sce.nac.int$cellType.final <- droplevels(sce.nac.int$cellType.final)
+sce.nac.int <- sce.nac[ ,grep("Inhib.", sce.nac$cellType)]
+sce.nac.int$cellType <- droplevels(sce.nac.int$cellType)
 
 
 # Take top four for 4 inhib. interneuron pops
@@ -820,12 +414,12 @@ dev.off()
 genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
 
 # First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 pdf("pdfs/pubFigures/suppFig_NAc_other-MSN-markers_MNTSep2020.pdf", height=4.5, width=6.5)
 print(
-  plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes2print,
+  plotExpression(sce.nac, exprs_values = "logcounts", features=genes2print,
                  x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=1.0, ncol=2,
                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                               geom = "crossbar", width = 0.3,
@@ -842,10 +436,10 @@ dev.off()
 
 ## Top markers for D1.4 / D2.2 often co-expressed ===
 load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.design, markers.nac.t.1vAll
+    # markers.nac.t.pw, markers.nac.t.1vAll
 
-cell.idx <- splitit(sce.nac.all$cellType.final)
-dat <- as.matrix(assay(sce.nac.all, "logcounts"))
+cell.idx <- splitit(sce.nac$cellType)
+dat <- as.matrix(assay(sce.nac, "logcounts"))
 genes <- head(rownames(markers.nac.t.1vAll[["MSN.D1.4"]]), n=40)
 
 pdf('pdfs/pubFigures/suppFigure_heatmap-Exprs_NAc-n5_top40-D1.4markers-1vAlltest_MNTSep2020.pdf',
@@ -864,27 +458,27 @@ dev.off()
 ### MNT add 18Nov2020 =================================
 # -> What if add param/requirement that for any given subcluster, median expression has to > 0?
 load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.design, markers.nac.t.1vAll
+    # markers.nac.t.pw, markers.nac.t.1vAll
 
 ## Load SCE 
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
-table(sce.nac.all$cellType.final)
+table(sce.nac$cellType)
 
 # First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 # Remove 0 genes across all nuclei
-sce.nac.all <- sce.nac.all[!rowSums(assay(sce.nac.all, "counts"))==0, ]
+sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]
 
 
 ## Make list of Boolean param / cell subtype ===
-cellSubtype.idx <- splitit(sce.nac.all$cellType.final)
+cellSubtype.idx <- splitit(sce.nac$cellType)
 medianNon0.idx <- lapply(cellSubtype.idx, function(x){
-  apply(as.matrix(assay(sce.nac.all, "logcounts")), 1, function(y){
+  apply(as.matrix(assay(sce.nac, "logcounts")), 1, function(y){
     median(y[x]) > 0
   })
 })
@@ -923,7 +517,7 @@ genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 for(i in names(genes.top40.t)){
   png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_1vALL_top40markers-REFINED-",gsub(":",".",i),"_logExprs_Nov2020.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
                    x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
@@ -936,16 +530,16 @@ for(i in names(genes.top40.t)){
 
 
 
-## Do the same with the pairwise result ('markers.nac.t.design') === === ===
+## Do the same with the pairwise result ('markers.nac.t.pw') === === ===
 # Add these to the stats for each set of markers
-for(i in names(markers.nac.t.design)){
-  markers.nac.t.design[[i]] <- cbind(markers.nac.t.design[[i]],
-                                     medianNon0.idx[[i]][match(rownames(markers.nac.t.design[[i]]),
+for(i in names(markers.nac.t.pw)){
+  markers.nac.t.pw[[i]] <- cbind(markers.nac.t.pw[[i]],
+                                     medianNon0.idx[[i]][match(rownames(markers.nac.t.pw[[i]]),
                                                                names(medianNon0.idx[[i]]))])
-  colnames(markers.nac.t.design[[i]])[16] <- "non0median"
+  colnames(markers.nac.t.pw[[i]])[16] <- "non0median"
 }
 
-markerList.t <- lapply(markers.nac.t.design, function(x){
+markerList.t <- lapply(markers.nac.t.pw, function(x){
   rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
   }
 )
@@ -967,7 +561,7 @@ genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
 for(i in names(genes.top40.t)){
   png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_pairwise_top40markers-REFINED-", i, "_logExprs_Nov2020.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.nac.all, exprs_values = "logcounts", features=genes.top40.t[[i]],
+    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
                    x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
                    add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                                                 geom = "crossbar", width = 0.3,
@@ -1000,14 +594,110 @@ write.csv(top40genes, file="tables/top40genesLists-REFINED_NAc-n5_cellType.final
 
 ## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
 for(s in names(markers.nac.t.1vAll)){
-  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac.all))
+  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac))
 }
 
-save(markers.nac.t.1vAll, markers.nac.t.design, sce.nac.all,
+save(markers.nac.t.1vAll, markers.nac.t.pw, sce.nac,
      file="rdas/markerStats-and-SCE_NAc-n5_sn-level_cleaned_MNTNov2020.rda")
 
 
-
+### (From preprint exploration)
+# ## Markers pulled from Gokce, et al (doi: 10.1016/j.celrep.2016.06.059) =========
+# markers.gokce <- list(
+#   "D1.MSN" = c("Tac1","Drd1","Asic4","Slc35d3","Pdyn","Sfxn1","Nrxn1"),
+#                       # ^ edited from 'Drd1a', Accn4
+#   "D2.MSN" = c("Penk","Adora2a","Drd2","Gpr6","Grik3","Gpr52","Gnas"),
+#                       # ^ edited from 'A2a'
+#   "D1.Pcdh8" = c("Pcdh8","Adarb2","Tacr1","Tac1" ,"Nrxn2","Sema3e","Sema4a","Sema5a","Sema5b",
+#                  "Sema6d","Pcdh7","Ptprg","Ptprm","Ptpro","Ptpru","TAC3","Elavl4",
+#                                                                   # ^ edited from 'Tac2'
+#                  "Khdrbs3","Rbm20","Aff2","Lrpprc","Celf4",
+#                  # Depleted set:
+#                  "Nlgn1", "Calb1"),
+#   "D1.Foxp1" = c("Foxp1","Camk4"),
+#   "D2.Htr7" = c("Htr7","AGTR1","Penk","Tac1","Ptprt","Ngfr","Grik3","Cacng5",
+#                         # ^ edited from 'Agtr1a'
+#                 "Tmeff2","Sox9","Sp8","Runx1","Mafb","Litaf",
+#                 # Depleted set:
+#                 "Cacna2d3","Synpr"),
+#   "D2.Synpr" = c("Synpr"),
+#   "gradient" = c("Dner","Cxcl14","Tnnt1","Meis2","Cartpt","Kcnip1","Calb1",
+#                  "Crym","Cnr1","Nnat","Gfra1","Wfs1","Th")
+# )
+# 
+# markers.gokce <- lapply(markers.gokce, toupper)
+# 
+# # Load SCE
+# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+#      verbose=T)
+#     # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
+# 
+# 
+# # First drop "ambig.lowNtrxts" (93 nuclei)
+# sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+# sce.nac$cellType <- droplevels(sce.nac$cellType)
+# 
+# # Which are there?
+# sapply(markers.gokce, function(x){x %in% rownames(sce.nac)})  # most of them
+# 
+# lapply(sapply(markers.gokce, function(x){x %in% rownames(sce.nac)}),  # most of them
+#        function(n){which(n==FALSE)})
+#     # So 'Drd1a', 'Accn4', 'A2a',       'Tac2',       'Agtr1a'
+# 
+# 
+#     # Exploring/identifying homologous gene names ====
+#     load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
+#     # sce.rat.PBsub, sce.hsap.PBsub, Readme
+#     
+#         # 'sce.hsap.PBsub' has 'HomoloGene.ID'
+# 
+#     hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
+#                      as.is=TRUE)
+#     
+#     hom_mm <- hom[hom$Common.Organism.Name == "mouse, laboratory", ]
+#     
+#     c('Drd1a', 'Accn4', 'A2a','Tac2','Agtr1a') %in% hom_mm$Symbol
+#     # FALSE     FALSE   FALSE   TRUE    TRUE
+#     # Drd1      Asic4  Adora2a
+#     
+#     # Then for 'Tac2'
+#     hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Tac2")]  # 7560
+#     rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==7560] # none...
+#     
+#     hom_hs <- hom[hom$Common.Organism.Name == "human", ]
+#     hom_hs[hom_hs$HomoloGene.ID==7560, ]  # symbol is TAC3
+#     'TAC3' %in% rowData(sce.nac)$Symbol # TRUE
+#         # ahhh so this one just didn't have a shared homolog with rat, I guess
+#     
+#     
+#     hom_mm$HomoloGene.ID[which(hom_mm$Symbol=="Agtr1a")]
+#     rowData(sce.hsap.PBsub)$Symbol[rowData(sce.hsap.PBsub)$HomoloGene.ID==3556]
+#         # AGTR1
+#     # end find synonyms =======
+# 
+# 
+# 
+# 
+# ## Let's make a new dir and files for these graphics, since these are of various length
+# #dir.create("pdfs/exploration/gokce-etal_markers/")
+# 
+# for(i in names(markers.gokce)){
+#   pdf(paste0("./pdfs/exploration/gokce-etal_markers/",i,"-mouseStriatum-markers_human-NAcExpression_Apr2020.pdf"), height=2.6, width=3)
+#   # Print each gene's expression in its own page of the pdf
+#   for(g in 1:length(markers.gokce[[i]])){
+#     print(
+#       plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.gokce[[i]][g]),
+#                      x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7,
+#                      add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+#                                                   geom = "crossbar", width = 0.3,
+#                                                   colour=tableau20[1:14]) +
+#         theme(axis.text.x = element_text(angle=90, hjust=1, size=5.5), axis.text.y = element_text(size=7.5),
+#               plot.title = element_text(size=7)) +  
+#         ggtitle(label=paste0(i, " markers in human NAc subclusters: ", markers.gokce[[i]][g]))
+#     )
+#   }
+#   dev.off()
+# }
 
 
 
