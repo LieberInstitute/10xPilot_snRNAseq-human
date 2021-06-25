@@ -199,7 +199,28 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
         # 50%  1.166  6.252 4.889   - tested findMarkers interactively on these and there are indeed
         # 75%  1.956  6.918 5.006     no real PW markers for prelimClusters 23, 24, 26, 28; can drop
         # 100% 6.708 10.558 5.225   - 29 actually has real markers, including SOX4, BCAN, GPR17, TNS3 (OPC_COP)
-
+    
+    # And total N transcripts / cluster:
+    sapply(clusIndexes, function(x){quantile(sce.nac$sum[x])})
+        #             1         2       3       4        5     6      7        8        9       10
+        # 0%     1774.0   2680.00  2362.0  1951.0  1828.00  2531   3807   4290.0  5246.00   565.00
+        # 25%   21349.0  20138.00 16942.5 12086.0  7261.25 13269  21212  23099.0 12017.75  4231.75
+        # 50%   26944.0  25311.00 20716.0 16269.0  9707.50 16479  27878  29959.5 16953.50  5894.50
+        # 75%   35404.5  33227.75 25313.0 21893.5 12737.75 20451  34620  40725.5 24388.50  7531.75
+        # 100% 114562.0 171929.00 72727.0 70890.0 29548.00 77527 109993 124105.0 65162.00 31312.00
+        #            11        12    13     14        15      16       17      18     19       20
+        # 0%    1197.00   2500.00   101  105.0   7257.00   798.0   635.00  1379.0 1164.0  4534.00
+        # 25%  20204.75  17329.75   289  469.5  21798.25  4049.5  7457.75  8630.0 2566.5 11219.00
+        # 50%  25540.50  22217.00   461  866.0  28172.50  6524.0 10811.50 11284.0 4229.5 13969.50
+        # 75%  33380.75  27756.00   881 1327.5  38033.25  9175.5 15545.00 14231.5 6374.0 17356.75
+        # 100% 92007.00 113864.00 71212 5239.0 118689.00 17601.0 37265.00 29825.0 8855.0 21624.00
+        #            21    22       23       24       25    26    27    28       29
+        # 0%     751.00  1504  7539.00 18719.00  2579.00  3430  4273  3388  9916.00
+        # 25%  12951.25  4268 13242.25 40880.25 14446.50 28996 16622  9667 14691.75
+        # 50%  15630.50  5545 17571.00 49361.00 18832.00 37389 24143 12934 18738.50
+        # 75%  22642.50  6789 25108.25 63095.75 25553.25 45372 35972 15563 24131.25
+        # 100% 73538.00 12537 36220.00 95998.00 80360.00 71127 69839 26000 42806.00
+    
 ### MNT comment 25Jun: skip 'collapsing' of prelimClusters, since several dropped from above QC:
 # # Compute LSFs at this level
 # sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
@@ -274,6 +295,8 @@ markers.mathys.custom = list(
   'inhibitory_neuron' = c('GAD1', 'GAD2', 'SLC32A1'),
   'oligodendrocyte' = c('MBP', 'MOBP', 'PLP1'),
   'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
+  # Post-hoc from interactive marker analysis
+  'differn_committed_OPC' = c("SOX4", "BCAN", "GPR17", "TNS3"),
   'microglia' = c('CD74', 'CSF1R', 'C3'),
   'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
   'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
@@ -333,31 +356,44 @@ save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
 ## Annotate 'prelimCluster's, based on broad cell type markers ===
 annotationTab.nac <- data.frame(cluster=c(1:29))
 annotationTab.nac$cellType <- NA
-annotationTab.nac$cellType[c(1:4,6:7,14,16)] <- paste0("Inhib_", c("A","B","C","D","E","F","G","H"))
-annotationTab.nac$cellType[c(5,12,15)] <- paste0("MSN.D1_", c("A","B","C"))
-annotationTab.nac$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
-annotationTab.nac$cellType[c(13,19)] <- paste0("drop.lowNTx_", c("A","B"))
-annotationTab.nac$cellType[c(17:18,20:21)] <- c("Endo","Mural", "Tcell", "Astro_B")
+annotationTab.nac$cellType[c(4,9,15,25,27)] <- paste0("Inhib_", c("A","B","C","D","E"))
+annotationTab.nac$cellType[c(1,3,6,8,12,21)] <- paste0("MSN.D1_", c("A","B","C","D","E","F"))
+annotationTab.nac$cellType[c(2,7,11,20)] <- paste0("MSN.D2_", c("A","B","C","D"))
+annotationTab.nac$cellType[c(5,10)] <- c("Oligo_A","Oligo_B")
+annotationTab.nac$cellType[c(16,17,22)] <- c("Astro_A","Astro_B","Micro")
+annotationTab.nac$cellType[c(18,29)] <- c("OPC","OPC_COP")
+annotationTab.nac$cellType[c(14,19)] <- c("ambig.glial_A","ambig.glial_B")
+annotationTab.nac$cellType[c(13, 23,24,26,28)] <- c("drop.lowNTx",
+                                                    paste0("drop.doublet_", c("A","B","C","D")))
 
 
 sce.nac$cellType <- annotationTab.nac$cellType[match(sce.nac$prelimCluster,
                                                      annotationTab.nac$cluster)]
 sce.nac$cellType <- factor(sce.nac$cellType)
 
-cell_colors.nac <- cluster_colors[order(as.integer(names(cluster_colors)))]
+cell_colors.nac <- c(tableau20, tableau10medium)[1:29]
 names(cell_colors.nac) <- annotationTab.nac$cellType
 cell_colors.nac
-
+    # MSN.D1_A       MSN.D2_A       MSN.D1_B        Inhib_A        Oligo_A       MSN.D1_C 
+    # "#1F77B4"      "#AEC7E8"      "#FF7F0E"      "#FFBB78"      "#2CA02C"      "#98DF8A" 
+    # MSN.D2_B       MSN.D1_D        Inhib_B        Oligo_B       MSN.D2_C       MSN.D1_E 
+    # "#D62728"      "#FF9896"      "#9467BD"      "#C5B0D5"      "#8C564B"      "#C49C94" 
+    # drop.lowNTx  ambig.glial_A        Inhib_C        Astro_A        Astro_B            OPC 
+    # "#E377C2"      "#F7B6D2"      "#7F7F7F"      "#C7C7C7"      "#BCBD22"      "#DBDB8D" 
+    # ambig.glial_B       MSN.D2_D       MSN.D1_F          Micro drop.doublet_A drop.doublet_B 
+    # "#17BECF"      "#9EDAE5"      "#729ECE"      "#FF9E4A"      "#67BF5C"      "#ED665D" 
+    # Inhib_D drop.doublet_C        Inhib_E drop.doublet_D        OPC_COP 
+    # "#AD8BC9"      "#A8786E"      "#ED97CA"      "#A2A2A2"      "#CDCC5D" 
 
 
 # Save
-save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
+save(sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
 
 ## Re-print marker expression plots with annotated cluster names ===
-pdf("pdfs/revision/regionSpecific_NAc-n8_marker-logExprs_prelimFinalClusters_MNT2021.pdf", height=5, width=9)
+pdf("pdfs/revision/regionSpecific_NAc-n8_marker-logExprs_annotatedClusters_MNT2021.pdf", height=5, width=9)
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpressionCustom(sce = sce.nac,
@@ -369,14 +405,14 @@ for(i in 1:length(markers.mathys.custom)){
 }
 dev.off()
 
-## Optionally, for a cleaner version, drop those 'drop.lowNTx_'s and re-print
-sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
-sce.nac$cellType <- droplevels(sce.nac$cellType)
+    ## Optionally, for a cleaner version, drop those 'drop.[lowNTx/doublet]_'s and re-print
+    sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+    sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 
 
 ## Re-print reducedDims with these annotations (keep the 'drop.' clusters here) ===
-pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-prelimFinalClusters_MNT2021.pdf",width=8)
+pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-annotatedClusters_MNT2021.pdf",width=8)
 plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5) +
   scale_color_manual(values = cell_colors.nac) + labs(colour="Cell type")
 plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5, point_size=2)
@@ -564,7 +600,7 @@ plotExpression(sce.nac, exprs_values = "logcounts", features="HTR7",
 
 
 
-## Session info for 23Jun2021 =============================================
+### Session info for 25Jun2021 ============
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -585,15 +621,14 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] scDblFinder_1.4.0           gridExtra_2.3               dynamicTreeCut_1.63-1      
-# [4] dendextend_1.14.0           jaffelab_0.99.30            rafalib_1.0.0              
-# [7] DropletUtils_1.10.3         batchelor_1.6.2             scran_1.18.5               
-# [10] scater_1.18.6               ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
-# [13] ensembldb_2.14.1            AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
-# [16] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
-# [19] Biobase_2.50.0              GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
-# [22] IRanges_2.24.1              S4Vectors_0.28.1            BiocGenerics_0.36.1        
-# [25] MatrixGenerics_1.2.1        matrixStats_0.58.0         
+#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0           jaffelab_0.99.30           
+# [4] rafalib_1.0.0               DropletUtils_1.10.3         batchelor_1.6.2            
+# [7] scran_1.18.5                scater_1.18.6               ggplot2_3.3.3              
+# [10] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [13] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
+# [16] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
+# [19] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
+# [22] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
 #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
@@ -616,19 +651,19 @@ sessionInfo()
 # [52] XML_3.99-0.6              edgeR_3.32.1              zlibbioc_1.36.0          
 # [55] scales_1.1.1              hms_1.0.0                 ProtGenerics_1.22.0      
 # [58] rhdf5_2.34.0              RColorBrewer_1.1-2        curl_4.3                 
-# [61] memoise_2.0.0             segmented_1.3-3           biomaRt_2.46.3           
-# [64] stringi_1.5.3             RSQLite_2.2.7             BiocParallel_1.24.1      
-# [67] rlang_0.4.10              pkgconfig_2.0.3           bitops_1.0-7             
-# [70] lattice_0.20-41           purrr_0.3.4               Rhdf5lib_1.12.1          
-# [73] labeling_0.4.2            GenomicAlignments_1.26.0  cowplot_1.1.1            
-# [76] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
-# [79] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
-# [82] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
-# [85] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
-# [88] xgboost_1.3.2.1           utf8_1.2.1                BiocFileCache_1.14.0     
+# [61] memoise_2.0.0             gridExtra_2.3             segmented_1.3-3          
+# [64] biomaRt_2.46.3            stringi_1.5.3             RSQLite_2.2.7            
+# [67] BiocParallel_1.24.1       rlang_0.4.10              pkgconfig_2.0.3          
+# [70] bitops_1.0-7              lattice_0.20-41           purrr_0.3.4              
+# [73] Rhdf5lib_1.12.1           labeling_0.4.2            GenomicAlignments_1.26.0 
+# [76] cowplot_1.1.1             bit_4.0.4                 tidyselect_1.1.1         
+# [79] magrittr_2.0.1            R6_2.5.0                  generics_0.1.0           
+# [82] DelayedArray_0.16.3       DBI_1.1.1                 pillar_1.6.0             
+# [85] withr_2.4.2               RCurl_1.98-1.3            tibble_3.1.1             
+# [88] crayon_1.4.1              utf8_1.2.1                BiocFileCache_1.14.0     
 # [91] viridis_0.6.0             progress_1.2.2            locfit_1.5-9.4           
-# [94] grid_4.0.4                data.table_1.14.0         blob_1.2.1               
-# [97] digest_0.6.27             R.utils_2.10.1            openssl_1.4.3            
-# [100] munsell_0.5.0             beeswarm_0.3.1            viridisLite_0.4.0        
-# [103] vipor_0.4.5               askpass_1.1 
+# [94] grid_4.0.4                blob_1.2.1                digest_0.6.27            
+# [97] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
+# [100] beeswarm_0.3.1            viridisLite_0.4.0         vipor_0.4.5              
+# [103] askpass_1.1 
 
