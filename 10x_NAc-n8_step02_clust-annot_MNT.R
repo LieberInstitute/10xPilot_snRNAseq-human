@@ -179,7 +179,7 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
  }
 )
 
-    # Btw: prelimCluster 23, 24, 26 may be doublet-driven:
+    # Btw: prelimCluster 24 & 26, especially, may be doublet-driven, but also 23, 28 & 29:
     round(sapply(clusIndexes, function(x){quantile(sce.nac$doubletScore[x])}), 3)
         #           1      2     3     4     5     6      7     8     9     10    11     12    13
         # 0%    0.000  0.000 0.017 0.000 0.000 0.000  0.027 0.000 0.366  0.000 0.000  0.000 0.000
@@ -199,72 +199,73 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
         # 50%  1.166  6.252 4.889   - tested findMarkers interactively on these and there are indeed
         # 75%  1.956  6.918 5.006     no real PW markers for prelimClusters 23, 24, 26, 28; can drop
         # 100% 6.708 10.558 5.225   - 29 actually has real markers, including SOX4, BCAN, GPR17, TNS3 (OPC_COP)
-    
-# Compute LSFs at this level
-sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
 
-# Normalize with these LSFs
-geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFactors.PB.all + 1)}))
+### MNT comment 25Jun: skip 'collapsing' of prelimClusters, since several dropped from above QC:
+# # Compute LSFs at this level
+# sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
+# 
+# # Normalize with these LSFs
+# geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFactors.PB.all + 1)}))
+# 
+# 
+# ## Perform hierarchical clustering
+# dist.clusCollapsed <- dist(t(geneExprs.temp))
+# tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
+# 
+# dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
+# 
+# # Just for observation
+# myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=8) prelim-kNN-cluster relationships",
+#           cex.main=1, cex.lab=0.8, cex=0.6)
+# 
+# sapply(clusIndexes, function(x) {quantile(sce.nac$sum[x])})
+#     # prelimCluster 13 is definitely a 'drop.lowNTx_'
+# 
+# clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
+#                                minClusterSize=2, deepSplit=1, cutHeight=220)
+# 
+# table(clust.treeCut)
+# unname(clust.treeCut[order.dendrogram(dend)])
+# 
+#     ## Cut at 220, but manually merge others based on other 'cutHeight's
+#      #    (225, 300, 425--for glial)
+# 
+# ## Add new labels to those prelimClusters cut off
+# clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <-
+#   max(clust.treeCut)+c(1:3, 4,4,4, 5:6, 7:9, 10,10,10, 11,11,12,12,13,rep(14,4))
+# 
+# ## Define color pallet
+# cluster_colors <- unique(c(tableau20, tableau10medium)[clust.treeCut[order.dendrogram(dend)]])
+# names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
+# labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
+# 
+# # Print for future reference
+# pdf("pdfs/revision/regionSpecific_NAc-n8_HC-prelimCluster-relationships_MNT2021.pdf")
+# par(cex=1.2, font=2)
+# plot(dend, main="All NAc (n=8) prelim-kNN-cluster relationships")
+# dev.off()
+# 
+# 
+# # Make reference for new cluster assignment
+# clusterRefTab.nac <- data.frame(origClust=order.dendrogram(dend),
+#                                 merged=clust.treeCut[order.dendrogram(dend)])
+# 
+# 
+# # Assign as 'collapsedCluster'
+# sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster, clusterRefTab.nac$origClust)])
 
-
-## Perform hierarchical clustering
-dist.clusCollapsed <- dist(t(geneExprs.temp))
-tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
-
-dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
-
-# Just for observation
-myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=8) prelim-kNN-cluster relationships",
-          cex.main=1, cex.lab=0.8, cex=0.6)
-
-sapply(clusIndexes, function(x) {quantile(sce.nac$sum[x])})
-    # prelimCluster 13 is definitely a 'drop.lowNTx_'
-
-clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                               minClusterSize=2, deepSplit=1, cutHeight=220)
-
-table(clust.treeCut)
-unname(clust.treeCut[order.dendrogram(dend)])
-
-    ## Cut at 220, but manually merge others based on other 'cutHeight's
-     #    (225, 300, 425--for glial)
-
-## Add new labels to those prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <-
-  max(clust.treeCut)+c(1:3, 4,4,4, 5:6, 7:9, 10,10,10, 11,11,12,12,13,rep(14,4))
-
-## Define color pallet
-cluster_colors <- unique(c(tableau20, tableau10medium)[clust.treeCut[order.dendrogram(dend)]])
-names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
-labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
-
-# Print for future reference
-pdf("pdfs/revision/regionSpecific_NAc-n8_HC-prelimCluster-relationships_MNT2021.pdf")
-par(cex=1.2, font=2)
-plot(dend, main="All NAc (n=8) prelim-kNN-cluster relationships")
-dev.off()
-
-
-# Make reference for new cluster assignment
-clusterRefTab.nac <- data.frame(origClust=order.dendrogram(dend),
-                                merged=clust.treeCut[order.dendrogram(dend)])
-
-
-# Assign as 'collapsedCluster'
-sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster, clusterRefTab.nac$origClust)])
-
-# Print some visualizations:
-pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-collapsedClusters_MNT2021.pdf")
-plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="protocol", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="collapsedCluster", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="doubletScore", point_alpha=0.5)
-# And some more informative UMAPs
-plotUMAP(sce.nac, colour_by="sampleID", point_alpha=0.5)
-plotUMAP(sce.nac, colour_by="collapsedCluster", point_alpha=0.5)
-dev.off()
+# # Print some visualizations:    (just print after annotating)
+# pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-collapsedClusters_MNT2021.pdf")
+# plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
+# plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5)
+# plotTSNE(sce.nac, colour_by="protocol", point_alpha=0.5)
+# plotTSNE(sce.nac, colour_by="prelimCluster", point_alpha=0.5)
+# plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5)
+# plotTSNE(sce.nac, colour_by="doubletScore", point_alpha=0.5)
+# # And some more informative UMAPs
+# plotUMAP(sce.nac, colour_by="sampleID", point_alpha=0.5)
+# plotUMAP(sce.nac, colour_by="prelimCluster", point_alpha=0.5)
+# dev.off()
 
 ## Print marker genes for annotation
 markers.mathys.custom = list(
@@ -292,8 +293,7 @@ for(i in 1:length(markers.mathys.custom)){
     plotExpressionCustom(sce = sce.nac,
                          features = markers.mathys.custom[[i]], 
                          features_name = names(markers.mathys.custom)[[i]], 
-                         anno_name = "collapsedCluster")# +
-      #scale_color_manual(values = cell_colors.nac)
+                         anno_name = "collapsedCluster")
   )
 }
 dev.off()
@@ -324,45 +324,80 @@ save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
      file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda")
 
 
-## Annotate clusters, based on broad cell type markers ===
+### MNT Note 25Jun2021 ===
+  #     Since there were only 29 'prelimCluster' from kNN graph-based clustering, and 5 of these
+  #     are being dropped due to doublet ID/low Tx-driven clustering, we are not not utilizing any
+  #     hierarchical clustering like with the other regions for a 'collapsedCluster' column ===
+
+
+## Annotate 'prelimCluster's, based on broad cell type markers ===
+annotationTab.nac <- data.frame(cluster=c(1:29))
+annotationTab.nac$cellType <- NA
+annotationTab.nac$cellType[c(1:4,6:7,14,16)] <- paste0("Inhib_", c("A","B","C","D","E","F","G","H"))
+annotationTab.nac$cellType[c(5,12,15)] <- paste0("MSN.D1_", c("A","B","C"))
+annotationTab.nac$cellType[c(8:11)] <- c("Astro_A", "Oligo", "OPC", "Micro")
+annotationTab.nac$cellType[c(13,19)] <- paste0("drop.lowNTx_", c("A","B"))
+annotationTab.nac$cellType[c(17:18,20:21)] <- c("Endo","Mural", "Tcell", "Astro_B")
+
+
+sce.nac$cellType <- annotationTab.nac$cellType[match(sce.nac$prelimCluster,
+                                                     annotationTab.nac$cluster)]
+sce.nac$cellType <- factor(sce.nac$cellType)
+
+cell_colors.nac <- cluster_colors[order(as.integer(names(cluster_colors)))]
+names(cell_colors.nac) <- annotationTab.nac$cellType
+cell_colors.nac
 
 
 
-# Re-print marker expression with cell type labels and dropping 'ambig.lowNtrxts' cluster
-table(sce.dlpfc$cellType.split)
+# Save
+save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac,
+     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
-# First drop "Ambig.lowNtrxts" (93 nuclei)
-sce.nac <- sce.nac[ ,sce.nac$cellType.split != "ambig.lowNtrxts"]
-sce.nac$cellType.split <- droplevels(sce.nac$cellType.split)
 
-pdf("pdfs/revision/regionSpecific_NAc-ALL-n5_marker-logExprs_collapsedClusters_Mar2020.pdf", height=6, width=12)
+
+## Re-print marker expression plots with annotated cluster names ===
+pdf("pdfs/revision/regionSpecific_NAc-n8_marker-logExprs_prelimFinalClusters_MNT2021.pdf", height=5, width=9)
 for(i in 1:length(markers.mathys.custom)){
   print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-                   x="cellType.split", colour_by="cellType.split", point_alpha=0.5, point_size=.7,
-                   add_legend=F) +
-      stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median, geom = "crossbar", 
-                   width = 0.3, colour=rep(tableau20[1:15], length(markers.mathys.custom[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-      ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
+    plotExpressionCustom(sce = sce.nac,
+                         features = markers.mathys.custom[[i]], 
+                         features_name = names(markers.mathys.custom)[[i]], 
+                         anno_name = "cellType") +
+      scale_color_manual(values = cell_colors.nac)
   )
 }
 dev.off()
 
+## Optionally, for a cleaner version, drop those 'drop.lowNTx_'s and re-print
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
-## Re-print some reducedDims with this information
-#pdf("pdfs/zold_regionSpecific_NAc-ALL-n5_reducedDims-with-collapsedClusters_Apr2020.pdf")
-pdf("pdfs/revision/regionSpecific_NAc-ALL-n5_reducedDims-with-cellType.final_Apr2020.pdf")
-plotReducedDim(sce.nac, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.nac, colour_by="processDate", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac, colour_by="sample", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac, colour_by="cellType", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-#plotTSNE(sce.nac, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-plotTSNE(sce.nac, colour_by="sum", point_size=3.5, point_alpha=0.5) + ggtitle("t-SNE on opt PCs")
-# UMAP
-#plotUMAP(sce.nac, colour_by="cellType.split", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
-plotUMAP(sce.nac, colour_by="cellType.final", point_size=3.5, point_alpha=0.5) + ggtitle("UMAP on opt PCs")
+
+
+## Re-print reducedDims with these annotations (keep the 'drop.' clusters here) ===
+pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-prelimFinalClusters_MNT2021.pdf",width=8)
+plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="cellType", point_alpha=0.5) +
+  scale_color_manual(values = cell_colors.nac) + labs(colour="Cell type")
+plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5, point_size=2)
+plotTSNE(sce.nac, colour_by="protocol", point_alpha=0.5, point_size=2)
+plotTSNE(sce.nac, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5, point_size=2)
+plotTSNE(sce.nac, colour_by="cellType", text_by="cellType",
+         text_size=3, point_alpha=0.5, point_size=2) +
+  scale_color_manual(values = cell_colors.nac,
+                     labels=paste0(levels(sce.nac$cellType)," (",table(sce.nac$cellType),")")) +
+  labs(colour="Cell type")
+plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5, point_size=2)
+plotTSNE(sce.nac, colour_by="doubletScore", point_alpha=0.5, point_size=2)
+# And some more informative UMAPs
+plotUMAP(sce.nac, colour_by="prelimCluster", text_by="prelimCluster",
+         text_size=3, point_alpha=0.5, point_size=2)
+plotUMAP(sce.nac, colour_by="cellType", text_by="cellType",
+         text_size=3, point_alpha=0.5, point_size=2) +
+  scale_color_manual(values = cell_colors.nac,
+                     labels=paste0(levels(sce.nac$cellType)," (",table(sce.nac$cellType),")")) +
+  labs(colour="Cell type")
 dev.off()
 
       ## -> proceed to 'step03_markerDetxn-analyses[...].R'
