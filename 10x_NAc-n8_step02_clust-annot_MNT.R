@@ -354,6 +354,7 @@ save(sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo,
 
 
 ## Annotate 'prelimCluster's, based on broad cell type markers ===
+#    (canonical, above, and from markers looked at in 'step3')
 annotationTab.nac <- data.frame(cluster=c(1:29))
 annotationTab.nac$cellType <- NA
 annotationTab.nac$cellType[c(4,9,15,25,27)] <- paste0("Inhib_", c("A","B","C","D","E"))
@@ -362,7 +363,7 @@ annotationTab.nac$cellType[c(2,7,11,20)] <- paste0("MSN.D2_", c("A","B","C","D")
 annotationTab.nac$cellType[c(5,10)] <- c("Oligo_A","Oligo_B")
 annotationTab.nac$cellType[c(16,17,22)] <- c("Astro_A","Astro_B","Micro")
 annotationTab.nac$cellType[c(18,29)] <- c("OPC","OPC_COP")
-annotationTab.nac$cellType[c(14,19)] <- c("ambig.glial_A","ambig.glial_B")
+annotationTab.nac$cellType[c(14,19)] <- c("Micro_resting","Macro_infilt")
 annotationTab.nac$cellType[c(13, 23,24,26,28)] <- c("drop.lowNTx",
                                                     paste0("drop.doublet_", c("A","B","C","D")))
 
