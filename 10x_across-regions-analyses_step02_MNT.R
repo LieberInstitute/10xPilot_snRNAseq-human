@@ -1,9 +1,9 @@
 ### MNT 10x snRNA-seq workflow: step 02
-###   **PAN-BRAIN analyses**
-###     - (n=12) all regions from: Br5161 & Br5212 & Br5287
+###   ** Across-regions analyses **
+###     - (n=24) all regions from up to 8 donors:
 ###     - Amyg, DLPFC, HPC, NAc, and sACC
 ### Initiated MNT 07Feb2020
-### test.edit
+### 
 #####################################################################
 
 library(SingleCellExperiment)
@@ -15,6 +15,8 @@ library(DropletUtils)
 library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
+
+source("plotExpressionCustom.R")
 
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
@@ -28,39 +30,114 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_processing-QC_MNTJan2020.rda",
-     verbose=T)
-# pilot.data, pilot.data.unfiltered, e.out
 
-### MNT comment: At this point, each sample (which is a SCE object in the list, 'pilot.data') has been
-#              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
+### Read in region-specific SCEs ===
+
+## Amyg
+load("rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy, cell_colors.amy
+    rm(pc.choice.amy, clusterRefTab.amy, annotationTab.amy, cell_colors.amy)
+
+    
+## DLPFC
+load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda", verbose=T)
+    # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors
+    rm(pc.choice.dlpfc, clusterRefTab.dlpfc, annotationTab.dlpfc, cell_colors)  
+
+    
+## HPC
+load("rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo, annotationTab.hpc, cell_colors.hpc
+    rm(pc.choice.hpc, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc)
+
+    
+## sACC
+load("rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo, annotationTab.sacc, cell_colors.sacc
+    rm(pc.choice.sacc, clusterRefTab.sacc, annotationTab.sacc, cell_colors.sacc)
+
+    
+## NAc
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
+    rm(pc.choice.nac, clusterRefTab.nac, annotationTab.nac, cell_colors.nac)
+    
+
+    
+### Create a new 'across-regions' n=24 SCE ===
+table(rownames(sce.sacc) == rownames(sce.hpc))  # all good
+
+# Remove 'collapsedCluster' and various reducedDims, metadata; add "region_" to $cellType
+sce.amy$collapsedCluster <- NULL
+sce.hpc$collapsedCluster <- NULL
+sce.sacc$collapsedCluster <- NULL
+sce.dlpfc$collapsedCluster <- NULL
+
+reducedDims(sce.nac) <- NULL
+sizeFactors(sce.nac) <- NULL
+metadata(sce.nac) <- list(NULL)
+sce.nac$cellType <- paste0("nac_", sce.nac$cellType)
+
+reducedDims(sce.amy) <- NULL
+sizeFactors(sce.amy) <- NULL
+metadata(sce.amy) <- list(NULL)
+sce.amy$cellType <- paste0("amy_", sce.amy$cellType)
+
+reducedDims(sce.hpc) <- NULL
+sizeFactors(sce.hpc) <- NULL
+metadata(sce.hpc) <- list(NULL)
+sce.hpc$cellType <- paste0("hpc_", sce.hpc$cellType)
+
+reducedDims(sce.sacc) <- NULL
+sizeFactors(sce.sacc) <- NULL
+metadata(sce.sacc) <- list(NULL)
+sce.sacc$cellType <- paste0("sacc_", sce.sacc$cellType)
+
+reducedDims(sce.dlpfc) <- NULL
+sizeFactors(sce.dlpfc) <- NULL
+metadata(sce.dlpfc) <- list(NULL)
+sce.dlpfc$cellType <- paste0("dlpfc_", sce.dlpfc$cellType)
 
 
-### Merging shared-region samples ============================================
-  # Newest iterations for normalization: cbind, THEN take scaled LSFs computed on all nuclei
-  # (i.e. no more MBN, because batch is so confounded with sample)
+## cbind() them
+sce.allRegions <- cbind(sce.nac, sce.amy, sce.hpc, sce.sacc, sce.dlpfc)
+sce.allRegions
+    # class: SingleCellExperiment 
+    # dim: 33538 72887 
+    # metadata(5): '' '' '' '' ''
+    # assays(2): counts logcounts
+    # rownames(33538): MIR1302-2HG FAM138A ... AC213203.1 FAM231C
+    # rowData names(6): gene_id gene_version ... gene_biotype Symbol.uniq
+    # colnames(72887): AAACCCACATCGAACT-1 AAACCCATCCAACCAA-1 ...
+    # TTTGTTGGTGACCGAA-1 TTTGTTGTCTCGAACA-1
+    # colData names(18): Sample Barcode ... prelimCluster cellType
+    # reducedDimNames(0):
+    #   altExpNames(0):
 
-# Add $sample identity
-for(i in 1:length(pilot.data)){
-  pilot.data[[i]]$sample <- names(pilot.data)[i]
-}
+table(sce.allRegions$sampleID)
+    #  br5161.amy     br5161.dlpfc       br5161.hpc       br5161.nac 
+    #        3294             4215             4421             2055 
+    # br5161.sacc  br5182.nac.neun     br5207.dlpfc  br5207.nac.neun 
+    #        3174             4256             5294             4425 
+    #  br5212.amy     br5212.dlpfc       br5212.hpc       br5212.nac 
+    #        3259             1693             3977             1773 
+    # br5212.sacc  br5276.amy.neun       br5276.nac br5276.sacc.neun 
+    #        3880             2465             2626              851 
+    #  br5287.hpc       br5287.nac  br5400.amy.neun       br5400.nac 
+    #        1870              681             2635             4108 
+    # br5400.sacc       br5701.amy  br5701.nac.neun br5701.sacc.neun 
+    #        3959             3524              647             3805
 
-sce.all.n12 <- cbind(pilot.data[[1]], pilot.data[[2]], pilot.data[[3]], pilot.data[[4]],
-                     pilot.data[[5]], pilot.data[[6]], pilot.data[[7]], pilot.data[[8]],
-                     pilot.data[[9]], pilot.data[[10]], pilot.data[[11]], pilot.data[[12]])
+sce.allRegions$cellType <- factor(sce.allRegions$cellType)
+# Take union of 'chosen.hvgs'
+chosen.hvgs.union <- chosen.hvgs.nac | chosen.hvgs.amy | chosen.hvgs.hpc | chosen.hvgs.sacc | chosen.hvgs.dlpfc
 
-# Remove $logcounts
-assay(sce.all.n12, "logcounts") <- NULL
-# Re-generate log-normalized counts
-sce.all.n12 <- logNormCounts(sce.all.n12)
-
-geneVar.all.n12 <- modelGeneVar(sce.all.n12)
-chosen.hvgs.all.n12 <- geneVar.all.n12$bio > 0
-sum(chosen.hvgs.all.n12)
-    # [1] 8748    - kinda surprising...
+## Save this
+save(sce.allRegions, chosen.hvgs.union, ref.sampleInfo, 
+     file="rdas/revision/all-n24-samples_across-regions-analyses_MNT2021.rda")
 
 
-### Dimensionality reduction ================================================================
+### (Optional:) Dimensionality reduction =========================================
 
 # Run PCA, taking top 250 (instead of default 50 PCs)
 set.seed(109)
@@ -69,14 +146,6 @@ sce.all.n12 <- runPCA(sce.all.n12, subset_row=chosen.hvgs.all.n12, ncomponents=2
 
 # Save into a new data file, which will dedicate for pan-brain-analyses
 save(sce.all.n12, chosen.hvgs.all.n12, file="rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda")
-
-
-
-    # === === === === === === === ===
-    ## 'getClusteredPCs()' evaluated in qsub mode (with 'R-batchJob_panBrain_optimalPCselxn_MNTFeb2020.R')
-    #    --> saved into same .rda
-
-
 
 
 
@@ -111,94 +180,14 @@ save(sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo,
 
 
 
-### MNT 20Mar2020 === === ===
-  # Add region-specific annotations
-
-load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
-    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
-
-## Amyg
-load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
-    rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy)
-
-## DLPFC
-# load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-#     # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo
-#     rm(chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc)
-    #or
-    load("rdas/regionSpecific_DLPFC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-        # sce.dlpfc.st
-    
-## HPC
-load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
-    rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc)
-# Change an annotation
-sce.hpc$cellType <- factor(gsub(pattern="Ambig.glial", "Tcell", sce.hpc$cellType))
-
-## NAc
-#load("rdas/regionSpecific_NAc-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-#    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
-#    rm(chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac)
-
-    ## Actually use the annotations for these respective nuclei from the all-NAc analysis
-    load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-        # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
-        rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all)
-    
-    # TEMPorarily set $cellType.final to $cellType and change casing of 'ambig.lowNtrxts'
-    sce.nac.all$cellType <- sce.nac.all$cellType.final
-    sce.nac.all$cellType <- ifelse(sce.nac.all$cellType=="ambig.lowNtrxts",
-                                   "Ambig.lowNtrxts",
-                                   as.character(sce.nac.all$cellType))
-    # Then collapse D1 and D2 subclusters & otherwise-inhibitory
-    sce.nac.all$cellType[grep("MSN.D1", sce.nac.all$cellType)] <- "MSN.D1"
-    sce.nac.all$cellType[grep("MSN.D2", sce.nac.all$cellType)] <- "MSN.D2"
-    sce.nac.all$cellType[grep("Inhib", sce.nac.all$cellType)] <- "Inhib"
-    
-    sce.nac.all$cellType <- factor(sce.nac.all$cellType)
-    
-## sACC
-load("rdas/regionSpecific_sACC-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc, ref.sampleInfo
-    rm(chosen.hvgs.sacc, pc.choice.sacc, clusterRefTab.sacc)
-
-    # Collapse as above
-    sce.sacc$cellType <- as.character(sce.sacc$cellType)
-    sce.sacc$cellType[grep("Inhib", sce.sacc$cellType)] <- "Inhib"
-    sce.sacc$cellType[grep("Excit", sce.sacc$cellType)] <- "Excit"
-    sce.sacc$cellType <- factor(sce.sacc$cellType)
-    
-
-## Assign to new colData column
-regions <- list(sce.amy, sce.dlpfc, sce.hpc, sce.nac.all, sce.sacc)
-
-BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
-
-#sce.all.n12$cellType.RS <- NA
-    # or
-    sce.all.n12$cellType.RS.sub <- NA
-
-for(r in regions){
-  matchTo <- paste0(colnames(r),".",r$sample)
-  BC.sample.sub <- BC.sample.ii %in% matchTo
-  sce.all.n12$cellType.RS[BC.sample.sub] <- as.character(r$cellType[match(BC.sample.ii[BC.sample.sub], matchTo)])
-}
-
-table(sce.all.n12$cellType.RS)
-sce.all.n12$cellType.RS <- factor(sce.all.n12$cellType.RS)
-table(sce.all.n12$cellType.RS)
-
-
 ## Added chunk 11May2020: add in NON-collapsed region-specific annotations ===
     # First, just load all objects but don't collapse, above
 
     # Temp - call everything $cellType.split (if not already)
-    sce.nac.all$cellType.split <- sce.nac.all$cellType.final
+    sce.nac$cellType.split <- sce.nac$cellType.final
     sce.sacc$cellType.split <- sce.sacc$cellType
     
-    regions <- list(sce.amy, sce.dlpfc.st, sce.hpc, sce.nac.all, sce.sacc)
+    regions <- list(sce.amy, sce.dlpfc.st, sce.hpc, sce.nac, sce.sacc)
     names(regions) <- c("amy", "dlpfc", "hpc", "nac", "sacc")
     BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
     
