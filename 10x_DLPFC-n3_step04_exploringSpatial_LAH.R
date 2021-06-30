@@ -189,6 +189,7 @@ all(rownames(pvals0_contrasts_cell) %in% rownames(pvals0_contrasts))
 
 common_genes <- intersect(rownames(pvals0_contrasts), rownames(pvals0_contrasts_cell))
 length(common_genes)
+# [1] 22331
 
 # Layer
 pvals0_contrasts = pvals0_contrasts[common_genes, ]
@@ -219,10 +220,10 @@ signif(cor_t_layer, 2)
 theSeq = seq(-.81, .81, by = 0.01)
 my.col <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq))
 
-ct = colData(sce_pseudobulk)
-ct = ct[!duplicated(sce_pseudobulk$collapsedCluster),]
-ct = ct[order(ct$cellType, ct$collapsedCluster),]
-ct$lab = paste0(ct$collapsedCluster, " (", ct$cellType,")")
+# ct = colData(sce_pseudobulk)
+# ct = ct[!duplicated(sce_pseudobulk$collapsedCluster),]
+# ct = ct[order(ct$cellType, ct$collapsedCluster),]
+# ct$lab = paste0(ct$collapsedCluster, " (", ct$cellType,")")
 
 cor_t_toPlot = cor_t[, c(1, 7:2)]
 cor_t_layer_toPlot = cor_t_layer[, c(1, 7:2)]
@@ -338,15 +339,35 @@ layer_specific_indices2 <- mapply(function(t) {
   as.data.frame(t0_contrasts2))
 
 layer_ind2 = unique(as.numeric(layer_specific_indices2))
+length(layer_ind2)
+# [1] 691
+
 cor_t_layer_fm = cor(t0_fm_cell[layer_ind2, ],
                   t0_contrasts[layer_ind2, ])
 signif(cor_t_layer_fm, 2)
 
-cor_fm <- list(cor_t_cells, cor_t_fm[, c(1, 7:2)], cor_t_layer_fm[, c(1, 7:2)])
-titles <- list("manual vs. findMarkers", "All Genes" , "Top 100 Layer Specific Genes")
+## Top100 cell Type genes
+cellType_specific_indices <- mapply(function(t) {
+  oo = order(t, decreasing = TRUE)[1:100]},
+  as.data.frame(t0_fm_cell))
+
+cellType_ind = unique(as.numeric(cellType_specific_indices))
+length(cellType_ind)
+# [1] 1402
+cor_t_layer_ct_fm = cor(t0_fm_cell[cellType_ind, ],
+                     t0_contrasts[cellType_ind, ])
+signif(cor_t_layer_ct_fm, 2)
+
+
+cor_fm <- list(cor_t_cells, cor_t_fm[, c(1, 7:2)], cor_t_layer_fm[, c(1, 7:2)], cor_t_layer_ct_fm[, c(1, 7:2)])
+titles <- list("manual vs. findMarkers", "All Genes" , "Top 100 Layer Specific Genes", "Top 100 cell type specific genes")
+
+theSeq3 = seq(-.12, .12, by = 0.005)
+my.col3 <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq3))
+
 pdf(here("pdfs/revision/exploration/overlap-ST-dlpfc_with_10x-snRNA-DLPFC-n3_findMarkers_LAH2021.pdf"),
     height=5)
-for(i in 1:3){
+for(i in 1:length(cor_fm)){
   print(
     levelplot(
       cor_fm[[i]],
@@ -360,5 +381,21 @@ for(i in 1:3){
     )
   )
 }
+
+for(i in 3:length(cor_fm)){
+  print(
+    levelplot(
+      cor_fm[[i]],
+      aspect = "fill",
+      at = theSeq3,
+      col.regions = my.col3,
+      ylab = "",
+      xlab = "",
+      scales = list(x = list(rot = 90, cex = 0.9), y = list(cex = 1.5)),
+      main = list(titles[[i]],side=1,line=0.5)
+    )
+  )
+}
+
 dev.off()
 
