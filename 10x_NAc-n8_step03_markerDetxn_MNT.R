@@ -90,82 +90,6 @@ markers.nac.t.pw <- findMarkers(sce.nac, groups=sce.nac$cellType,
 
 sapply(markers.nac.t.pw, function(x){table(x$FDR<0.05)})
 
-    ### Exploration: What are the 'ambig.glial's? ====
-    ## For identification/annotation of those 'ambig.glial' clusters, check out some top markers:
-    prelimMarkers <- lapply(markers.nac.t.pw, function(x){rownames(x)[x$FDR<0.05]})
-    lengths(prelimMarkers)
-    # ambig.glial_A ambig.glial_B       Astro_A       Astro_B       Inhib_A       Inhib_B 
-    #            43           509           444           419           183           164 
-    #       Inhib_C       Inhib_D       Inhib_E         Micro      MSN.D1_A      MSN.D1_B 
-    #           137            80           206           547            12            22 
-    #      MSN.D1_C      MSN.D1_D      MSN.D1_E      MSN.D1_F      MSN.D2_A      MSN.D2_B 
-    #            26            32            55            76            21            15 
-    #      MSN.D2_C      MSN.D2_D       Oligo_A       Oligo_B           OPC       OPC_COP 
-    #           156           127           256            62           102           169
-
-    # (ran interactively just for these 'ambig.glial' clusters)
-    sapply(medianNon0.nac, table)
-    #       ambig.glial_A ambig.glial_B
-    # FALSE         29581         28549
-    # TRUE             99          1131
-    
-    head(prelimMarkers[["ambig.glial_A"]],n=40)
-        # [1] "AC063949.2" "AC002480.3" "LINC00958"  "ASGR2"      "AC008687.4" "AC048383.1"
-        # [7] "AL139351.1" "AC007952.7" "FOSL1"      "AL359636.2" "OR3A2"      "SNX20"     
-        # [13] "SMG8"       "TGIF2"      "AC080078.1" "SH2D2A"     "HIST1H1B"   "FABP12"    
-        # [19] "LINCMD1"    "AC093627.7" "ZNF503"     "SENCR"      "TSPEAR-AS2" "ADGRF1"    
-        # [25] "IL6"        "SAGE1"      "OSM"        "AL359979.1" "CHAT"       "AP000977.1"
-        # [31] "AC006974.2" "LINC02422"  "C2orf91"    "ANKRD22"    "AL590764.1" "URAD"      
-        # [37] "Z84488.2"   "GRK1"       "FOXN4"      "KLK15"     
-            # None of these 99 non-0-median-expressing genes are pairwise-FDR<0.05 markers for this cluster...
-            i <- "ambig.glial_A"
-            table(markers.nac.t.pw[[i]]$FDR < 0.5 & markers.nac.t.pw[[i]]$non0median==TRUE)
-                # Even none here...
-            plotExpressionCustom(sce = sce.hold,
-                                 features = head(prelimMarkers[[i]][-c(grep("^AC", prelimMarkers[[i]]),
-                                                                       grep("^AL", prelimMarkers[[i]]))],n=12), 
-                                 features_name = i,
-                                 anno_name = "cellType",
-                                 ncol=4, point_alpha=0.4) +
-              scale_color_manual(values = cell_colors.nac)
-            
-      head(rownames(markers.nac.t.pw[[i]])[markers.nac.t.pw[[i]]$non0median==TRUE],n=12)
-          # [1] "AC244021.1" "FP236383.1" "FP671120.1" "FRMD4A"     "SYNDIG1"    "BACH1"     
-          # [7] "SSH2"       "SLC8A1"     "LDLRAD4"    "MAML2"      "PLXDC2"     "MAML3"
-              # Plot these:
-            plotExpressionCustom(sce = sce.hold,
-                                 features = head(rownames(markers.nac.t.pw[[i]])[markers.nac.t.pw[[i]]$non0median==TRUE],n=12), 
-                                 features_name = i,
-                                 anno_name = "cellType",
-                                 ncol=4, point_alpha=0.4) +
-              scale_color_manual(values = cell_colors.nac)
-            
-              # -> Since it's pretty unclear from the literature as to what these might be, and since
-              #    they're quite low in transcriptional activity, let's call 'Micro_resting'
-
-            
-    i <- "ambig.glial_B"
-    head(prelimMarkers[[i]],n=40)
-        # [1] "CD163"      "F13A1"      "MS4A4E"     "MS4A4A"     "LILRB5"     "TGFBI"     
-        # [7] "MS4A6A"     "CD209"      "SIGLEC1"    "MRC1"       "MARCO"      "STAB1"     
-        # [13] "HOXB-AS1"   "CD28"       "IQGAP2"     "FCGR2B"     "MS4A14"     "IFI44L"    
-        # [19] "ADGRG6"     "CCL8"       "AP000812.1" "CASP4"      "MAFB"       "LINC01839" 
-        # [25] "VSIG4"      "AP001636.3" "LINC00278"  "KIR2DL4"    "CD163L1"    "LYVE1"     
-        # [31] "LY96"       "JAML"       "MPEG1"      "MMP2-AS1"   "GYPC"       "FPR3"      
-        # [37] "MYO7A"      "CD200R1"    "TNFRSF14"   "FCMR"
-    plotExpressionCustom(sce = sce.hold,
-                         features = c("AIF1","SIGLEC1", "CD44","EGR3", "MPEG1","CD28",
-                                      # Broad microglial markers (used for annotation)
-                                      "CD74", "CSF1R"), 
-                         features_name = i,
-                         anno_name = "cellType",
-                         ncol=4, point_alpha=0.4) +
-      scale_color_manual(values = cell_colors.nac)
-        # --> These are definitely a macrophage or microglia subtype; former: SIGLEC1 (aka CD169)
-        #     - is an infiltrating-Mphage-specific marker: https://doi.org/10.1038/s41583-018-0057-5
-        #     -> Call 'Macro_infilt'
-    # End prelim marker exploration ======
-    
 
 ## WMW: Blocking on sample (this test doesn't take 'design=' argument) ===
 markers.nac.wilcox.block <- findMarkers(sce.nac, groups=sce.nac$cellType,
@@ -174,7 +98,7 @@ markers.nac.wilcox.block <- findMarkers(sce.nac, groups=sce.nac$cellType,
 
 
 sapply(markers.nac.wilcox.block, function(x){table(x$FDR<0.05)})
-    ## none for about ~1/3 of these... none for Micros or Oligos...
+    ## none for about ~2/3 of these; ignore
 
 
 ## Binomial ===
@@ -184,7 +108,7 @@ markers.nac.binom.block <- findMarkers(sce.nac, groups=sce.nac$cellType,
 
 
 sapply(markers.nac.binom.block, function(x){table(x$FDR<0.05)})
-    ## even worse than WMW... basically none
+    ## none; ignore
 
 # Add respective 'non0median' column to the stats for each set of markers
 for(i in names(markers.nac.t.pw)){
@@ -195,410 +119,324 @@ for(i in names(markers.nac.t.pw)){
 }
 
 sapply(markers.nac.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
-
+    #  Astro_A.TRUE      Astro_B.TRUE      Inhib_A.TRUE      Inhib_B.TRUE      Inhib_C.TRUE
+    #            97               250                78                40                69
+    #  Inhib_D.TRUE      Inhib_E.TRUE Macro_infilt.TRUE        Micro.TRUE  Micro_resting.NA
+    #            40                70               154               227                NA
+    # MSN.D1_A.TRUE     MSN.D1_B.TRUE     MSN.D1_C.TRUE     MSN.D1_D.TRUE     MSN.D1_E.TRUE
+    #            12                16                15                21                38
+    # MSN.D1_F.TRUE     MSN.D2_A.TRUE     MSN.D2_B.TRUE     MSN.D2_C.TRUE     MSN.D2_D.TRUE
+    #            33                16                 6                99                41
+    #  Oligo_A.TRUE      Oligo_B.TRUE          OPC.TRUE      OPC_COP.TRUE
+    #           213                59                67                23
 
 ## Save all these for future reference
-save(markers.nac.t.pw, #markers.nac.wilcox.block, markers.nac.binom.block,
-     file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
+save(markers.nac.t.pw, medianNon0.nac,#markers.nac.wilcox.block, markers.nac.binom.block,
+     file="rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda")
 
 
-## Print these to PNGs
-markerList.t <- lapply(markers.nac.t.pw, function(x){
-    rownames(x)[x$FDR < 0.05]
+# # As needed:
+# load("rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+#     # markers.nac.t.pw, medianNon0.nac
+
+# Print these to pngs
+markerList.t.pw <- lapply(markers.nac.t.pw, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median == TRUE]
   }
 )
+genes.top40.t <- lapply(markerList.t.pw, function(x){head(x, n=40)})
 
-# Take top 40
-genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
+#dir.create("pdfs/revision/NAc/")
+smaller.set <- names(genes.top40.t)[lengths(genes.top40.t) <= 20 & lengths(genes.top40.t) != 0]
+left.set <- names(genes.top40.t)[lengths(genes.top40.t) > 20]
 
-#dir.create("pdfs/exploration/NAc-n5-markers/")
-for(i in names(genes.top40.t)){
-  png(paste0("pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level-top40markers-",i,"_logExprs_Apr2020.png"), height=1900, width=1200)
+# Smaller graphical window
+for(i in smaller.set){
+  png(paste0("pdfs/revision/NAc/NAc_t_pairwise_top40markers-", i, "_logExprs_MNT2021.png"), height=950, width=1200)
   print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level p.w. t-tests"))
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]],
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.nac) +
+      ggtitle(label=paste0("NAc ", i, " top markers: single-nucleus-level p.w. t-tests (FDR<0.05)")) +
+      theme(plot.title = element_text(size = 20))
+  )
+  dev.off()
+}
+
+# 20-40 markers
+for(i in left.set){
+  png(paste0("pdfs/revision/NAc/NAc_t_pairwise_top40markers-", i, "_logExprs_MNT2021.png"), height=1900, width=1200)
+  print(
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]],
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.nac) +
+      ggtitle(label=paste0("NAc ", i, " top markers: single-nucleus-level p.w. t-tests (FDR<0.05)")) +
+      theme(plot.title = element_text(size = 20))
   )
   dev.off()
 }
 
 
 
-### Cluster-vs-all single-nucleus-level iteration ======
-
+### Cluster-vs-all single-nucleus-level iteration ========================
 ## Load SCE with new info
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_SCE_MNT2021.rda",
      verbose=T)
-    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
+# sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
 
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+
+# First drop "drop.lowNTx_" (669 nuclei)
+sce.nac <- sce.nac[ ,-grep("drop.",sce.nac$cellType)]
 sce.nac$cellType <- droplevels(sce.nac$cellType)
 
-# Drop genes with all 0's
-sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]  ## keeps 29236 genes
+# Remove 0 genes across all nuclei
+sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]  # keeps same 29680 genes
 
+
+## Re-create 'logcounts' (don't want to use 'multiBatchNorm's down-scaling across donor 'batches')
+# First 'hold' the MBN 'logcounts' for printing
+sce.hold <- sce.nac
+
+assay(sce.nac, "logcounts") <- NULL
+sizeFactors(sce.nac) <- NULL
+sce.nac <- logNormCounts(sce.nac)
 
 ## Traditional t-test with design as in PB'd/limma approach ===
-# mod <- with(colData(sce.nac), model.matrix(~ donor))
-# mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
-
-
-#mod <- with(colData(sce.nac), model.matrix(~ processDate + donor))
-    # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
-    # -> just try processDate bc it describes more var (at least at PB-pan-brain level)
-mod <- with(colData(sce.nac), model.matrix(~ processDate))
-mod <- mod[ ,-1]
-
+mod <- with(colData(sce.nac), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
 
 markers.nac.t.1vAll <- list()
 for(i in levels(sce.nac$cellType)){
   # Make temporary contrast
   sce.nac$contrast <- ifelse(sce.nac$cellType==i, 1, 0)
-  # Test cluster vs. all
+  # Test cluster vs. all others
   markers.nac.t.1vAll[[i]] <- findMarkers(sce.nac, groups=sce.nac$contrast,
                                           assay.type="logcounts", design=mod, test="t",
+                                          std.lfc=TRUE,
                                           direction="up", pval.type="all", full.stats=T)
 }
+    ## Since all other stats are the same, and don't really use the non-standardized
+    #    logFC, just generate one object, unlike before
 
-    ## Then, temp set of stats to get the standardized logFC
-    temp.1vAll <- list()
-    for(i in levels(sce.nac$cellType)){
-      # Make temporary contrast
-      sce.nac$contrast <- ifelse(sce.nac$cellType==i, 1, 0)
-      # Test cluster vs. all
-      temp.1vAll[[i]] <- findMarkers(sce.nac, groups=sce.nac$contrast,
-                                     assay.type="logcounts", design=mod, test="t",
-                                     std.lfc=TRUE,
-                                     direction="up", pval.type="all", full.stats=T)
-    }
+class(markers.nac.t.1vAll[["Oligo_A"]])
+    # a SimpleList of length 2, named "0" and "1" (from the temporary 'contrast')
+    # -> we want the second entry, named "1"
+    #    (for other purposes, might be interesting to look into that "0" entry, which
+    #     is basically what genes are depleted in the cell type of interest)
 
 
-## For some reason all the results are in the second List entry (first is always empty)
+sapply(markers.nac.t.1vAll, function(x){
+  table(x[["1"]]$stats.0$log.FDR < log(.001))
+})
+    #
 
-# Replace that empty slot with the entry with the actul stats
-markers.nac.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){ x[[2]] })
-# Same for that with std.lfc
-temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+# Do some reorganizing
+markers.nac.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
+  # Basically take the 'stats.[1 or 0]' since is redundant with the 'summary'-level stats
+  lapply(x, function(y){ y[ ,4] }) 
+})
 
-# Now just pull from the 'stats.0' DataFrame column
-markers.nac.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){ x$stats.0 })
-temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
-
-# Re-name std.lfc column and add to the first result
-for(i in names(temp.1vAll)){
-  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
-  markers.nac.t.1vAll[[i]] <- cbind(markers.nac.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
-  # Oh the colname is kept weird
-  colnames(markers.nac.t.1vAll[[i]])[4] <- "std.logFC"
-  # Then re-organize
-  markers.nac.t.1vAll[[i]] <- markers.nac.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+# Re-name std.lfc column and the entries; add non-0-median info
+for(i in names(markers.nac.t.1vAll)){
+  colnames(markers.nac.t.1vAll[[i]][["0"]])[1] <- "std.logFC"
+  colnames(markers.nac.t.1vAll[[i]][["1"]])[1] <- "std.logFC"
+  # Add non0median Boolean - might be informative for both sets of stats
+  markers.nac.t.1vAll[[i]][["0"]] <- cbind(markers.nac.t.1vAll[[i]][["0"]],
+                                           medianNon0.nac[[i]][match(rownames(markers.nac.t.1vAll[[i]][["0"]]),
+                                                                     names(medianNon0.nac[[i]]))])
+  colnames(markers.nac.t.1vAll[[i]][["0"]])[4] <- "non0median"
+  
+  # "1" aka 'enriched'
+  markers.nac.t.1vAll[[i]][["1"]] <- cbind(markers.nac.t.1vAll[[i]][["1"]],
+                                           medianNon0.nac[[i]][match(rownames(markers.nac.t.1vAll[[i]][["1"]]),
+                                                                     names(medianNon0.nac[[i]]))])
+  colnames(markers.nac.t.1vAll[[i]][["1"]])[4] <- "non0median"
+  
+  # Then re-name the entries to more interpretable, because we'll keeping both contrasts
+  names(markers.nac.t.1vAll[[i]]) <- paste0(i,c("_depleted", "_enriched"))
 }
 
 
 ## Let's save this along with the previous pairwise results
-save(markers.nac.t.pw, markers.nac.t.1vAll,
-     file="rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda")
-
+save(markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac,
+     file="rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda")
 
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
-    rownames(x)[x[ ,"log.FDR"] < log10(0.001)]
+  rownames(x[[2]])[ x[[2]]$log.FDR < log(0.05) & x[[2]]$non0median==TRUE ]
   }
 )
-genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t.1vAll)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc-all-n5_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes.top40.t.1vAll[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers: single-nucleus-level t-tests, cluster-vs-all-others"))
-  )
-  dev.off()
-}
-
-
-
-## How do these top 40 intersect? ===
-sapply(names(genes.top40.t), function(c){
-  length(intersect(genes.top40.t[[c]],
-                   genes.top40.t.1vAll[[c]]))
-})
-    #     Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-    #        35       30       16       26       22       40       17       24
-    #  MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-    #         7        9       23       16       32       29
-
-
-## Write these top 40 lists to a csv
-names(markerList.t) <- paste0(names(markerList.t),"_pw")
-names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
-
-top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
-                    sapply(markerList.t.1vAll, function(y) head(y, n=40)))
-top40genes <- top40genes[ ,sort(colnames(top40genes))]
-
-write.csv(top40genes, file="tables/top40genesLists_NAc-n5_cellType.final_SN-LEVEL-tests_May2020.csv",
-          row.names=FALSE)
-
-
-
-## Make marker array for Supp figure (MNT suggested panel A) ===========
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    #sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
-
-load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.pw, markers.nac.t.1vAll
-
-# First make interneuron subset
-sce.nac.int <- sce.nac[ ,grep("Inhib.", sce.nac$cellType)]
-sce.nac.int$cellType <- droplevels(sce.nac.int$cellType)
-
-
-# Take top four for 4 inhib. interneuron pops
-topToPrint <- as.data.frame(sapply(markers.nac.t.1vAll, function(x) {head(rownames(x),n=4)}))
-topToPrint <- topToPrint[grep("Inhib.", names(topToPrint))]
-
-# Manual assignment, bc 'Inhib.2' is mostly driven by noise (but 0 median)
-topToPrint["Inhib.2"] <- c("KCNJ6", "SDK1", "LRFN2","NR2F1-AS1")
-
-table(unlist(topToPrint) %in% rownames(sce.nac.int)) # good
-
-# Print
-pdf("pdfs/pubFigures/suppFig_NAc_interneuron-marker-array_MNTSep2020.pdf", height=8, width=5.5)
-print(
-  plotExpression(sce.nac.int, exprs_values = "logcounts", features=c(t(topToPrint)),
-                 x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.5, ncol=4,
-                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                              geom = "crossbar", width = 0.3,
-                                              colour=rep(tableau10medium[1:4], length(unlist(topToPrint)))) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
-    ggtitle(label="Inhib.1          Inhib.2           Inhib.3          Inhib.4") + xlab("") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
-          axis.title.y = element_text(angle = 90, size = 16),
-          plot.title = element_text(size = 15),
-          panel.grid.major=element_line(colour="grey95", size=0.8),
-          panel.grid.minor=element_line(colour="grey95", size=0.4))
-)
-dev.off()
-
-
-## For MNT version panel B
-pdf("pdfs/pubFigures/suppFig_NAc_interneuron-experiment-panelB_MNTSep2020.pdf", height=3.2, width=4.5)
-print(
-  plotExpression(sce.nac.int, exprs_values = "logcounts", features=c("GAD1", "KIT", "PTHLH", "PVALB"),
-                 x="cellType.final", colour_by="cellType.final", point_alpha=0.7, point_size=1.2, ncol=2,
-                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                              geom = "crossbar", width = 0.3,
-                                              colour=rep(tableau10medium[1:4], 4)) +
-    xlab("") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
-          axis.title.y = element_text(angle = 90, size = 10),
-          panel.grid.major=element_line(colour="grey95", size=0.8),
-          panel.grid.minor=element_line(colour="grey95", size=0.4))
-)
-dev.off()
-
-
-## Supp Fig 5: Other markers pointed out in text ===
-genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
-
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
-sce.nac$cellType <- droplevels(sce.nac$cellType)
-
-pdf("pdfs/pubFigures/suppFig_NAc_other-MSN-markers_MNTSep2020.pdf", height=4.5, width=6.5)
-print(
-  plotExpression(sce.nac, exprs_values = "logcounts", features=genes2print,
-                 x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=1.0, ncol=2,
-                 add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                              geom = "crossbar", width = 0.3,
-                                              colour=rep(tableau20[1:14], length(genes2print))) +
-    xlab("") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
-          axis.title.y = element_text(angle = 90, size = 10),
-          panel.grid.major=element_line(colour="grey95", size=0.8),
-          panel.grid.minor=element_line(colour="grey95", size=0.4))
-)
-dev.off()
-
-
-
-## Top markers for D1.4 / D2.2 often co-expressed ===
-load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.pw, markers.nac.t.1vAll
-
-cell.idx <- splitit(sce.nac$cellType)
-dat <- as.matrix(assay(sce.nac, "logcounts"))
-genes <- head(rownames(markers.nac.t.1vAll[["MSN.D1.4"]]), n=40)
-
-pdf('pdfs/pubFigures/suppFigure_heatmap-Exprs_NAc-n5_top40-D1.4markers-1vAlltest_MNTSep2020.pdf',
-    useDingbats=TRUE, height=6, width=10)
-current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
-pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 5, length.out = 101),
-         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
-         fontsize_row = 20, fontsize_col=15)
-dev.off()
-
-
-
-
-
-
-### MNT add 18Nov2020 =================================
-# -> What if add param/requirement that for any given subcluster, median expression has to > 0?
-load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-    # markers.nac.t.pw, markers.nac.t.1vAll
-
-## Load SCE 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
-     verbose=T)
-    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
-
-table(sce.nac$cellType)
-
-# First drop "ambig.lowNtrxts" (93 nuclei)
-sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
-sce.nac$cellType <- droplevels(sce.nac$cellType)
-
-# Remove 0 genes across all nuclei
-sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]
-
-
-## Make list of Boolean param / cell subtype ===
-cellSubtype.idx <- splitit(sce.nac$cellType)
-medianNon0.idx <- lapply(cellSubtype.idx, function(x){
-  apply(as.matrix(assay(sce.nac, "logcounts")), 1, function(y){
-    median(y[x]) > 0
-  })
-})
-
-lengths(medianNon0.idx)
-sapply(medianNon0.idx, head)
-
-# Add these to the stats for each set of markers
-for(i in names(markers.nac.t.1vAll)){
-  markers.nac.t.1vAll[[i]] <- cbind(markers.nac.t.1vAll[[i]],
-                                    medianNon0.idx[[i]][match(rownames(markers.nac.t.1vAll[[i]]),
-                                                              names(medianNon0.idx[[i]]))])
-  colnames(markers.nac.t.1vAll[[i]])[5] <- "non0median"
-}
-
-
-## Use these restrictions to print (to png) a refined top 40, as before ===
-markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
-  rownames(x)[x$log.FDR < log10(0.000001) & x$non0median==TRUE]
-  }
-)
-    # lengths(markerList.t.1vAll)     # ( **without $non0median==TRUE restriction )
-        #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-        #     4956     1295     1589     4917     4719     3656     1474     2468
-        # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-        #     2434     5893     2027     3106     2248     3259
-
-lengths(markerList.t.1vAll)
-    #    Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-    #     1214      690      561     1953     1716      763      700      989
-    # MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-    #     1173     3054     1069     1912      700     1086
-
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 
 for(i in names(genes.top40.t)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_1vALL_top40markers-REFINED-",gsub(":",".",i),"_logExprs_Nov2020.png"), height=1900, width=1200)
+  png(paste0("pdfs/revision/NAc/NAc_t_1vALL_top40markers-",i,"_logExprs_MNT2021.png"), height=1900, width=1200)
   print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests, cluster-vs-all"))
+    plotExpressionCustom(sce = sce.hold,
+                         features = genes.top40.t[[i]], 
+                         features_name = i,
+                         anno_name = "cellType",
+                         ncol=5, point_alpha=0.4) +
+      scale_color_manual(values = cell_colors.nac) +  
+      ggtitle(label=paste0("NAc ", i, " top markers: 'cluster-vs-all-others' t-tests (FDR<0.05)")) +
+      theme(plot.title = element_text(size = 20))
   )
   dev.off()
 }
 
 
-
-## Do the same with the pairwise result ('markers.nac.t.pw') === === ===
-# Add these to the stats for each set of markers
-for(i in names(markers.nac.t.pw)){
-  markers.nac.t.pw[[i]] <- cbind(markers.nac.t.pw[[i]],
-                                     medianNon0.idx[[i]][match(rownames(markers.nac.t.pw[[i]]),
-                                                               names(medianNon0.idx[[i]]))])
-  colnames(markers.nac.t.pw[[i]])[16] <- "non0median"
-}
-
-markerList.t <- lapply(markers.nac.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
+## How do they intersect?
+markerList.t.pw <- lapply(markers.nac.t.pw, function(x){
+  rownames(x)[ x$FDR < 0.05 & x$non0median==TRUE ]
   }
 )
-    # lengths(markerList.t)     # ( **without $non0median==TRUE restriction )
-        #   Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-        #     831      340      179      256      283     1417       82      295
-        #MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-        #      87       61      230       66      493      372
 
-lengths(markerList.t)
-    #   Astro  Inhib.1  Inhib.2  Inhib.3  Inhib.4    Micro MSN.D1.1 MSN.D1.2
-    #     378      110        9      145      105      402       45      201
-    #MSN.D1.3 MSN.D1.4 MSN.D2.1 MSN.D2.2    Oligo      OPC
-    #      64       54      143       57      333      187
+# From pairwise t-tests, FDR < 0.05 (& median restriction)
+lengths(markerList.t.pw)
+
+# From cluster-vs-all others, FDR < 0.05 (& median restriction)
+lengths(markerList.t.1vAll)
+
+# Intersection
+sapply(names(markerList.t.pw), function(c){
+  length(intersect(markerList.t.pw[[c]],
+                   markerList.t.1vAll[[c]]))
+})
+
+# Of top 40's:
+sapply(names(markerList.t.pw), function(c){
+  length(intersect(lapply(markerList.t.pw, function(l){head(l,n=40)})[[c]],
+                   lapply(markerList.t.1vAll, function(l){head(l,n=40)})[[c]]
+  ))
+})
+    #
 
 
-genes.top40.t <- lapply(markerList.t, function(x){head(x, n=40)})
-
-for(i in names(genes.top40.t)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/NAc-n5-markers/NAc_t-sn-level_pairwise_top40markers-REFINED-", i, "_logExprs_Nov2020.png"), height=1900, width=1200)
-  print(
-    plotExpression(sce.nac, exprs_values = "logcounts", features=genes.top40.t[[i]],
-                   x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau20[1:14], length(genes.top40.t[[i]]))) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " top 40 markers, refined: single-nucleus-level p.w. t-tests"))
-  )
-  dev.off()
-}
-
-## Then write a new CSV of these refined top 40 genes ===
-names(markerList.t) <- paste0(names(markerList.t),"_pw")
+## Write these top 40 lists to a csv
+names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
 names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
 
-# Many of the PW results don't have at least 40 markers:
-extend.idx <- names(which(lengths(markerList.t) < 40))
+# Many of the PW results don't have 40 markers:
+extend.idx <- names(which(lengths(markerList.t.pw) < 40))
 for(i in extend.idx){
-  markerList.t[[i]] <- c(markerList.t[[i]], rep("", 40-length(markerList.t[[i]])))
+  markerList.t.pw[[i]] <- c(markerList.t.pw[[i]], rep("", 40-length(markerList.t.pw[[i]])))
 }
 
-top40genes <- cbind(sapply(markerList.t, function(x) head(x, n=40)),
+top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
                     sapply(markerList.t.1vAll, function(y) head(y, n=40)))
 top40genes <- top40genes[ ,sort(colnames(top40genes))]
 
-write.csv(top40genes, file="tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv",
+write.csv(top40genes, file="tables/revision/top40genesLists_NAc-n8_cellType_SN-LEVEL-tests_MNT2021.csv",
           row.names=FALSE)
 
 
 
+# ## Make marker array for Supp figure (MNT suggested panel A) ===========
+# load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+#     #sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
+# 
+# load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+#     # markers.nac.t.pw, markers.nac.t.1vAll
+# 
+# # First make interneuron subset
+# sce.nac.int <- sce.nac[ ,grep("Inhib.", sce.nac$cellType)]
+# sce.nac.int$cellType <- droplevels(sce.nac.int$cellType)
+# 
+# 
+# # Take top four for 4 inhib. interneuron pops
+# topToPrint <- as.data.frame(sapply(markers.nac.t.1vAll, function(x) {head(rownames(x),n=4)}))
+# topToPrint <- topToPrint[grep("Inhib.", names(topToPrint))]
+# 
+# # Manual assignment, bc 'Inhib.2' is mostly driven by noise (but 0 median)
+# topToPrint["Inhib.2"] <- c("KCNJ6", "SDK1", "LRFN2","NR2F1-AS1")
+# 
+# table(unlist(topToPrint) %in% rownames(sce.nac.int)) # good
+# 
+# # Print
+# pdf("pdfs/pubFigures/suppFig_NAc_interneuron-marker-array_MNTSep2020.pdf", height=8, width=5.5)
+# print(
+#   plotExpression(sce.nac.int, exprs_values = "logcounts", features=c(t(topToPrint)),
+#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.5, ncol=4,
+#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+#                                               geom = "crossbar", width = 0.3,
+#                                               colour=rep(tableau10medium[1:4], length(unlist(topToPrint)))) +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
+#     ggtitle(label="Inhib.1          Inhib.2           Inhib.3          Inhib.4") + xlab("") +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
+#           axis.title.y = element_text(angle = 90, size = 16),
+#           plot.title = element_text(size = 15),
+#           panel.grid.major=element_line(colour="grey95", size=0.8),
+#           panel.grid.minor=element_line(colour="grey95", size=0.4))
+# )
+# dev.off()
+# 
+# 
+# ## For MNT version panel B
+# pdf("pdfs/pubFigures/suppFig_NAc_interneuron-experiment-panelB_MNTSep2020.pdf", height=3.2, width=4.5)
+# print(
+#   plotExpression(sce.nac.int, exprs_values = "logcounts", features=c("GAD1", "KIT", "PTHLH", "PVALB"),
+#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.7, point_size=1.2, ncol=2,
+#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+#                                               geom = "crossbar", width = 0.3,
+#                                               colour=rep(tableau10medium[1:4], 4)) +
+#     xlab("") +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+#           axis.title.y = element_text(angle = 90, size = 10),
+#           panel.grid.major=element_line(colour="grey95", size=0.8),
+#           panel.grid.minor=element_line(colour="grey95", size=0.4))
+# )
+# dev.off()
+# 
+# 
+# ## Supp Fig 5: Other markers pointed out in text ===
+# genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
+# 
+# # First drop "ambig.lowNtrxts" (93 nuclei)
+# sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
+# sce.nac$cellType <- droplevels(sce.nac$cellType)
+# 
+# pdf("pdfs/pubFigures/suppFig_NAc_other-MSN-markers_MNTSep2020.pdf", height=4.5, width=6.5)
+# print(
+#   plotExpression(sce.nac, exprs_values = "logcounts", features=genes2print,
+#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=1.0, ncol=2,
+#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+#                                               geom = "crossbar", width = 0.3,
+#                                               colour=rep(tableau20[1:14], length(genes2print))) +
+#     xlab("") +
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
+#           axis.title.y = element_text(angle = 90, size = 10),
+#           panel.grid.major=element_line(colour="grey95", size=0.8),
+#           panel.grid.minor=element_line(colour="grey95", size=0.4))
+# )
+# dev.off()
+# 
+# 
+# 
+# ## Top markers for D1.4 / D2.2 often co-expressed ===
+# load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+#     # markers.nac.t.pw, markers.nac.t.1vAll
+# 
+# cell.idx <- splitit(sce.nac$cellType)
+# dat <- as.matrix(assay(sce.nac, "logcounts"))
+# genes <- head(rownames(markers.nac.t.1vAll[["MSN.D1.4"]]), n=40)
+# 
+# pdf('pdfs/pubFigures/suppFigure_heatmap-Exprs_NAc-n5_top40-D1.4markers-1vAlltest_MNTSep2020.pdf',
+#     useDingbats=TRUE, height=6, width=10)
+# current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+# pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 5, length.out = 101),
+#          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+#          fontsize_row = 20, fontsize_col=15)
+# dev.off()
 
-## Aside: add in 't.stat' as in 'step04' analyses to save for LoHu/LeCo ===
-for(s in names(markers.nac.t.1vAll)){
-  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac))
-}
 
-save(markers.nac.t.1vAll, markers.nac.t.pw, sce.nac,
-     file="rdas/markerStats-and-SCE_NAc-n5_sn-level_cleaned_MNTNov2020.rda")
+
+
 
 
 ### (From preprint exploration)
@@ -699,6 +537,92 @@ save(markers.nac.t.1vAll, markers.nac.t.pw, sce.nac,
 #   dev.off()
 # }
 
-
-
-
+rm(list=ls())
+### Session info for 30Jun2021 ==================================================
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+# [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+# [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils    
+# [8] methods   base     
+# 
+# other attached packages:
+#   [1] pheatmap_1.0.12             RColorBrewer_1.1-2         
+# [3] lattice_0.20-41             limma_3.46.0               
+# [5] jaffelab_0.99.30            rafalib_1.0.0              
+# [7] DropletUtils_1.10.3         batchelor_1.6.2            
+# [9] scran_1.18.5                scater_1.18.6              
+# [11] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0  
+# [13] ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [15] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [17] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [19] Biobase_2.50.0              GenomicRanges_1.42.0       
+# [21] GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [23] S4Vectors_0.28.1            BiocGenerics_0.36.1        
+# [25] MatrixGenerics_1.2.1        matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
+# [3] colorspace_2.0-0          ellipsis_0.3.2           
+# [5] scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2      
+# [9] rstudioapi_0.13           farver_2.1.0             
+# [11] bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4            
+# [15] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
+# [17] cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1             
+# [21] R.oo_1.24.0               HDF5Array_1.18.1         
+# [23] compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1         
+# [27] Matrix_1.3-2              fastmap_1.1.0            
+# [29] lazyeval_0.2.2            BiocSingular_1.6.0       
+# [31] prettyunits_1.1.1         tools_4.0.4              
+# [33] rsvd_1.0.3                igraph_1.2.6             
+# [35] gtable_0.3.0              glue_1.4.2               
+# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5              
+# [39] rappdirs_0.3.3            Rcpp_1.0.6               
+# [41] vctrs_0.3.6               Biostrings_2.58.0        
+# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0       
+# [45] DelayedMatrixStats_1.12.3 stringr_1.4.0            
+# [47] beachmat_2.6.4            lifecycle_1.0.0          
+# [49] irlba_2.3.3               statmod_1.4.35           
+# [51] XML_3.99-0.6              edgeR_3.32.1             
+# [53] zlibbioc_1.36.0           scales_1.1.1             
+# [55] hms_1.0.0                 ProtGenerics_1.22.0      
+# [57] rhdf5_2.34.0              curl_4.3                 
+# [59] memoise_2.0.0             gridExtra_2.3            
+# [61] segmented_1.3-3           biomaRt_2.46.3           
+# [63] stringi_1.5.3             RSQLite_2.2.7            
+# [65] BiocParallel_1.24.1       rlang_0.4.10             
+# [67] pkgconfig_2.0.3           bitops_1.0-7             
+# [69] purrr_0.3.4               Rhdf5lib_1.12.1          
+# [71] labeling_0.4.2            GenomicAlignments_1.26.0 
+# [73] cowplot_1.1.1             bit_4.0.4                
+# [75] tidyselect_1.1.1          magrittr_2.0.1           
+# [77] R6_2.5.0                  generics_0.1.0           
+# [79] DelayedArray_0.16.3       DBI_1.1.1                
+# [81] pillar_1.6.0              withr_2.4.2              
+# [83] RCurl_1.98-1.3            tibble_3.1.1             
+# [85] crayon_1.4.1              utf8_1.2.1               
+# [87] BiocFileCache_1.14.0      viridis_0.6.0            
+# [89] progress_1.2.2            locfit_1.5-9.4           
+# [91] grid_4.0.4                blob_1.2.1               
+# [93] digest_0.6.27             R.utils_2.10.1           
+# [95] openssl_1.4.3             munsell_0.5.0            
+# [97] beeswarm_0.3.1            viridisLite_0.4.0        
+# [99] vipor_0.4.5               askpass_1.1  
