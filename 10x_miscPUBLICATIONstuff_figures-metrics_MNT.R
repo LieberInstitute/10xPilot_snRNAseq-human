@@ -12,6 +12,7 @@ library(batchelor)
 library(DropletUtils)
 library(jaffelab)
 
+source("plotExpressionCustom.R")
 
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
@@ -268,7 +269,7 @@ load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbo
 # Get only NeuNs to add to 'sce.all.n12'
 sce.neuns <- sce.nac.all[ ,sce.nac.all$protocol == "Frank.NeuN"]
 # Trick 'sce.neuns' to keep the column which has regionally-defined annotations
-sce.neuns$cellType.RS.sub <- sce.neuns$cellType.final
+sce.neuns$cellType.RS.sub <- sce.neuns$cellType
 # Clean up
 sce.neuns$cellType.RS.sub <- gsub("Excit", "Ex", sce.neuns$cellType.RS.sub)
 sce.neuns$cellType.RS.sub <- gsub("Inhib", "In", sce.neuns$cellType.RS.sub)
@@ -335,7 +336,7 @@ quantile(as.numeric(gsub(",","",n14.metrics.collapsed$Number.of.Reads)))
 #118752669 148651409 253012622 274925035 296198922
 
 
-## NAc, all n=5 ===
+## NAc, all n=8 ===
 load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
 
@@ -361,94 +362,120 @@ signif(sum(assay(sce.nac, "counts")),3)
 
 
 
-# Make diff object for 'ambig.lowNtrxts' removed
-sce.nac <- sce.nac[ ,!sce.nac$cellType=="ambig.lowNtrxts"]
-sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
+# Clean up '.drop' clusters (669 nuclei, total)
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 ## Proportion of cell types
-table(sce.nac$cellType.final)
-prop.table(table(sce.nac$cellType.final))
-#       Astro     Inhib.1     Inhib.2     Inhib.3     Inhib.4       Micro
-# 0.041451171 0.001901430 0.004259203 0.020991786 0.013918467 0.013766352
-#    MSN.D1.1    MSN.D1.2    MSN.D1.3    MSN.D1.4    MSN.D2.1    MSN.D2.2
-# 0.010039550 0.022893216 0.054685123 0.285442653 0.022817159 0.276163675
-#       Oligo         OPC
-# 0.213492546 0.018177670
+table(sce.nac$cellType)
+round(prop.table(table(sce.nac$cellType)),3)
+    #  Astro_A       Astro_B       Inhib_A       Inhib_B       Inhib_C 
+    #    0.005         0.050         0.013         0.002         0.005 
+    #  Inhib_D       Inhib_E  Macro_infilt         Micro Micro_resting 
+    #    0.012         0.002         0.001         0.022         0.003 
+    # MSN.D1_A      MSN.D1_B      MSN.D1_C      MSN.D1_D      MSN.D1_E 
+    #    0.197         0.012         0.014         0.036         0.032 
+    # MSN.D1_F      MSN.D2_A      MSN.D2_B      MSN.D2_C      MSN.D2_D 
+    #    0.004         0.214         0.014         0.016         0.003 
+    #  Oligo_A       Oligo_B           OPC       OPC_COP 
+    #    0.050         0.259         0.033         0.001 
 
 # How many MSNs in our dataset?
-sum(prop.table(table(sce.nac$cellType.final))[grep("MSN", levels(sce.nac$cellType.final))])
-# However this is including two samples where we enriched on neurons
+sum(prop.table(table(sce.nac$cellType))[grep("MSN", levels(sce.nac$cellType))])
+    #[1] 0.5434345
 
+table(sce.nac$cellType, sce.nac$donor)
+    #               br5161 br5182 br5207 br5212 br5276 br5287 br5400 br5701
+    # Astro_A           27      0      0      5      8      3     56      0
+    # Astro_B          115      0      0    377    173      8    294     33
+    # Inhib_A           10    101     58      8     29      4     26     15
+    # Inhib_B            0     23      6      0      3      0      4      4
+    # Inhib_C            4     33     40      2      4      3     11      1
+    # Inhib_D            4     56    128      5      4      6     24     13
+    # Inhib_E            1     16      5      3      6      0      6      0
+    # Macro_infilt       4      0      0      7      2      1      4      4
+    # Micro             66      0      0     59     33     34    222     15
+    # Micro_resting      3      0      0     33     22      0      5      0
+    # MSN.D1_A          96   1269   1680    129    419     35    258     41
+    # MSN.D1_B           4    161     64      2      1      0      0      7
+    # MSN.D1_C           8    224      4     22     21      0      2      2
+    # MSN.D1_D          27    267    173     26    108      5    111      1
+    # MSN.D1_E          15    260    255      6     15      6     30     51
+    # MSN.D1_F           2     61     10      0      2      0      2      9
+    # MSN.D2_A          95   1421   1819    101    488     29    252     57
+    # MSN.D2_B           9    134     29      7     58      5     36      7
+    # MSN.D2_C           9    130    131      3     15      3     18      5
+    # MSN.D2_D           3     53      0      0      2      0      0      0
+    # Oligo_A          237      0      0     50    385     69    247      0
+    # Oligo_B         1202      0      0    804    523    421   2186     10
+    # OPC               98      0      0    104    200     34    209      6
+    # OPC_COP            0      0      0      0      1      3     14      0
+        # ** br5182, 5207 & 5701 are the neun-enriched samples
 
-table(sce.nac$cellType.final, sce.nac$sample)
-# 
-#          nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-# Astro         149      384       12             0             0
-# Inhib.1         1        3        0            16             5
-# Inhib.2         1        1        1            42            11
-# Inhib.3         7        7        9            86           167
-# Inhib.4         9        8        4           104            58
-# Micro          72       72       37             0             0
-# MSN.D1.1        2        0        0           117            13
-# MSN.D1.2       10        3        0           285             3
-# MSN.D1.3       17        8        6           369           319
-# MSN.D1.4      178      169       72          1505          1829
-# MSN.D2.1        9        6        3           134           148
-# MSN.D2.2       41      113        5          1602          1870
-# Oligo        1454      854      499             0             0
-# OPC            98      104       37             0             0
 
 ## Proportions of cell type by sample
-apply(table(sce.nac$cellType.final, sce.nac$sample), 2, function(x){round(prop.table(x),3)})
-#          nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-# Astro       0.073    0.222    0.018         0.000         0.000
-# Inhib.1     0.000    0.002    0.000         0.004         0.001
-# Inhib.2     0.000    0.001    0.001         0.010         0.002
-# Inhib.3     0.003    0.004    0.013         0.020         0.038
-# Inhib.4     0.004    0.005    0.006         0.024         0.013
-# Micro       0.035    0.042    0.054         0.000         0.000
-# MSN.D1.1    0.001    0.000    0.000         0.027         0.003
-# MSN.D1.2    0.005    0.002    0.000         0.067         0.001
-# MSN.D1.3    0.008    0.005    0.009         0.087         0.072
-# MSN.D1.4    0.087    0.098    0.105         0.353         0.414
-# MSN.D2.1    0.004    0.003    0.004         0.031         0.033
-# MSN.D2.2    0.020    0.065    0.007         0.376         0.423
-# Oligo       0.710    0.493    0.728         0.000         0.000
-# OPC         0.048    0.060    0.054         0.000         0.000
+apply(table(sce.nac$cellType, sce.nac$donor), 2, function(x){round(prop.table(x),3) * 100})
+    #               br5161 br5182 br5207 br5212 br5276 br5287 br5400 br5701
+    # Astro_A          1.3    0.0    0.0    0.3    0.3    0.4    1.4    0.0
+    # Astro_B          5.6    0.0    0.0   21.5    6.9    1.2    7.3   11.7
+    # Inhib_A          0.5    2.4    1.3    0.5    1.1    0.6    0.6    5.3
+    # Inhib_B          0.0    0.5    0.1    0.0    0.1    0.0    0.1    1.4
+    # Inhib_C          0.2    0.8    0.9    0.1    0.2    0.4    0.3    0.4
+    # Inhib_D          0.2    1.3    2.9    0.3    0.2    0.9    0.6    4.6
+    # Inhib_E          0.0    0.4    0.1    0.2    0.2    0.0    0.1    0.0
+    # Macro_infilt     0.2    0.0    0.0    0.4    0.1    0.1    0.1    1.4
+    # Micro            3.2    0.0    0.0    3.4    1.3    5.1    5.5    5.3
+    # Micro_resting    0.1    0.0    0.0    1.9    0.9    0.0    0.1    0.0
+    # MSN.D1_A         4.7   30.1   38.2    7.4   16.6    5.2    6.4   14.6
+    # MSN.D1_B         0.2    3.8    1.5    0.1    0.0    0.0    0.0    2.5
+    # MSN.D1_C         0.4    5.3    0.1    1.3    0.8    0.0    0.0    0.7
+    # MSN.D1_D         1.3    6.3    3.9    1.5    4.3    0.7    2.8    0.4
+    # MSN.D1_E         0.7    6.2    5.8    0.3    0.6    0.9    0.7   18.1
+    # MSN.D1_F         0.1    1.4    0.2    0.0    0.1    0.0    0.0    3.2
+    # MSN.D2_A         4.7   33.8   41.3    5.8   19.3    4.3    6.3   20.3
+    # MSN.D2_B         0.4    3.2    0.7    0.4    2.3    0.7    0.9    2.5
+    # MSN.D2_C         0.4    3.1    3.0    0.2    0.6    0.4    0.4    1.8
+    # MSN.D2_D         0.1    1.3    0.0    0.0    0.1    0.0    0.0    0.0
+    # Oligo_A         11.6    0.0    0.0    2.9   15.3   10.3    6.1    0.0
+    # Oligo_B         59.0    0.0    0.0   45.9   20.7   62.9   54.4    3.6
+    # OPC              4.8    0.0    0.0    5.9    7.9    5.1    5.2    2.1
+    # OPC_COP          0.0    0.0    0.0    0.0    0.0    0.4    0.3    0.0
 
 # Of neurons, how many are MSNs?  Let's just look at the NeuN-sorted samples
 
-table(ss(as.character(sce.nac$cellType.final[grep("neun", sce.nac$sample)]),
-         "\\.",1),
-      sce.nac$sample[grep("neun", sce.nac$sample)])
-#        nac.neun.5182 nac.neun.5207
-#  Inhib           248           241
-#  MSN            4012          4182
-apply(table(ss(as.character(sce.nac$cellType.final[grep("neun", sce.nac$sample)]),
-               "\\.",1),
-            sce.nac$sample[grep("neun", sce.nac$sample)]),2,prop.table)
-#        nac.neun.5182 nac.neun.5207
-#  Inhib    0.05821596     0.0544879
-#  MSN      0.94178404     0.9455121
+table(ss(as.character(sce.nac$cellType[grep("neun", sce.nac$sampleID)]),
+         "_",1),
+      sce.nac$sampleID[grep("neun", sce.nac$sampleID)])[c("Inhib", "MSN.D1", "MSN.D2"), ]
+    #        br5182.nac.neun br5207.nac.neun br5701.nac.neun
+    # Inhib              229             237              33
+    # MSN.D1            2242            2186             111
+    # MSN.D2            1738            1979              69
+apply(table(ss(as.character(sce.nac$cellType[grep("neun", sce.nac$sampleID)]),
+               "_",1),
+            sce.nac$sampleID[grep("neun", sce.nac$sampleID)])[c("Inhib", "MSN.D1", "MSN.D2"), ],2,prop.table)
+    #        br5182.nac.neun br5207.nac.neun br5701.nac.neun
+    # Inhib       0.05440722      0.05383916       0.1549296
+    # MSN.D1      0.53266809      0.49659246       0.5211268
+    # MSN.D2      0.41292469      0.44956838       0.3239437
+    
+    # (MSN prop:) 0.9455928       0.9461608        0.8450705
 
 # Proportions of MSN subpopulations across donors
-round(apply(prop.table(table(sce.nac$cellType.final[grep("MSN", sce.nac$cellType.final)],
-                             sce.nac$sample[grep("MSN", sce.nac$cellType.final)])),2,prop.table),3)
-#          nac.5161 nac.5212 nac.5287 nac.neun.5182 nac.neun.5207
-# Astro       0.000    0.000    0.000         0.000         0.000
-# Inhib.1     0.000    0.000    0.000         0.000         0.000
-# Inhib.2     0.000    0.000    0.000         0.000         0.000
-# Inhib.3     0.000    0.000    0.000         0.000         0.000
-# Inhib.4     0.000    0.000    0.000         0.000         0.000
-# Micro       0.000    0.000    0.000         0.000         0.000
-# MSN.D1.1    0.008    0.000    0.000         0.029         0.003
-# MSN.D1.2    0.039    0.010    0.000         0.071         0.001
-# MSN.D1.3    0.066    0.027    0.070         0.092         0.076
-# MSN.D1.4    0.693    0.565    0.837         0.375         0.437
-# MSN.D2.1    0.035    0.020    0.035         0.033         0.035
-# MSN.D2.2    0.160    0.378    0.058         0.399         0.447
-# Oligo       0.000    0.000    0.000         0.000         0.000
-# OPC         0.000    0.000    0.000         0.000         0.000
+round(apply(prop.table(table(sce.nac$cellType[grep("MSN", sce.nac$cellType)],
+                             sce.nac$donor[grep("MSN", sce.nac$cellType)])),2,prop.table),3)
+    #                br5161 br5182 br5207 br5212 br5276 br5287 br5400 br5701
+    # [(0's)]
+    # MSN.D1_A       0.358  0.319  0.403  0.436  0.371  0.422  0.364  0.228
+    # MSN.D1_B       0.015  0.040  0.015  0.007  0.001  0.000  0.000  0.039
+    # MSN.D1_C       0.030  0.056  0.001  0.074  0.019  0.000  0.003  0.011
+    # MSN.D1_D       0.101  0.067  0.042  0.088  0.096  0.060  0.157  0.006
+    # MSN.D1_E       0.056  0.065  0.061  0.020  0.013  0.072  0.042  0.283
+    # MSN.D1_F       0.007  0.015  0.002  0.000  0.002  0.000  0.003  0.050
+    # MSN.D2_A       0.354  0.357  0.437  0.341  0.432  0.349  0.355  0.317
+    # MSN.D2_B       0.034  0.034  0.007  0.024  0.051  0.060  0.051  0.039
+    # MSN.D2_C       0.034  0.033  0.031  0.010  0.013  0.036  0.025  0.028
+    # MSN.D2_D       0.011  0.013  0.000  0.000  0.002  0.000  0.000  0.000
+    # [(0's)]
 
 
 
@@ -474,7 +501,7 @@ plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
 geneExprs <- assay(sce.nac, "logcounts")
 
 sce.nac$MSN.D1 <- NA
-sce.nac$MSN.D1[grep("MSN.D1", sce.nac$cellType.final)] <- TRUE
+sce.nac$MSN.D1[grep("MSN.D1", sce.nac$cellType)] <- TRUE
 
 sce.nac$MSN.D1.0 <- NA
 sce.nac$MSN.D1.0 <- sce.nac$MSN.D1 & geneExprs["DRD1", ]==0
@@ -487,7 +514,7 @@ plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
 
 
 sce.nac$MSN.D2 <- NA
-sce.nac$MSN.D2[grep("MSN.D2", sce.nac$cellType.final)] <- TRUE
+sce.nac$MSN.D2[grep("MSN.D2", sce.nac$cellType)] <- TRUE
 
 sce.nac$MSN.D2.0 <- NA
 sce.nac$MSN.D2.0 <- sce.nac$MSN.D2 & geneExprs["DRD2", ]==0
@@ -508,7 +535,7 @@ table(geneExprs["DRD1", union(which(sce.nac$MSN.D1), which(sce.nac$MSN.D2))] > 0
 # 8017   819
 
 sce.nac$MSN.broad <- NA
-sce.nac$MSN.broad[grep("MSN", sce.nac$cellType.final)] <- TRUE
+sce.nac$MSN.broad[grep("MSN", sce.nac$cellType)] <- TRUE
 # the above is the same as
 table(geneExprs["DRD1", which(sce.nac$MSN.broad)] > 0 &
         geneExprs["DRD2", which(sce.nac$MSN.broad)] > 0)
@@ -556,7 +583,7 @@ dev.off()
 table(sce.nac$prelimCluster, sce.nac$bothD1D2)
 # don't seem to make up or be enriched in their own cluster
 
-table(sce.nac$cellType.final, sce.nac$bothD1D2)
+table(sce.nac$cellType, sce.nac$bothD1D2)
 #          FALSE TRUE
 # Astro        0    0
 # Inhib.1      0    0
@@ -633,94 +660,31 @@ write.table(cellType.rgnTab, file="tables/suppTable_17panBrain-subclusters_regio
             sep="\t", quote=F, row.names=F,col.names=T)
   
 ### RNAscope misc checks for NAc ===============================
-# MNT/AnJa 21Sep2020
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-#sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
 
-# For AnJa: within DRD2's:
-sce.nac.all$DRD2 <- FALSE
-sce.nac.all$DRD2[grep("MSN.D2.", sce.nac.all$cellType.final)] <- TRUE
-table(sce.nac.all$DRD2) # 3931
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
 
 
-# Amongst DRD2's, could one define which are of which class based on non-0 expression of these markers?:
-table(sce.nac.all$DRD2 & assay(sce.nac.all, "logcounts")["PENK", ] > 0,
-      sce.nac.all$DRD2 & assay(sce.nac.all, "logcounts")["TAC1", ] > 0)
-#       FALSE TRUE
-# FALSE  9467  277
-# TRUE   3116  381
-
-(3116+381)/(3116+381+277)
-#[1] 0.9266031
-
-(277+381)/(3116+381+277)
-#[1] 0.1743508
-
-
-table(assay(sce.nac.all, "logcounts")["DRD2", ] > 0 & assay(sce.nac.all, "logcounts")["PENK", ] > 0,
-      assay(sce.nac.all, "logcounts")["DRD2", ] > 0 & assay(sce.nac.all, "logcounts")["TAC1", ] > 0)
-#        FALSE TRUE
-# FALSE  8554  601
-# TRUE   3385  701
-
-## Without the 'data-driven'defined cluster
-# ## cross-tab - first transpose and make data.frame 
-# d_match <- t(as.data.frame(as.matrix(assay(sce.nac.all, "logcounts"))))
-# 
-# with(d_match[d_match[ ,"DRD2"] > 0, ],
-#      table(PENK = PENK > 0 ,  TAC1 = TAC1 > 0))
-# 
-# 
-# with(d_match[ ,d_match["DRD2",] > 0],
-#      table(PENK = d_match["PENK", ] > 0 ,  TAC1 = d_match["TAC1", ] > 0))
-# 
-# with(d_match[ ,d_match["DRD2",] > 0 & d_match["DRD1",]==0],
-#      table(PENK = "PENK" >0 ,  TAC1 = "TAC1"> 0))
-#     ** not happy with trying to re-formate the dgCMatrix into a data.frame
-
-
-## Try subsetting ===
-sce.nac.d2 <- sce.nac.all[ ,assay(sce.nac.d2, "logcounts")["DRD2", ] > 0]
-
-# Now tabulate
-logExprs.DRD2 <-  assay(sce.nac.d2, "logcounts")
-table(PENK = logExprs.DRD2["PENK", ] > 0,
-      TAC1 = logExprs.DRD2["TAC1", ] > 0)
-#       TAC1
-# PENK    FALSE TRUE
-#  FALSE  4987 2307
-#  TRUE   3707 1958
-
-
-
-d = as.data.frame(t(as.matrix(assay(sce.nac.all, "logcounts")[c("TAC1","PENK","DRD1","DRD2"), ])))
-with(d[d$DRD2 > 0,],
-     table(PENK = PENK >0 ,  TAC1 = TAC1> 0))
-#       TAC1
-# PENK    FALSE TRUE
-#   FALSE   430  601
-#   TRUE   3385  701
-with(d[d$DRD2 > 0 & d$DRD1==0,],
-     table(PENK = PENK >0 ,  TAC1 = TAC1> 0))
-#       TAC1
-# PENK    FALSE TRUE
-#   FALSE   339  323
-#   TRUE   3252  372
-
+# Clean up '.drop' clusters (669 nuclei, total)
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 ## Save logcounts of experimental genes for future use (with FULL SCE)
 RNAscope.probes <- c("DRD1","TAC1","RXFP2","GABRQ","CRHR2","RXFP1",
                      "DRD2","PENK","HTR7", "PVALB", "GAD1", "PTHLH","KIT")
 
-logExprs.rnascope <- as.data.frame(t(as.matrix(assay(sce.nac.all, "logcounts")[c(RNAscope.probes), ])))
-
-save(logExprs.rnascope, file="rnascope/snRNA-seq-logExprs_13probes_MNT.rda")
+# Print these for revision
+pdf("pdfs/revision/NAc/forRef_RNAscope-probes_NAc-n8_revision-cellClasses_MNT2021.pdf", width=10)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="select RNAscope",
+                     features=RNAscope.probes, ncol=3) +
+  scale_color_manual(values = cell_colors.nac)
+dev.off()
 
 
 
 # On-the-fly printing ===
 sce.nac.all <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac.all$cellType <- droplevels(sce.nac.all$cellType)
 
 plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("RXFP1"),
                x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.3, ncol=5,
@@ -962,7 +926,7 @@ load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
     rm(sce.all.tsne.10pcs)
 
 # Already has 'ambig.lowNtrxts' removed, so remove these and just assign to $cellType
-sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType.final=="ambig.lowNtrxts"]
+sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
 
 reducedDim(sce.nac, "TSNE") <- reducedDim(sce.all.tsne.15pcs, "TSNE")
 
