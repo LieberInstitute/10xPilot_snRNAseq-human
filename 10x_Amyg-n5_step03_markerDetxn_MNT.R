@@ -361,70 +361,75 @@ write.csv(top40genes, file="tables/revision/top40genesLists_Amyg-n5_cellType_SN-
 
 
 ### For fig: Plot some top markers in vlnplot array (12Jun2020) === === === ===
-  #     * had been done on local machine, but realized chunk isn't in script
-  #       - updating 31Aug2020
 
-# load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-# load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-#     # markers.amy.t.1vAll, markers.amy.t.pw, markers.amy.wilcox.block
-#     # Focus on the pairwise result (".pw") bc more specific
-#     rm(markers.amy.t.1vAll, markers.amy.wilcox.block)
-# 
-# # First drop "ambig.lowNtrxts" (50 nuclei)
-# sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
-# sce.amy$cellType <- droplevels(sce.amy$cellType)
-# 
-# 
-# # Take top two for broad glia
-# topToPrint <- as.data.frame(sapply(markers.amy.t.pw, function(x) {head(rownames(x),n=2)}))
-# topToPrint <- c(topToPrint$Astro, c("NPTX1", "SLC30A3", # Excit.1
-#                                     "SLC17A6", "SOX4", "SOX11", #Excit.2
-#                                     "MCHR2", "CDH22", # Excit.3
-#                                     "CCK", "CALB2", "KIT", # Inhib.1/2/4
-#                                     "CNTNAP3", "CNTNAP3B", "CALB1", # Inhib.3
-#                                     "NPFFR2", "TLL1"), # Inhib.5
-#                 topToPrint$Micro, topToPrint$Oligo, topToPrint$OPC)
-# 
-# table(topToPrint %in% rownames(sce.amy)) # good
-# 
-# # With top 2 per glial
-# pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v1.pdf", height=17, width=4)
-# print(
-#   plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
-#                  x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=1,
-#                  add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
-#                                               geom = "crossbar", width = 0.3,
-#                                               colour=rep(tableau20[1:12], length(topToPrint))) +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
-#     ggtitle(label="AMY top marker array (with glial)")
-# )
-# dev.off()
-# 
-# # Neuronal markers only (highlighted in paper)
-# topToPrint <- c("NRN1", "NPTX1", "SLC30A3", # Excit.1
-#   "SLC17A6", "VCAN", #Excit.2
-#   "MCHR2", "RBFOX3", # Excit.3
-#   "CCK", "CALB2", "KIT", # Inhib.1/2/4
-#   "CRH", "CALB1", # Inhib.3
-#   "NPFFR2", "TLL1")
-# 
-# pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v2.pdf", height=11, width=4.5)
-# print(
-#   plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
-#                  x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=1,
-#                  add_legend=F, scales="free_y") + stat_summary(fun = median, fun.min = median, fun.max = median,
-#                                               geom = "crossbar", width = 0.3,
-#                                               colour=rep(tableau20[1:12], length(topToPrint))) +
-#     xlab("") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
-#           axis.text.y = element_text(size = 6.5),
-#           axis.title.y = element_text(angle = 90, size = 16),
-#           plot.title = element_text(size = 20),
-#           panel.grid.major=element_line(colour="grey95", size=0.8),
-#           panel.grid.minor=element_line(colour="grey95", size=0.4))# +  
-#     #ggtitle(label="AMY top marker array (neuronal only)")
-# )
-# dev.off()
+load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+load("rdas/markers-stats_Amyg-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+    # markers.amy.t.1vAll, markers.amy.t.pw, markers.amy.wilcox.block
+    # Focus on the pairwise result (".pw") bc more specific
+    rm(markers.amy.t.1vAll, markers.amy.wilcox.block)
+
+# First drop "ambig.lowNtrxts" (50 nuclei)
+sce.amy <- sce.amy[ ,sce.amy$cellType != "Ambig.lowNtrxts"]
+sce.amy$cellType <- droplevels(sce.amy$cellType)
+
+
+# Take top two for broad glia
+topToPrint <- as.data.frame(sapply(markers.amy.t.pw, function(x) {head(rownames(x),n=2)}))
+topToPrint <- c(topToPrint$Astro, c("NPTX1", "SLC30A3", # Excit.1
+                                    "SLC17A6", "SOX4", "SOX11", #Excit.2
+                                    "MCHR2", "CDH22", # Excit.3
+                                    "CCK", "CALB2", "KIT", # Inhib.1/2/4
+                                    "CNTNAP3", "CNTNAP3B", "CALB1", # Inhib.3
+                                    "NPFFR2", "TLL1"), # Inhib.5
+                topToPrint$Micro, topToPrint$Oligo, topToPrint$OPC)
+
+table(topToPrint %in% rownames(sce.amy)) # good
+
+# With top 2 per glial
+pdf("pdfs/pubFigures/Amyg_topMarkers-ARRAY_logExprs_Jun2020_v1.pdf", height=17, width=4)
+print(
+  plotExpression(sce.amy, exprs_values = "logcounts", features=topToPrint,
+                 x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=1,
+                 add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
+                                              geom = "crossbar", width = 0.3,
+                                              colour=rep(tableau20[1:12], length(topToPrint))) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +
+    ggtitle(label="AMY top marker array (with glial)")
+)
+dev.off()
+
+# Neuronal markers only (highlighted in paper)
+topToPrint <- c("NRN1", "NPTX1", "SLC30A3", # Excit_A
+  "SLC17A6", "VCAN", #Excit_B
+  "MCHR2", "CDH22", # Excit_C
+  "PENK", "ACTN2", # Inhib_A (& Inhib_H)
+  "CCK", "CALB2", "KIT", # Inhib_B/D
+  "CRH", # Inhib_B
+  "NPFFR2", "TLL1", # Inhib_C
+  "SYT2", "ONECUT2", # Inhib_E
+  "LHX6", "ELAVL2", # Inhib_F
+  "DIO2", # Inhib_G
+  "NPY", "PRLR") # Inhib_H
+
+#pdf("pdfs/revision/pubFigures/regionSpecific_Amyg-n5_topMarkers-ARRAY_MNT2021_1stHalf.pdf", height=11, width=3.8)
+pdf("pdfs/revision/pubFigures/regionSpecific_Amyg-n5_topMarkers-ARRAY_MNT2021_2ndHalf.pdf", height=11, width=3.8)
+print(
+#  plotExpressionCustom(sce.amy, features=topToPrint[1:11], features_name="manually-selected",
+  plotExpressionCustom(sce.amy, features=topToPrint[12:22], features_name="manually-selected",
+                       point_alpha=0.5, point_size=.7, ncol=1,
+                       scales="free_y") +
+    scale_color_manual(values = cell_colors.amy) +
+    xlab("") +
+    ylab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+          axis.text.y = element_text(size = 8),
+          axis.title.y = element_text(angle = 90, size = 14),
+          plot.title = element_text(size = 12),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4)) +
+    ggtitle(label="AMY top neuronal markers array")
+)
+dev.off()
 
 
 
@@ -450,82 +455,60 @@ sessionInfo()
 # LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
 # 
 # locale:
-#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
-# [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
-# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
-# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
-# [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-# [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 # 
 # attached base packages:
-#   [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
-# [8] methods   base     
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
 # 
 # other attached packages:
-#   [1] limma_3.46.0                jaffelab_0.99.30           
-# [3] rafalib_1.0.0               DropletUtils_1.10.3        
-# [5] batchelor_1.6.2             scran_1.18.5               
-# [7] scater_1.18.6               ggplot2_3.3.3              
-# [9] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
-# [11] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
-# [13] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
-# [15] SummarizedExperiment_1.20.0 Biobase_2.50.0             
-# [17] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
-# [19] IRanges_2.24.1              S4Vectors_0.28.1           
-# [21] BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
-# [23] matrixStats_0.58.0         
+#   [1] ggrepel_0.9.1               dynamicTreeCut_1.63-1       dendextend_1.14.0          
+# [4] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
+# [7] batchelor_1.6.2             scran_1.18.5                scater_1.18.6              
+# [10] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
+# [13] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [16] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0 Biobase_2.50.0             
+# [19] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [22] S4Vectors_0.28.1            BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
+# [25] matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
-#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0         
-# [3] colorspace_2.0-0          ellipsis_0.3.2           
-# [5] scuttle_1.0.4             bluster_1.0.0            
-# [7] XVector_0.30.0            BiocNeighbors_1.8.2      
-# [9] rstudioapi_0.13           farver_2.1.0             
-# [11] bit64_4.0.5               fansi_0.4.2              
-# [13] xml2_1.3.2                splines_4.0.4            
-# [15] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
-# [17] cachem_1.0.4              Rsamtools_2.6.0          
-# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1             
-# [21] R.oo_1.24.0               HDF5Array_1.18.1         
-# [23] compiler_4.0.4            httr_1.4.2               
-# [25] dqrng_0.2.1               assertthat_0.2.1         
-# [27] Matrix_1.3-2              fastmap_1.1.0            
-# [29] lazyeval_0.2.2            BiocSingular_1.6.0       
-# [31] prettyunits_1.1.1         tools_4.0.4              
-# [33] rsvd_1.0.3                igraph_1.2.6             
-# [35] gtable_0.3.0              glue_1.4.2               
-# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5              
-# [39] rappdirs_0.3.3            Rcpp_1.0.6               
-# [41] vctrs_0.3.6               Biostrings_2.58.0        
-# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0       
-# [45] DelayedMatrixStats_1.12.3 stringr_1.4.0            
-# [47] beachmat_2.6.4            lifecycle_1.0.0          
-# [49] irlba_2.3.3               statmod_1.4.35           
-# [51] XML_3.99-0.6              edgeR_3.32.1             
-# [53] zlibbioc_1.36.0           scales_1.1.1             
-# [55] hms_1.0.0                 ProtGenerics_1.22.0      
-# [57] rhdf5_2.34.0              RColorBrewer_1.1-2       
-# [59] curl_4.3                  memoise_2.0.0            
-# [61] gridExtra_2.3             segmented_1.3-3          
-# [63] biomaRt_2.46.3            stringi_1.5.3            
-# [65] RSQLite_2.2.7             BiocParallel_1.24.1      
-# [67] rlang_0.4.10              pkgconfig_2.0.3          
-# [69] bitops_1.0-7              lattice_0.20-41          
-# [71] purrr_0.3.4               Rhdf5lib_1.12.1          
-# [73] labeling_0.4.2            GenomicAlignments_1.26.0 
-# [75] cowplot_1.1.1             bit_4.0.4                
-# [77] tidyselect_1.1.1          magrittr_2.0.1           
-# [79] R6_2.5.0                  generics_0.1.0           
-# [81] DelayedArray_0.16.3       DBI_1.1.1                
-# [83] pillar_1.6.0              withr_2.4.2              
-# [85] RCurl_1.98-1.3            tibble_3.1.1             
-# [87] crayon_1.4.1              utf8_1.2.1               
-# [89] BiocFileCache_1.14.0      viridis_0.6.0            
-# [91] progress_1.2.2            locfit_1.5-9.4           
-# [93] grid_4.0.4                blob_1.2.1               
-# [95] digest_0.6.27             R.utils_2.10.1           
-# [97] openssl_1.4.3             munsell_0.5.0            
-# [99] beeswarm_0.3.1            viridisLite_0.4.0        
-# [101] vipor_0.4.5               askpass_1.1
-
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
+# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
+# [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
+# [16] sparseMatrixStats_1.2.1   cachem_1.0.4              Rsamtools_2.6.0          
+# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
+# [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
+# [25] dqrng_0.2.1               assertthat_0.2.1          Matrix_1.3-2             
+# [28] fastmap_1.1.0             lazyeval_0.2.2            limma_3.46.0             
+# [31] BiocSingular_1.6.0        prettyunits_1.1.1         tools_4.0.4              
+# [34] rsvd_1.0.3                igraph_1.2.6              gtable_0.3.0             
+# [37] glue_1.4.2                GenomeInfoDbData_1.2.4    dplyr_1.0.5              
+# [40] rappdirs_0.3.3            Rcpp_1.0.6                vctrs_0.3.6              
+# [43] Biostrings_2.58.0         rhdf5filters_1.2.0        rtracklayer_1.50.0       
+# [46] DelayedMatrixStats_1.12.3 stringr_1.4.0             beachmat_2.6.4           
+# [49] lifecycle_1.0.0           irlba_2.3.3               statmod_1.4.35           
+# [52] XML_3.99-0.6              edgeR_3.32.1              zlibbioc_1.36.0          
+# [55] scales_1.1.1              hms_1.0.0                 ProtGenerics_1.22.0      
+# [58] rhdf5_2.34.0              RColorBrewer_1.1-2        curl_4.3                 
+# [61] memoise_2.0.0             gridExtra_2.3             segmented_1.3-3          
+# [64] biomaRt_2.46.3            stringi_1.5.3             RSQLite_2.2.7            
+# [67] BiocParallel_1.24.1       rlang_0.4.10              pkgconfig_2.0.3          
+# [70] bitops_1.0-7              lattice_0.20-41           purrr_0.3.4              
+# [73] Rhdf5lib_1.12.1           labeling_0.4.2            GenomicAlignments_1.26.0 
+# [76] cowplot_1.1.1             bit_4.0.4                 tidyselect_1.1.1         
+# [79] magrittr_2.0.1            R6_2.5.0                  generics_0.1.0           
+# [82] DelayedArray_0.16.3       DBI_1.1.1                 pillar_1.6.0             
+# [85] withr_2.4.2               RCurl_1.98-1.3            tibble_3.1.1             
+# [88] crayon_1.4.1              utf8_1.2.1                BiocFileCache_1.14.0     
+# [91] viridis_0.6.0             progress_1.2.2            locfit_1.5-9.4           
+# [94] grid_4.0.4                blob_1.2.1                digest_0.6.27            
+# [97] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
+# [100] beeswarm_0.3.1            viridisLite_0.4.0         vipor_0.4.5              
+# [103] askpass_1.1
 
