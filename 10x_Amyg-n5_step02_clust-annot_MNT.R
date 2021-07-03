@@ -482,11 +482,11 @@ dev.off()
     }
     # ====
 
-text_by <- "cellType.split"
-text_out <- retrieveCellInfo(sce.amy.tsne.optb, text_by, search="colData")
+text_by <- "cellType"
+text_out <- retrieveCellInfo(sce.amy, text_by, search="colData")
 text_out$val <- .coerce_to_factor(text_out$val, level.limit=Inf)
 ## actually not necessary if the colData chosen (usually cellType[.etc] is factorized)
-df_to_plot <- data.frame(reducedDim(sce.amy.tsne.optb, "TSNE"))
+df_to_plot <- data.frame(reducedDim(sce.amy, "TSNE"))
 by_text_x <- vapply(split(df_to_plot$X1, text_out$val), median, FUN.VALUE=0)
 by_text_y <- vapply(split(df_to_plot$X2, text_out$val), median, FUN.VALUE=0)
 # plot_out <- plot_out + annotate("text", x=by_text_x, y=by_text_y, 
@@ -494,18 +494,20 @@ by_text_y <- vapply(split(df_to_plot$X2, text_out$val), median, FUN.VALUE=0)
 
 
 
-plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=4.5, point_alpha=0.5,
-         text_size=8, theme_size=18) +
+plotTSNE(sce.amy, colour_by="cellType", point_size=3.5, point_alpha=0.5,
+         text_size=8, theme_size=16) +
   annotate("text", x=by_text_x, y=by_text_y, 
            label=names(by_text_x), size=6) +
-  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed")
+  ggtitle("t-SNE on optimal fastMNN-corrected PCs (87)") +
+  scale_color_manual(values = cell_colors.amy)
+
 
 # OR
-sce.amy.tsne.optb$labels <- ifelse(!duplicated(sce.amy.tsne.optb$cellType.split), as.character(sce.amy.tsne.optb$cellType.split), NA)
+sce.amy$labels <- ifelse(!duplicated(sce.amy$cellType), as.character(sce.amy$cellType), NA)
 Labs.df <- data.frame(by_text_x, by_text_y, labs=names(by_text_x))
 
-colDF <- data.frame(colData(sce.amy.tsne.optb))
-DFforLabs <- cbind(reducedDim(sce.amy.tsne.optb,"TSNE"), data.frame(colDF$labels))
+colDF <- data.frame(colData(sce.amy))
+DFforLabs <- cbind(reducedDim(sce.amy,"TSNE"), data.frame(colDF$labels))
 colnames(DFforLabs) <- c("X","Y","labels")
 
 # plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=4.5, point_alpha=0.5,
@@ -524,15 +526,17 @@ DFforLabs.edit$Y[!is.na(DFforLabs$labels)] <- by_text_y[match(as.character(DFfor
 
 ## Finally print
 library(ggrepel)
-
-#pdf("pdfs/revision/pubFigures/FINAL_pilotPaper_Amyg-n2_tSNE_optPCs-PC5_MNTMay2020.pdf", width=8)
-set.seed(109)
-plotTSNE(sce.amy.tsne.optb, colour_by="cellType.split", point_size=6, point_alpha=0.5,
-         theme_size=18) +
-  geom_text_repel(data=DFforLabs.edit, size=6.0,
+#dir.create("pdfs/revision/pubFigures")
+pdf("pdfs/revision/pubFigures/regionSpecific_Amyg-n5_main-fig-TSNE_MNT2021.pdf", width=9)
+set.seed(70321)
+plotTSNE(sce.amy, colour_by="cellType", point_size=4.5, point_alpha=0.5,
+         theme_size=16) + labs(colour="Cell type") +
+  geom_text_repel(data=DFforLabs.edit, size=5.0,
                   aes(label=labels)) +
-  ggtitle("t-SNE on optimal PCs (45), donor-correlated PC[5] removed")
-#dev.off()
+  scale_color_manual(values = cell_colors.amy,
+                     labels=paste0(levels(sce.amy$cellType)," (",table(sce.amy$cellType),")")) +
+  ggtitle("t-SNE on optimal fastMNN-corrected PCs (87)")
+dev.off()
 
 ### end reference chunk ========
 
@@ -573,7 +577,7 @@ round(apply(apply(table(sce.amy$cellType, sce.amy$donor),2,prop.table),1,mean),3
 
 
 
-### Session info for 03Jun2021 ==============================
+### Session info for 03Jul2021 ==============================
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -594,14 +598,15 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0           jaffelab_0.99.30           
-# [4] rafalib_1.0.0               DropletUtils_1.10.3         batchelor_1.6.2            
-# [7] scran_1.18.5                scater_1.18.6               ggplot2_3.3.3              
-# [10] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
-# [13] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
-# [16] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
-# [19] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
-# [22] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
+#   [1] ggrepel_0.9.1               dynamicTreeCut_1.63-1       dendextend_1.14.0          
+# [4] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
+# [7] batchelor_1.6.2             scran_1.18.5                scater_1.18.6              
+# [10] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
+# [13] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [16] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0 Biobase_2.50.0             
+# [19] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [22] S4Vectors_0.28.1            BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
+# [25] matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
 #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
@@ -638,6 +643,6 @@ sessionInfo()
 # [94] grid_4.0.4                blob_1.2.1                digest_0.6.27            
 # [97] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
 # [100] beeswarm_0.3.1            viridisLite_0.4.0         vipor_0.4.5              
-# [103] askpass_1.1
+# [103] askpass_1.1 
 
     
