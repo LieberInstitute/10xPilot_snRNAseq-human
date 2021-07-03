@@ -7,16 +7,18 @@
 
 
 plotExpressionCustom <- function(sce, features, features_name, anno_name = "cellType",
-                                 point_alpha=0.2, point_size=0.7, ncol=2){
+                                 point_alpha=0.2, point_size=0.7, ncol=2,
+                                 exprs_values = "logcounts", scales = "fixed"){
   scater::plotExpression(sce, 
-                         exprs_values = "logcounts", 
+                         exprs_values = exprs_values, 
                          features = features,
                          x = anno_name, 
                          colour_by = anno_name,
                          ncol = ncol,
                          point_alpha = point_alpha, 
                          point_size = point_size,
-                         add_legend = F) +
+                         add_legend = F,
+                         scales = scales) +
   stat_summary(fun = median, 
                fun.min = median, 
                fun.max = median,
