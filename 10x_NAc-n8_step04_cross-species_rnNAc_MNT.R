@@ -7,6 +7,9 @@
 
 library(SingleCellExperiment)
 library(EnsDb.Hsapiens.v86)
+library(org.Hs.eg.db)
+#BiocManager::install("org.Rn.eg.db")
+library(org.Rn.eg.db)
 library(scater)
 library(scran)
 library(batchelor)
@@ -16,6 +19,8 @@ library(limma)
 library(lattice)
 library(RColorBrewer)
 library(pheatmap)
+
+source('plotExpressionCustom.R')
 
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
@@ -29,151 +34,185 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 ### *** 09Jun 2021 update:
-# JAX MGI database no longer reports a $HomoloGene.ID -> now use $DB.Class.Key
+# JAX MGI database no longer reports a $JAX.geneID -> now use $DB.Class.Key
 # (corresponded with David Shaw @ JAX/MGI)
+
+# For mapping === == === ===
+# human.entrez > DB.Class.Key < mouse.entrez < rn.Symbol
+#                ^ filter SCE's on this - to be more descriptive, call 'JAX.geneID'
+
 
 ### Setting up homologous gene IDs, for mapping b/tw species =============
 
-## load modeling outputs
-# # 10x-pilot human NAc
-# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda", verbose=T)
-# # eb_list.nac.all, sce.nac.all.PB, corfit.nac.all
-# 
-# # Day Lab Rat NAc
-# load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_manualContrasts_MNTApr2020.rda", verbose=T)
-# # eb_list.nac.rat, sce.nac.rat.PB, corfit.nac.rat
+## Load SCE with new info
+load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
+     verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
+
+# First drop the "drop." clusters (669 nuclei, total)
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
+
+# Drop genes with all 0's
+sce.nac <- sce.nac[!rowSums(assay(sce.nac, "counts"))==0, ]
 
 
 # Add EntrezID for human
-hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.nac.all.PB)$ID, 
+hs.entrezIds <- mapIds(org.Hs.eg.db, keys=rowData(sce.nac)$gene_id, 
                        column="ENTREZID", keytype="ENSEMBL")
-# "'select()' returned 1:many mapping between keys and columns"
+    # "'select()' returned 1:many mapping between keys and columns"
 table(!is.na(hs.entrezIds))
-    # 20,931 valid entries (remember this is already subsetted for those non-zero genes only)
+    # 21,191 valid entries (remember this is already subsetted for those non-zero genes only)
+    withoutEntrez <- names(hs.entrezIds)[is.na(hs.entrezIds)]
+    # Store those somewhere, maybe for later reference
+    table(rowData(sce.nac)[rowData(sce.nac)$gene_id %in% withoutEntrez, ]$gene_id == withoutEntrez)
+    names(withoutEntrez) <- rowData(sce.nac)[rowData(sce.nac)$gene_id %in% withoutEntrez, ]$gene_name
+
 
 # Add to rowData
-rowData(sce.nac.all.PB) <- cbind(rowData(sce.nac.all.PB), hs.entrezIds)
+rowData(sce.nac) <- cbind(rowData(sce.nac), hs.entrezIds)
 
 
-## Bring in 'HomoloGene.ID' for human (already in rowData for rat SCE) ===
-## JAX annotation info
+## Bring in 'DB.Class.Key' for human ===
+# JAX annotation info
 hom = read.delim("http://www.informatics.jax.org/downloads/reports/HOM_AllOrganism.rpt",
                  as.is=TRUE)
 
 hom_hs <- hom[hom$Common.Organism.Name == "human", ]
-    # of 19,124 entries
-table(rowData(sce.nac.all.PB)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
-    # 17,491
-table(rowData(sce.nac.all.PB)$Symbol %in% hom_hs$Symbol)
-    # 17,150 - not a bad difference
+    # of 22,514 entries
+table(rowData(sce.nac)$hs.entrezIds %in% hom_hs$EntrezGene.ID)
+    # 17,063
+table(rowData(sce.nac)$gene_name %in% hom_hs$Symbol)
+    # 16,739 - not a bad difference
 
-        # So for mapping === == === ===
-        # human.entrez > HomoloGene.ID < rat.Symbol
-        #                ^ filter SCE's on this
+# Human JAX.geneID (by Entrez)
+rowData(sce.nac)$JAX.geneID <- hom_hs$DB.Class.Key[match(rowData(sce.nac)$hs.entrezIds,
+                                                       hom_hs$EntrezGene.ID)]
 
-# Human (by Entrez)
-rowData(sce.nac.all.PB)$HomoloGene.ID <- hom_hs$HomoloGene.ID[match(rowData(sce.nac.all.PB)$hs.entrezIds,
-                                                                 hom_hs$EntrezGene.ID)]
+
+## Do the same for rat NAc ===
+load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
+    # sce.nac.rat, chosen.hvgs.nac.rat
+    # (This object was already processed to contain the now-deprecated $HomoloGene.ID)
+
+# Find/add Entrez ID
+rn.entrezIds <- mapIds(org.Rn.eg.db, keys=rowData(sce.nac.rat)$ID, 
+                       column="ENTREZID", keytype="ENSEMBL")
+
+table(!is.na(hs.entrezIds)) #21866
+
+# Add to rowData
+rowData(sce.nac.rat) <- cbind(rowData(sce.nac.rat), rn.entrezIds)
+
+hom_rn <- hom[hom$Common.Organism.Name == "rat", ]
+    # of 17,655 entries
+table(rowData(sce.nac.rat)$rn.entrezIds %in% hom_rn$EntrezGene.ID)
+    # 16,201
+table(rowData(sce.nac.rat)$Symbol %in% hom_rn$Symbol)
+    # 15,893
+
+# Now add rat JAX.geneID (by Entrez)
+rowData(sce.nac.rat)$JAX.geneID <- hom_rn$DB.Class.Key[match(rowData(sce.nac.rat)$rn.entrezIds,
+                                                         hom_rn$EntrezGene.ID)]
 
 
 ## Now set/match to shared homologous genes ===
+length(intersect(rowData(sce.nac)$JAX.geneID,
+                 rowData(sce.nac.rat)$JAX.geneID))  # 14,008
 
-length(intersect(rowData(sce.nac.all.PB)$HomoloGene.ID,
-                 rowData(sce.nac.rat.PB)$HomoloGene.ID))  # 14,122 (well, 14,121)
-
-sharedHomologs <- intersect(rowData(sce.nac.all.PB)$HomoloGene.ID,
-                            rowData(sce.nac.rat.PB)$HomoloGene.ID)
-# That first one is NA lol - get rid of it
+sharedHomologs <- intersect(rowData(sce.nac)$JAX.geneID,
+                            rowData(sce.nac.rat)$JAX.geneID)
+    # That first one is NA - rm
 sharedHomologs <- sharedHomologs[-1]
 
 # Human not in rat
-length(setdiff(rowData(sce.nac.all.PB)$HomoloGene.ID,
-                 rowData(sce.nac.rat.PB)$HomoloGene.ID))  # 3187
+length(setdiff(rowData(sce.nac)$JAX.geneID,
+                 rowData(sce.nac.rat)$JAX.geneID))  # 2524
 # Rat not in human
-length(setdiff(rowData(sce.nac.rat.PB)$HomoloGene.ID,
-               rowData(sce.nac.all.PB)$HomoloGene.ID))  # 1533
+length(setdiff(rowData(sce.nac.rat)$JAX.geneID,
+               rowData(sce.nac)$JAX.geneID))  # 1741
 
 
 # Subset for those
-sce.rat.PBsub <- sce.nac.rat.PB[rowData(sce.nac.rat.PB)$HomoloGene.ID %in% sharedHomologs, ]   # 14247
-sce.hsap.PBsub <- sce.nac.all.PB[rowData(sce.nac.all.PB)$HomoloGene.ID %in% sharedHomologs, ]  # 14178
+sce.rn.sub <- sce.nac.rat[rowData(sce.nac.rat)$JAX.geneID %in% sharedHomologs, ]   # 14213
+sce.hsap.sub <- sce.nac[rowData(sce.nac)$JAX.geneID %in% sharedHomologs, ]  # 14408
     ## Many are duplicated...
 
-rowData(sce.rat.PBsub)$Symbol[duplicated(rowData(sce.rat.PBsub)$HomoloGene.ID)]
-    # shoot many genes are orthologs
-rowData(sce.hsap.PBsub)$Symbol[duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)]
-    # same here, though less
+rowData(sce.rn.sub)$Symbol[duplicated(rowData(sce.rn.sub)$JAX.geneID)]
+    # many orthologs
+rowData(sce.hsap.sub)$gene_name[duplicated(rowData(sce.hsap.sub)$JAX.geneID)]
+    # many, almost double
 
 
-### -> Take the higher-expressing of the duplicated - just mean across PB clusters:
+### -> Take the higher-expressing of the duplicated
 
     ## Rat ===
-    duplicatedSet.rat <- which(duplicated(rowData(sce.rat.PBsub)$HomoloGene.ID))
+    duplicatedSet.rat <- which(duplicated(rowData(sce.rn.sub)$JAX.geneID))
     genes2compare.rat <- list()
     gene2keep.rat <- character()
     for(g in 1:length(duplicatedSet.rat)){
-      genes2compare.rat[[g]] <- rownames(sce.rat.PBsub)[rowData(sce.rat.PBsub)$HomoloGene.ID ==
-                                              rowData(sce.rat.PBsub)$HomoloGene.ID[duplicatedSet.rat[g]]]
-      rowmeansmat <- rowMeans(assay(sce.rat.PBsub[genes2compare.rat[[g]], ], "logcounts"))
+      genes2compare.rat[[g]] <- rownames(sce.rn.sub)[rowData(sce.rn.sub)$JAX.geneID ==
+                                              rowData(sce.rn.sub)$JAX.geneID[duplicatedSet.rat[g]]]
+      rowmeansmat <- rowMeans(assay(sce.rn.sub[genes2compare.rat[[g]], ], "logcounts"))
       gene2keep.rat[g] <- names(rowmeansmat[order(rowmeansmat, decreasing=TRUE)])[1]
     }
     
-    # Now pull out those that not being compared, so can `c()`
-    table(rownames(sce.rat.PBsub) %in% unlist(genes2compare.rat)) # 234   - why isn't this ==
-    sum(lengths(genes2compare.rat))                               # 312 ????
-    length(unique(unlist(genes2compare.rat))) # 234   - oh. also `length(unique(gene2keep.rat)) == 108`
+    length(genes2compare.rat) # 206
+    length(unique(gene2keep.rat)) # 181
+        # This is because many 'tested' might have been orthologous,
+        #   b/tw themselves (i.e. 3+ orthologous genes):
+    length(unique(rowData(sce.rn.sub)$JAX.geneID[duplicatedSet.rat])) # 181 - good
     
-    genesNoCompare.rat <- rownames(sce.rat.PBsub)[!(rownames(sce.rat.PBsub) %in% unlist(genes2compare.rat))]
+    genesNoCompare.rat <- rownames(sce.rn.sub)[!(rownames(sce.rn.sub) %in% unlist(genes2compare.rat))]
     
     # Finally combine and subset
-    sce.rat.PBsub <- sce.rat.PBsub[c(genesNoCompare.rat, unique(gene2keep.rat)), ]
+    sce.rn.sub <- sce.rn.sub[c(genesNoCompare.rat, unique(gene2keep.rat)), ]
     
-    table(rowData(sce.rat.PBsub)$HomoloGene.ID %in% sharedHomologs) # 14121 TRUE
-    table(duplicated(rowData(sce.rat.PBsub)$HomoloGene.ID)) # 14121 FALSE         dope.
+    table(rowData(sce.rn.sub)$JAX.geneID %in% sharedHomologs) # 14007 TRUE
+    table(duplicated(rowData(sce.rn.sub)$JAX.geneID)) # 14007 FALSE         dope.
 
     
     ## Human ===
     # First change rownames to EnsemblID
-    rowData(sce.hsap.PBsub)$Symbol.unique <- rownames(sce.hsap.PBsub)
-    rownames(sce.hsap.PBsub) <- rowData(sce.hsap.PBsub)$ID
+    rownames(sce.hsap.sub) <- rowData(sce.hsap.sub)$gene_id
         
-    duplicatedSet.hsap <- which(duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID))
+    duplicatedSet.hsap <- which(duplicated(rowData(sce.hsap.sub)$JAX.geneID))
     genes2compare.hsap <- list()
     gene2keep.hsap <- character()
     for(g in 1:length(duplicatedSet.hsap)){
-      genes2compare.hsap[[g]] <- rownames(sce.hsap.PBsub)[rowData(sce.hsap.PBsub)$HomoloGene.ID ==
-                                                          rowData(sce.hsap.PBsub)$HomoloGene.ID[duplicatedSet.hsap[g]]]
-      rowmeansmat <- rowMeans(assay(sce.hsap.PBsub[genes2compare.hsap[[g]], ], "logcounts"))
+      genes2compare.hsap[[g]] <- rownames(sce.hsap.sub)[rowData(sce.hsap.sub)$JAX.geneID ==
+                                                          rowData(sce.hsap.sub)$JAX.geneID[duplicatedSet.hsap[g]]]
+      rowmeansmat <- rowMeans(assay(sce.hsap.sub[genes2compare.hsap[[g]], ], "logcounts"))
       gene2keep.hsap[g] <- names(rowmeansmat[order(rowmeansmat, decreasing=TRUE)])[1]
     }
     
-    # Now pull out those that not being compared, so can `c()`
-    table(rownames(sce.hsap.PBsub) %in% unlist(genes2compare.hsap)) # 112   - why isn't this ==
-    sum(lengths(genes2compare.hsap))                               # 118 ????
-    length(unique(unlist(genes2compare.hsap))) # 112   - oh. also `length(unique(gene2keep.hsap)) == 55`
+    length(gene2keep.hsap)  # 401
+    length(unique(gene2keep.hsap))  # 274
+        # This is because many 'tested' might have been orthologous,
+        #   b/tw themselves (i.e. 3+ orthologous genes):
+    length(unique(rowData(sce.hsap.sub)$JAX.geneID[duplicatedSet.hsap]))  # 274 - good
     
-    genesNoCompare.hsap <- rownames(sce.hsap.PBsub)[!(rownames(sce.hsap.PBsub) %in% unlist(genes2compare.hsap))]
-        # of length 14066 (which + 55 == 14121)
+    genesNoCompare.hsap <- rownames(sce.hsap.sub)[!(rownames(sce.hsap.sub) %in% unlist(genes2compare.hsap))]
+        # of length 13733 (which + 274 == 14007)
     
     # Finally combine and subset
-    sce.hsap.PBsub <- sce.hsap.PBsub[c(genesNoCompare.hsap, unique(gene2keep.hsap)), ]
+    sce.hsap.sub <- sce.hsap.sub[c(genesNoCompare.hsap, unique(gene2keep.hsap)), ]
     
-    table(rowData(sce.hsap.PBsub)$HomoloGene.ID %in% sharedHomologs) # 14121 TRUE
-    table(duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)) # 14121 FALSE         dope.
+    table(rowData(sce.hsap.sub)$JAX.geneID %in% sharedHomologs) # 14007 TRUE
+    table(duplicated(rowData(sce.hsap.sub)$JAX.geneID)) # 14007 FALSE         dope.
 
 
     ## Match order and save
-    sce.rat.PBsub <- sce.rat.PBsub[match(rowData(sce.hsap.PBsub)$HomoloGene.ID,
-                                   rowData(sce.rat.PBsub)$HomoloGene.ID), ]
+    sce.rn.sub <- sce.rn.sub[match(rowData(sce.hsap.sub)$JAX.geneID,
+                                   rowData(sce.rn.sub)$JAX.geneID), ]
 
-    table(rowData(sce.rat.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)
+    table(rowData(sce.rn.sub)$JAX.geneID == rowData(sce.hsap.sub)$JAX.geneID)
         # all TRUE - good
-    pheatmap(cor(assay(sce.rat.PBsub, "logcounts"), assay(sce.hsap.PBsub, "logcounts")), fontsize=5)
-        # (ah but this is at the sample:cluster level)
-    
-    Readme <- "These two SCEs are subsetted and ordered for matching HomoloGene.ID in the rowData. This can be used to subset the nucleus-level SCEs in their respected Rdata files."
-    save(sce.rat.PBsub, sce.hsap.PBsub, Readme, file="/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq//SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda")
-    
+
+    Readme <- "These two SCEs are subsetted and ordered for matching 'JAX.geneID' in the rowData. This can be used to subset the nucleus-level SCEs in their respected Rdata files."
+    save(sce.rn.sub, sce.hsap.sub, Readme, file="/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda")
+    # Also save in the main project dir
+    save(sce.rn.sub, sce.hsap.sub, Readme, file="rdas/revision/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda")
     
     
 ### FINALLY resume comparisons === === === === ===
@@ -186,11 +225,11 @@ rowData(sce.hsap.PBsub)$Symbol[duplicated(rowData(sce.hsap.PBsub)$HomoloGene.ID)
 ### Another comparison: Rat nuclei vs human subclusters (t stats) ====================================
 # 10x-pilot human NAc stats
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.nac.all, sce.nac.all.PB, corfit.nac.all
+    # eb_list.nac, sce.nac, corfit.nac
 
 # Day Lab Rat NAc stats
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.nac.rat, sce.nac.rat.PB, corfit.nac.rat
+    # eb_list.nac.rat, sce.nac.rat, corfit.nac.rat
 
 # Day Lab Rat NAc full nuclei-level SCE
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
@@ -198,7 +237,7 @@ load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-
 
 # Already subsetted on shared homologous genes (14,121):
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
-    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+    # sce.rn.sub, sce.hsap.sub, Readme
 
 
 sce.nac.rat
@@ -223,19 +262,19 @@ sce.nac.rat
 library(Matrix)
 
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-     # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+     # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 # Mtx
-mat2write <- assay(sce.nac.all, "counts")
+mat2write <- assay(sce.nac, "counts")
 Matrix::writeMM(mat2write, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_countMat.mtx")
     ## NULL     - uh what?  Lol
 
 # Features
-write.table(rowData(sce.nac.all), file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_features.tsv",
+write.table(rowData(sce.nac), file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_features.tsv",
             sep="\t", row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 # Barcodes
-write.table(sce.nac.all$Barcode, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_barcodes.tsv",
+write.table(sce.nac$Barcode, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_barcodes.tsv",
             row.names=FALSE, col.names=FALSE, quote=FALSE)
 
 
@@ -264,16 +303,16 @@ sce.test
 
 head(rownames(assay(sce.test, "counts"))) # ensemblID
 
-table(rownames(sce.test) == rowData(sce.nac.all)$ID)  # all TRUE - so make rownames(sce.test)
+table(rownames(sce.test) == rowData(sce.nac)$ID)  # all TRUE - so make rownames(sce.test)
 
-rownames(sce.test) <- rownames(sce.nac.all)
+rownames(sce.test) <- rownames(sce.nac)
 
-all.equal(assay(sce.test, "counts"), assay(sce.nac.all, "counts"))
+all.equal(assay(sce.test, "counts"), assay(sce.nac, "counts"))
     ## [1] TRUE - dope
 
 
 ## Write out colData
-colnames(colData(sce.nac.all))
+colnames(colData(sce.nac))
     # [1] "Sample"                "Barcode"               "sum"
     # [4] "detected"              "percent_top_50"        "percent_top_100"
     # [7] "percent_top_200"       "percent_top_500"       "subsets_Mito_sum"
@@ -285,8 +324,8 @@ colnames(colData(sce.nac.all))
     # [25] "cellType.final"
 
 # Keep $Barcode so can rid of the rownames
-    # (because `table(rownames(colData(sce.nac.all)) == sce.nac.all$Barcode)` == all TRUE)
-pheno2write <- colData(sce.nac.all)[ ,c(2, 13, 3,4, 11,12, 14:18, 25)]
+    # (because `table(rownames(colData(sce.nac)) == sce.nac$Barcode)` == all TRUE)
+pheno2write <- colData(sce.nac)[ ,c(2, 13, 3,4, 11,12, 14:18, 25)]
 
 write.csv(pheno2write, row.names=FALSE, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd_n3-hom_n2-NeuN_metadata.csv")
 
@@ -330,18 +369,18 @@ load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers
 
 load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda",
      verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,ref.sampleInfo
-    rm(chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all,ref.sampleInfo)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac,ref.sampleInfo
+    rm(chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac,ref.sampleInfo)
     # First drop "ambig.lowNtrxts" (93 nuclei)
-    sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-    sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+    sce.nac <- sce.nac[ ,sce.nac$cellType.final != "ambig.lowNtrxts"]
+    sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
 
 ## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) for rat clusters
  #      and fix row order to the first entry "Astrocyte"
 fixTo <- rownames(markers.nac.t.1vAll[["Astro"]])
 
 for(s in names(markers.nac.t.1vAll)){
-  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac.all))
+  markers.nac.t.1vAll[[s]]$t.stat <- markers.nac.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.nac))
   markers.nac.t.1vAll[[s]] <- markers.nac.t.1vAll[[s]][fixTo, ]
 }
 
@@ -354,28 +393,28 @@ rownames(ts.nac) <- fixTo
 ## Bring in HomoloGene.ID info to subset/match order
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda",
      verbose=T)
-    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+    # sce.rn.sub, sce.hsap.sub, Readme
 
-table(rowData(sce.rat.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+table(rowData(sce.rn.sub)$JAX.geneID == rowData(sce.hsap.sub)$JAX.geneID)  # all TRUE - dope
     # (see above - these are the intersecting homologs)
 
 # First give [human] ts.nac rownames their respective EnsemblID
-#   (have to use the full sce bc rownames(sce.hsap.PBsub) is EnsemblID and we uniquified the $Symbol)
-rownames(ts.nac) <- rowData(sce.nac.all)$ID[match(rownames(ts.nac), rownames(sce.nac.all))]
+#   (have to use the full sce bc rownames(sce.hsap.sub) is EnsemblID and we uniquified the $Symbol)
+rownames(ts.nac) <- rowData(sce.nac)$ID[match(rownames(ts.nac), rownames(sce.nac))]
 
 # How many human genes with rat homologs are in these?
-table(rownames(sce.hsap.PBsub) %in% rownames(ts.nac)) # 14121 good
+table(rownames(sce.hsap.sub) %in% rownames(ts.nac)) # 14121 good
 
 # Subset/re-order for these and set to HomoloGene.ID
-ts.nac <- ts.nac[rownames(sce.hsap.PBsub), ]
-rownames(ts.nac) <- rowData(sce.hsap.PBsub)$HomoloGene.ID
+ts.nac <- ts.nac[rownames(sce.hsap.sub), ]
+rownames(ts.nac) <- rowData(sce.hsap.sub)$JAX.geneID
 
 
 # Same for rat t's
-table(rownames(sce.rat.PBsub) %in% rownames(ts.rat))
+table(rownames(sce.rn.sub) %in% rownames(ts.rat))
 
-ts.rat <- ts.rat[rownames(sce.rat.PBsub), ]
-rownames(ts.rat) <- rowData(sce.rat.PBsub)$HomoloGene.ID
+ts.rat <- ts.rat[rownames(sce.rn.sub), ]
+rownames(ts.rat) <- rowData(sce.rn.sub)$JAX.geneID
 
 table(rownames(ts.nac) == rownames(ts.rat)) # all 14121 TRUE (well duh)
 
@@ -602,10 +641,10 @@ intersect(toupper(head(rownames(markers.rat.t.1vAll[["Grm8-MSN"]]), n=40)),
         # Three with MSN.D1.2: "THSD7B" "KCNH5"  "LYPD1"
 
 # Plot it
-sce.nac.all <- sce.nac.all[ ,sce.nac.all$cellType.final != "ambig.lowNtrxts"]
-sce.nac.all$cellType.final <- droplevels(sce.nac.all$cellType.final)
+sce.nac <- sce.nac[ ,sce.nac$cellType.final != "ambig.lowNtrxts"]
+sce.nac$cellType.final <- droplevels(sce.nac$cellType.final)
 
-plotExpression(sce.nac.all, x="cellType.final", colour_by="cellType.final",
+plotExpression(sce.nac, x="cellType.final", colour_by="cellType.final",
                exprs_values="logcounts", features="GRM8") +
   stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
                geom = "crossbar", width = 0.3,
@@ -667,38 +706,38 @@ library(batchelor)
 
 # Load human NAc .rda (preprint)
 load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-    # sce.nac.all, chosen.hvgs.nac.all, pc.choice.nac.all, clusterRefTab.nac.all, ref.sampleInfo
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
 
 # Load rat SCE
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
     # sce.nac.rat, chosen.hvgs.nac.rat
 
-# Load previous object with 'pseudo-bulked' SCEs subsetted for aligned $HomoloGene.ID
+# Load previous object with 'pseudo-bulked' SCEs subsetted for aligned $JAX.geneID
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda",
      verbose=T)
-    # sce.rat.PBsub, sce.hsap.PBsub, Readme
+    # sce.rn.sub, sce.hsap.sub, Readme
 
-table(rowData(sce.rat.PBsub)$HomoloGene.ID == rowData(sce.hsap.PBsub)$HomoloGene.ID)  # all TRUE - dope
+table(rowData(sce.rn.sub)$JAX.geneID == rowData(sce.hsap.sub)$JAX.geneID)  # all TRUE - dope
 
 
 ## Subset/match order for those
-sce.nac.all <- sce.nac.all[rowData(sce.nac.all)$ID %in% rowData(sce.hsap.PBsub)$ID, ]
-sce.nac.rat <- sce.nac.rat[rowData(sce.nac.rat)$ID %in% rowData(sce.rat.PBsub)$ID, ]
+sce.nac <- sce.nac[rowData(sce.nac)$ID %in% rowData(sce.hsap.sub)$ID, ]
+sce.nac.rat <- sce.nac.rat[rowData(sce.nac.rat)$ID %in% rowData(sce.rn.sub)$ID, ]
 
-# The rat SCE already has its $HomoloGene.ID; add it to 'sce.nac.all
-rowData(sce.nac.all)$HomoloGene.ID <- rowData(sce.hsap.PBsub)$HomoloGene.ID[match(
-  rowData(sce.nac.all)$ID, rowData(sce.hsap.PBsub)$ID
+# The rat SCE already has its $JAX.geneID; add it to 'sce.nac
+rowData(sce.nac)$JAX.geneID <- rowData(sce.hsap.sub)$JAX.geneID[match(
+  rowData(sce.nac)$ID, rowData(sce.hsap.sub)$ID
 )]
 
 # Match the order
-sce.nac.rat <- sce.nac.rat[match(rowData(sce.nac.all)$HomoloGene.ID, rowData(sce.nac.rat)$HomoloGene.ID), ]
+sce.nac.rat <- sce.nac.rat[match(rowData(sce.nac)$JAX.geneID, rowData(sce.nac.rat)$JAX.geneID), ]
 
-table(rowData(sce.nac.all)$HomoloGene.ID == rowData(sce.nac.rat)$HomoloGene.ID)
+table(rowData(sce.nac)$JAX.geneID == rowData(sce.nac.rat)$JAX.geneID)
     # good
 
 # Duplicate, in case mess anything up
 sce.rat <- sce.nac.rat
-sce.hsap <- sce.nac.all
+sce.hsap <- sce.nac
 
 # Clean up and get 'intersecting' colData cols
 sce.hsap$Sample <- ss(sce.hsap$Sample,"/",9)
@@ -730,25 +769,25 @@ reducedDim(sce.hsap) <- NULL  # 4x
 assay(sce.rat, "logcounts") <- NULL
 assay(sce.hsap, "logcounts") <- NULL
 
-table(rowData(sce.rat)$HomoloGene.ID == rowData(sce.hsap)$HomoloGene.ID)
+table(rowData(sce.rat)$JAX.geneID == rowData(sce.hsap)$JAX.geneID)
 
-# Make rownames the $HomoloGene.ID
-rownames(sce.rat) <- rowData(sce.rat)$HomoloGene.ID
-rownames(sce.hsap) <- rowData(sce.hsap)$HomoloGene.ID 
+# Make rownames the $JAX.geneID
+rownames(sce.rat) <- rowData(sce.rat)$JAX.geneID
+rownames(sce.hsap) <- rowData(sce.hsap)$JAX.geneID 
 
 
 ## Requiring that the rowData basically match exactly - have to drop other info
-rowData(sce.rat) <- rowData(sce.rat)$HomoloGene.ID
-rowData(sce.hsap) <- rowData(sce.hsap)$HomoloGene.ID
+rowData(sce.rat) <- rowData(sce.rat)$JAX.geneID
+rowData(sce.hsap) <- rowData(sce.hsap)$JAX.geneID
 
 sce.comb <- cbind(sce.hsap, sce.rat)
 
 
 ## Save this for future work (along with original SCEs for their rowData)
-table(rownames(sce.comb) == rowData(sce.nac.all)$HomoloGene.ID) # good
+table(rownames(sce.comb) == rowData(sce.nac)$JAX.geneID) # good
 
 Readme <- "These SCEs are all subsetted for matching 'HomoloGene.ID'; the original spp. SCEs are saved for convenience of their gene info (rowData)"
-save(sce.comb, sce.nac.all, sce.nac.rat, Readme,
+save(sce.comb, sce.nac, sce.nac.rat, Readme,
      file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
 
 sce.comb
@@ -849,7 +888,7 @@ reducedDim(sce.comb, "PCA_corrected_2H.500") <- reducedDim(mnn.hold, "corrected"
 
 
 # # Save with these new dims
-# save(sce.comb, sce.nac.all, sce.nac.rat, Readme, chosen.hvgs.comb,
+# save(sce.comb, sce.nac, sce.nac.rat, Readme, chosen.hvgs.comb,
 #      file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
 
 
@@ -886,7 +925,7 @@ dev.off()
 
 
 # Save progress
-save(sce.comb, sce.nac.all, sce.nac.rat, Readme,
+save(sce.comb, sce.nac, sce.nac.rat, Readme,
      file="rdas/zPiloting_human-rat-combinedSCEs_for-fastMNN-integration_MNT.rda")
 
 
