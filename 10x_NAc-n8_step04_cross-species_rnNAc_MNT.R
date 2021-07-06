@@ -215,45 +215,21 @@ rowData(sce.hsap.sub)$gene_name[duplicated(rowData(sce.hsap.sub)$JAX.geneID)]
     save(sce.rn.sub, sce.hsap.sub, Readme, file="rdas/revision/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda")
     
     
+    ## MNT 06Jul2021: oops - the rat SCE wasn't first subsetted for 0-capture genes ===
+    load("rdas/revision/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda", verbose=T)
+        # sce.rn.sub, sce.hsap.sub, Readme
+    
+    sce.rn.sub <- sce.rn.sub[!rowSums(assay(sce.rn.sub, "counts"))==0, ]
+    # Subset the corresponding human-NAc SCE
+    sce.hsap.sub <- sce.hsap.sub[rowData(sce.hsap.sub)$JAX.geneID %in% rowData(sce.rn.sub)$JAX.geneID, ]
+    # re-save
+    save(sce.rn.sub, sce.hsap.sub, Readme, file="/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda")
+    # Also save in the main project dir
+    save(sce.rn.sub, sce.hsap.sub, Readme, file="rdas/revision/SCE_rat-NAc_matched2_Hsap-NAc_JAX.geneIDs_MNT2021.rda")
+    
+    
+    
 ### FINALLY resume comparisons === === === === ===
-
-
-
-
-
-
-### Another comparison: Rat nuclei vs human subclusters (t stats) ====================================
-# 10x-pilot human NAc stats
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc_all-n5_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.nac, sce.nac, corfit.nac
-
-# Day Lab Rat NAc stats
-load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_manualContrasts_MNTApr2020.rda", verbose=T)
-    # eb_list.nac.rat, sce.nac.rat, corfit.nac.rat
-
-# Day Lab Rat NAc full nuclei-level SCE
-load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
-    # sce.nac.rat, chosen.hvgs.nac.rat
-
-# Already subsetted on shared homologous genes (14,121):
-load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc-PBd_w_matchingHsap-NAc-PBd_HomoloGene.IDs_MNT.rda", verbose=T)
-    # sce.rn.sub, sce.hsap.sub, Readme
-
-
-sce.nac.rat
-    # class: SingleCellExperiment
-    # dim: 32883 15631
-    # metadata(1): Samples
-    # assays(2): counts logcounts
-    # rownames(32883): ENSRNOG00000046319 ENSRNOG00000047964 ...
-    #   ENSRNOG00000053444 ENSRNOG00000060590
-    # rowData names(4): ID Symbol Type HomoloGene.ID
-    # colnames(15631): AAACCCATCGGACTGC_1 AAACCCATCTCCTGCA_1 ...
-    #   TTTGGTTTCTCATAGG_4 TTTGTTGGTTCTCGTC_4
-    # colData names(14): Sample Barcode ... Celltype Idents.All_Groups_log.
-    # reducedDimNames(3): PCA TSNE UMAP
-    # spikeNames(0):
-    # altExpNames(0):
 
 
 
@@ -335,7 +311,6 @@ write.csv(pheno2write, row.names=FALSE, file="pdfs/exploration/DayLab-ratNAc/10x
 
 
 ### Comparison to Day Lab Rat with SN-LEVEL stats =============================================
-  # Added MNT 11May2020
 
 # Load rat SCE
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-processing_MNT.rda", verbose=T)
@@ -344,6 +319,13 @@ load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/SCE_rat-NAc_downstream-
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_findMarkers-SN-LEVEL_MNTMay2020.rda",
      verbose=T)
     # markers.rat.t.1vAll
+
+table(rownames(sce.rn.sub) %in% rownames(markers.rat.t.1vAll[[1]]))
+    #FALSE  TRUE 
+    #  562 13445    # Why is this... (should be all 14007 TRUE)
+
+    # Ohhh this is bc not all genes in that SCE are expressed:
+    table(rowSums(assay(sce.rn.sub, "counts"))==0)  # 562
 
 ## Calculate and add t-statistic (= std.logFC * sqrt(N)) for rat clusters
  #      and fix row order to the first entry "Astrocyte"
@@ -355,7 +337,7 @@ for(x in names(markers.rat.t.1vAll)){
 
 # Pull out the t's
 ts.rat <- sapply(markers.rat.t.1vAll, function(x){x$t.stat})
-rownames(ts.rat) <- fixTo
+rownames(ts.rat) <- rowData(sce.rn.sub)$JAX.geneID[match(fixTo, rownames(sce.rn.sub))]
 
 
 
