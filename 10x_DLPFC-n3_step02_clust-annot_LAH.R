@@ -37,8 +37,8 @@ pilot.data <- pilot.data[grep("dlpfc", names(pilot.data))]
 pilot.data.2 <- pilot.data.2[grep("dlpfc", names(pilot.data.2))]
 
 map_int(c(pilot.data, pilot.data.2), ncol)
-# br5161.dlpfc br5212.dlpfc br5207.dlpfc 
-# 4215         1693         5294 
+# br5161.dlpfc br5212.dlpfc br5207.dlpfc
+# 4215         1693         5294
 
 ### MNT comment: At this point, each sample (which is a SCE object in the list, 'pilot.data') has been
   #              QC'd for cell/nucleus calling ('emptyDrops()' test) and mito rate thresholding
@@ -49,14 +49,14 @@ map_int(c(pilot.data, pilot.data.2), ncol)
   # Newest iterations for normalization: multiBatchNorm-alize
 
 # Order as will do for `fastMNN()` (this shouldn't matter here)
-sce.dlpfc <- cbind(pilot.data.2[["br5207.dlpfc"]], 
+sce.dlpfc <- cbind(pilot.data.2[["br5207.dlpfc"]],
                    pilot.data[["br5161.dlpfc"]],
                    pilot.data[["br5212.dlpfc"]]
 )
 
 sce.dlpfc
-# class: SingleCellExperiment 
-# dim: 33538 11202 
+# class: SingleCellExperiment
+# dim: 33538 11202
 # metadata(3): Samples Samples Samples
 # assays(1): counts
 # rownames(33538): MIR1302-2HG FAM138A ... AC213203.1 FAM231C
@@ -67,8 +67,8 @@ sce.dlpfc
 #   altExpNames(0):
 
 table(sce.dlpfc$sampleID)
-# br5161.dlpfc br5207.dlpfc br5212.dlpfc 
-# 4215         5294         1693 
+# br5161.dlpfc br5207.dlpfc br5212.dlpfc
+# 4215         5294         1693
 
 # Use `multiBatchNorm()` to compute log-normalized counts, matching the scaling across samples
 sce.dlpfc <- multiBatchNorm(sce.dlpfc, batch=sce.dlpfc$sampleID)
@@ -164,19 +164,19 @@ prelimCluster.medianDoublet <- sapply(clusIndexes, function(ii){
 )
 
 summary(prelimCluster.medianDoublet)
-# Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-# 0.01059  0.07083  0.14823  0.53264  0.30064 14.79144 
+# Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+# 0.01059  0.07083  0.14823  0.53264  0.30064 14.79144
 
 hist(prelimCluster.medianDoublet)
 
 ## watch in clustering
 prelimCluster.medianDoublet[prelimCluster.medianDoublet > 5]
-# 19       32       73 
-# 14.79144  7.98099 10.20462 
+# 19       32       73
+# 14.79144  7.98099 10.20462
 
 table(sce.dlpfc$prelimCluster)[c(19, 32, 73)]
-# 19 32 73 
-# 27 32  8 
+# 19 32 73
+# 27 32  8
 
 # Save for now
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo,
@@ -194,10 +194,10 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
   rowSums(assays(sce.dlpfc)$counts[ ,ii])
   }
 )
-    
+
     # And btw...
     table(rowSums(prelimCluster.PBcounts)==0)
-    # FALSE  TRUE 
+    # FALSE  TRUE
     # 29310  4228
 
 # Compute LSFs at this level
@@ -218,7 +218,7 @@ dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
 par(cex=.6)
 myplclust(tree.clusCollapsed, cex.main=2, cex.lab=1.5, cex=1.8)
 
-dend %>% 
+dend %>%
   set("labels_cex", 0.8) %>%
   plot(horiz = TRUE)
 abline(v = 325, lty = 2)
@@ -231,13 +231,13 @@ unname(clust.treeCut[order.dendrogram(dend)])
     ## Cutting at 250 looks good for the main neuronal branch, but a lot of glial
      #    prelim clusters are dropped off (0's)
 
-    # Cut at 400 for broad glia branch (will manually merge remaining dropped off)    
+    # Cut at 400 for broad glia branch (will manually merge remaining dropped off)
     glia.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
                                   minClusterSize=2, deepSplit=1, cutHeight=400)
     unname(glia.treeCut[order.dendrogram(dend)])
-    
+
     # Take those and re-assign to the first assignments
-    
+
 # clust <- clust.treeCut[order.dendrogram(dend)]
 # clust2 <- name_zeros(clust, list(c(1,2), c(106,107)))
 # unname(clust2)
@@ -291,8 +291,8 @@ pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpressionCustom(sce = sce.dlpfc,
-                         features = markers.mathys.custom[[i]], 
-                         features_name = names(markers.mathys.custom)[[i]], 
+                         features = markers.mathys.custom[[i]],
+                         features_name = names(markers.mathys.custom)[[i]],
                          anno_name = "collapsedCluster")
   )
 }
@@ -330,22 +330,39 @@ sapply(newClusIndex, function(x) {quantile(sce.dlpfc$sum[x])})
 # 100% 11137.00 8043.0 25379.0 23492.00    6919
 
 sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$doubletScore)})
+#       Astro  Excit_A   Excit_B  Excit_C    Excit_D  Excit_E  Excit_F  Inhib_A   Inhib_B  Inhib_C   Inhib_D  Inhib_E
+# 0%    0.000000 0.000000  0.010588 0.021176  0.0252900  0.09273 0.074116 0.021176  0.000000 0.000000  0.000000 0.021176
+# 25%   0.025290 0.042150  0.077878 0.179996  0.1058800  0.21918 0.635280 0.063528  0.052940 0.095292  0.042352 0.031764
+# 50%   0.063528 0.109590  0.137644 0.292889  0.2117600  0.37058 1.230780 0.128668  0.118020 0.243524  0.075870 0.042150
+# 75%   0.116468 0.370920  0.232936 0.441309  0.4515585  0.56481 1.461144 0.490970  0.243524 0.885150  0.201172 0.107278
+# 100% 11.565960 7.972764 26.671172 9.793900 11.0962240 10.52447 7.232940 6.119864 15.780960 8.788040 10.270360 0.145598
+#      Inhib_F    Micro    Mural     Oligo      OPC    Tcell
+# 0%   0.063528 0.000000 0.021176  0.000000 0.000000 0.006772
+# 25%  0.074116 0.003386 0.031764  0.042352 0.016860 0.008680
+# 50%  0.153526 0.016860 0.052940  0.189616 0.044018 0.010588
+# 75%  0.275288 0.044018 0.119115  0.584085 0.092730 0.010588
+# 100% 1.147854 4.324590 0.556380 11.001150 8.502164 0.067440
 
+sapply(newClusIndex, function(x) {median(sce.dlpfc[,x]$doubletScore)})
+#    Astro  Excit_A  Excit_B  Excit_C  Excit_D  Excit_E  Excit_F  Inhib_A  Inhib_B  Inhib_C  Inhib_D  Inhib_E  Inhib_F
+# 0.063528 0.109590 0.137644 0.292889 0.211760 0.370580 1.230780 0.128668 0.118020 0.243524 0.075870 0.042150 0.153526
+#    Micro    Mural    Oligo      OPC    Tcell
+# 0.016860 0.052940 0.189616 0.044018 0.010588
 
 table(sce.dlpfc$collapsedCluster)
-# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18 
-# 333  454  365  529  773  413  782  524 5455  132  187  243  572   19   18  388    7    8 
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18
+# 333  454  365  529  773  413  782  524 5455  132  187  243  572   19   18  388    7    8
 
 
 cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
 names(cell_colors) <- annotationTab.dlpfc$cellType
 cell_colors
-# Inhib_A       Inhib_B       Inhib_C       Excit_A       Excit_B       Inhib_D         Astro       Excit_C 
-# "#1F77B4"     "#AEC7E8"     "#FF7F0E"     "#FFBB78"     "#2CA02C"     "#98DF8A"     "#D62728"     "#FF9896" 
-# Oligo       Excit_D       Excit_E       Excit_F           OPC ambig.glial_A ambig.glial_B         Micro 
-# "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7" 
-# Inhib_E       Inhib_F 
-# "#BCBD22"     "#DBDB8D" 
+# Inhib_A       Inhib_B       Inhib_C       Excit_A       Excit_B       Inhib_D         Astro       Excit_C
+# "#1F77B4"     "#AEC7E8"     "#FF7F0E"     "#FFBB78"     "#2CA02C"     "#98DF8A"     "#D62728"     "#FF9896"
+# Oligo       Excit_D       Excit_E       Excit_F           OPC ambig.glial_A ambig.glial_B         Micro
+# "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7"
+# Inhib_E       Inhib_F
+# "#BCBD22"     "#DBDB8D"
 
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors,
@@ -356,8 +373,8 @@ pdf("pdfs/revision/regionSpecific_DLPFC-n3_marker-logExprs_collapsedClusters_LAH
 for(i in 1:length(markers.mathys.custom)){
   print(
     plotExpressionCustom(sce = sce.dlpfc,
-                         features = markers.mathys.custom[[i]], 
-                         features_name = names(markers.mathys.custom)[[i]], 
+                         features = markers.mathys.custom[[i]],
+                         features_name = names(markers.mathys.custom)[[i]],
                          anno_name = "cellType") +
       scale_color_manual(values = cell_colors)
   )
