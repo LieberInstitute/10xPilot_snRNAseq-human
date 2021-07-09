@@ -223,6 +223,20 @@ write.table(snploc.ADHD, file="./GWAS_Results/ADHD_PGC2018.snploc",
 rm(list=ls(pattern=".ADHD"))
 
 
+## GWAS for AD (PGC-ALZ, IGAP, ADSP, UKB meta-meta-analysis: Jansen, et al.2019)
+#     added MNT Jul2021
+sumStats.AD <- read.table("./GWAS_Results/AD_sumstats_Jansenetal_2019sept.txt", header=T)
+class(sumStats.AD)
+dim(sumStats.AD)
+head(sumStats.AD)
+unique(sumStats.AD$CHR)  # 1:22 as well
+snploc.AD <- sumStats.AD[ ,c(6,2,3)]
+#colnames(snploc.AD) <- c("SNP", "CHR", "BP")
+write.table(snploc.AD, file="./GWAS_Results/AD_PGC-IGAP-ADSP-UKB_2019.snploc",
+            sep="\t", col.names=T, row.names=F, quote=F)
+rm(list=ls(pattern=".AD"))
+
+
 
 ### Gene marker sets (analagous to layer marker setup) ==============
   # We'll just use the 'enriched' stats--i.e. '1vAll'
