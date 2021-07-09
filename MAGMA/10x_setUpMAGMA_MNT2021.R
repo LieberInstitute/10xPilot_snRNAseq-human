@@ -1,5 +1,5 @@
 ### for MAGMA with LIBD 10x pilot analyses
-  # MNT 14Aug2020 ========================
+  # MNT Jul2021 update ===================
 
 
 ### Set up annotation === === === === === === === === === === === === 
@@ -242,13 +242,16 @@ rm(list=ls(pattern=".AD"))
   # We'll just use the 'enriched' stats--i.e. '1vAll'
   # Update May 2021: Apply a filter for markers that median expression in respective subcluster != 0
   #                  (already computed and added to a different .rda file)
-
+  # UPDATE FOR REVISION: the 'log.FDR' are on the natural log scale, NOT BASE 10
+  #                      -> Will switch to log.FDR <= log(1e-6), since this is ~= log10(1e-12)
+  #                         (log(1e-12) == -27.63, way too strict)
+  
 ## DLPFC ===
 load("rdas/markerStats-and-SCE_DLPFC-n2_sn-level_cleaned_MNTMay2021.rda", verbose=T)
     # markers.dlpfc.t.1vAll, markers.dlpfc.t.design, sce.dlpfc.st, Readme
     rm(markers.dlpfc.t.design)
 
-sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
     #       Oligo Astro Inhib.4 Excit.L4:5 Micro Inhib.6   OPC Excit.L2:3 Excit.ambig Excit.L3:4
     # FALSE 27306 27536   25959      25458 27527   26421 27198      26506       26040      26748
     # TRUE    805   575    2152       2653   584    1690   913       1605        2071       1363
@@ -272,9 +275,9 @@ sapply(markers.dlpfc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non
 
 dlpfc.markerSet <- data.frame()
 for(i in names(markers.dlpfc.t.1vAll)){
-  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                          markers.dlpfc.t.1vAll[[i]]$non0median==TRUE)),
-             Gene=rownames(markers.dlpfc.t.1vAll[[i]])[markers.dlpfc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+             Gene=rownames(markers.dlpfc.t.1vAll[[i]])[markers.dlpfc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                                          markers.dlpfc.t.1vAll[[i]]$non0median==TRUE])
   dlpfc.markerSet <- rbind(dlpfc.markerSet, dlpfc.i)
 }
@@ -295,16 +298,16 @@ load("rdas/markerStats-and-SCE_sACC-n2_sn-level_cleaned_MNTNov2020.rda", verbose
     # markers.sacc.t.1vAll, markers.sacc.t.design, sce.sacc
     rm(markers.sacc.t.design)
 
-sapply(markers.sacc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+sapply(markers.sacc.t.1vAll, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
     #      Astro Excit.1 Excit.2 Excit.3 Excit.4 Inhib.1 Inhib.2 Micro Oligo   OPC
     # FALSE 27995   24601   24875   26197   26780   25436   25973 28104 27959 27747
     # TRUE    779    4173    3899    2577    1994    3338    2801   670   815  1027
     
 sacc.markerSet <- data.frame()
 for(i in names(markers.sacc.t.1vAll)){
-  sacc.i <- data.frame(Set=rep(i, sum(markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+  sacc.i <- data.frame(Set=rep(i, sum(markers.sacc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                         markers.sacc.t.1vAll[[i]]$non0median==TRUE)),
-                        Gene=rownames(markers.sacc.t.1vAll[[i]])[markers.sacc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                        Gene=rownames(markers.sacc.t.1vAll[[i]])[markers.sacc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                                                    markers.sacc.t.1vAll[[i]]$non0median==TRUE])
   sacc.markerSet <- rbind(sacc.markerSet, sacc.i)
 }
@@ -327,7 +330,7 @@ write.table(sacc.markerSet, file="./MAGMA/saccMarkerSets_fdr1e-12.txt", sep="\t"
 load("rdas/markerStats-and-SCE_HPC-n3_sn-level_cleaned_MNTNov2020.rda", verbose=T)
   # markers.hpc.t.1vAll, markers.hpc.t.design, sce.hpc
 
-sapply(markers.hpc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+sapply(markers.hpc.t.1vAll, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
     #       Astro Excit.1 Excit.2 Excit.3 Excit.4 Excit.5 Inhib.1 Inhib.2 Inhib.3
     # FALSE 27951   27112   26648   25829   27309   28118   27648   27182   26831
     # TRUE    806    1645    2109    2928    1448     639    1109    1575    1926
@@ -339,9 +342,9 @@ sapply(markers.hpc.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0m
 
 hpc.markerSet <- data.frame()
 for(i in names(markers.hpc.t.1vAll)){
-  hpc.i <- data.frame(Set=rep(i, sum(markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+  hpc.i <- data.frame(Set=rep(i, sum(markers.hpc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                        markers.hpc.t.1vAll[[i]]$non0median==TRUE)),
-                       Gene=rownames(markers.hpc.t.1vAll[[i]])[markers.hpc.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                       Gene=rownames(markers.hpc.t.1vAll[[i]])[markers.hpc.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                                                  markers.hpc.t.1vAll[[i]]$non0median==TRUE])
   hpc.markerSet <- rbind(hpc.markerSet, hpc.i)
 }
@@ -360,11 +363,14 @@ write.table(hpc.markerSet, file="./MAGMA/hpcMarkerSets_fdr1e-12.txt", sep="\t",
 
 
 ## NAc ===
-load("rdas/markerStats-and-SCE_NAc-n5_sn-level_cleaned_MNTNov2020.rda", verbose=T)
-    # markers.nac.t.design, markers.nac.t.1vAll, sce.nac.all
-    rm(markers.nac.t.design)
+load("rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac
+    rm(markers.nac.t.pw, medianNon0.nac)
 
-sapply(markers.nac.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+## These stats now have both an '_enriched' & '_depleted' result - take the '_enriched'
+markers.nac.enriched <- lapply(markers.nac.t.1vAll, function(x){x[[2]]})
+
+sapply(markers.nac.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
     #       Astro Inhib.1 Inhib.2 Inhib.3 Inhib.4 Micro MSN.D1.1 MSN.D1.2 MSN.D1.3
     # FALSE 28097   28843   28879   27684   27924 28532    28735    28456    28297
     # TRUE   1139     393     357    1552    1312   704      501      780      939
@@ -375,11 +381,11 @@ sapply(markers.nac.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0m
 
 
 nac.markerSet <- data.frame()
-for(i in names(markers.nac.t.1vAll)){
-  nac.i <- data.frame(Set=rep(i, sum(markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12) &
-                                       markers.nac.t.1vAll[[i]]$non0median==TRUE)),
-                      Gene=rownames(markers.nac.t.1vAll[[i]])[markers.nac.t.1vAll[[i]]$log.FDR < log10(1e-12) &
-                                                                markers.nac.t.1vAll[[i]]$non0median==TRUE])
+for(i in names(markers.nac.enriched)){
+  nac.i <- data.frame(Set=rep(i, sum(markers.nac.enriched[[i]]$log.FDR <= log(1e-6) &
+                                       markers.nac.enriched[[i]]$non0median==TRUE)),
+                      Gene=rownames(markers.nac.enriched[[i]])[markers.nac.enriched[[i]]$log.FDR < log(1e-6) &
+                                                                markers.nac.enriched[[i]]$non0median==TRUE])
   nac.markerSet <- rbind(nac.markerSet, nac.i)
 }
 
@@ -403,7 +409,7 @@ load("rdas/markerStats-and-SCE_AMY-n2_sn-level_cleaned_MNTNov2020.rda", verbose=
     # markers.amy.t.1vAll, markers.amy.t.design, sce.amy
     rm(markers.amy.t.design, markers.amy.wilcox.block)
 
-sapply(markers.amy.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0median==TRUE)})
+sapply(markers.amy.t.1vAll, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
     #      Astro Excit.1 Excit.2 Excit.3 Inhib.1 Inhib.2 Inhib.3 Inhib.4 Inhib.5
     # FALSE 27233   24838   27719   27006   25800   26249   27281   27753   26573
     # TRUE   1231    3626     745    1458    2664    2215    1183     711    1891
@@ -415,9 +421,9 @@ sapply(markers.amy.t.1vAll, function(x){table(x$log.FDR < log10(1e-12) & x$non0m
 
 amy.markerSet <- data.frame()
 for(i in names(markers.amy.t.1vAll)){
-  amy.i <- data.frame(Set=rep(i, sum(markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+  amy.i <- data.frame(Set=rep(i, sum(markers.amy.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                        markers.amy.t.1vAll[[i]]$non0median==TRUE)),
-                      Gene=rownames(markers.amy.t.1vAll[[i]])[markers.amy.t.1vAll[[i]]$log.FDR < log10(1e-12) &
+                      Gene=rownames(markers.amy.t.1vAll[[i]])[markers.amy.t.1vAll[[i]]$log.FDR < log(1e-6) &
                                                                 markers.amy.t.1vAll[[i]]$non0median==TRUE])
   amy.markerSet <- rbind(amy.markerSet, amy.i)
 }
