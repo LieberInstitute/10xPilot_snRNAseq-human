@@ -149,6 +149,7 @@ for(i in levels(sce.dlpfc$cellType)){
                                             direction="up", pval.type="all", full.stats=T)
 }
 
+
     ## Then, temp set of stats to get the standardized logFC
     temp.1vAll <- list()
     for(i in levels(sce.dlpfc$cellType)){
@@ -279,6 +280,113 @@ top40genes <- top40genes[ ,sort(colnames(top40genes))]
 ## fix this
 write.csv(top40genes, file=here("tables/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv"),
           row.names=FALSE)
+
+
+### MNT add 09Jul2021 =========
+  # Another way ('cluster-vs-all-others' method used in other regions):
+
+## (Filter all-0 genes; set up `logNormCounts()`, as above)
+
+## Re-create list of Boolean param / cell subtype (will append/save this info):
+cellSubtype.idx <- splitit(sce.dlpfc$cellType)
+medianNon0.dlpfc <- lapply(cellSubtype.idx, function(x){
+  apply(as.matrix(assay(sce.dlpfc, "logcounts")), 1, function(y){
+    median(y[x]) > 0
+  })
+})
+
+sapply(medianNon0.dlpfc, table) # see above
+
+mod <- with(colData(sce.dlpfc), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.dlpfc.t.1vAll <- list()
+for(i in levels(sce.dlpfc$cellType)){
+  # Make temporary contrast
+  sce.dlpfc$contrast <- ifelse(sce.dlpfc$cellType==i, 1, 0)
+  # Test cluster vs. all others
+  markers.dlpfc.t.1vAll[[i]] <- findMarkers(sce.dlpfc, groups=sce.dlpfc$contrast,
+                                          assay.type="logcounts", design=mod, test="t",
+                                          std.lfc=TRUE,
+                                          direction="up", pval.type="all", full.stats=T)
+}
+    ## Since all other stats are the same, and don't really use the non-standardized
+    #    logFC, just generate one object, unlike before
+
+class(markers.dlpfc.t.1vAll[["Oligo"]])
+    # a SimpleList of length 2, named "0" and "1" (from the temporary 'contrast')
+    # -> we want the second entry, named "1"
+        #    (for other purposes, might be interesting to look into that "0" entry, which
+        #     is basically what genes are depleted in the cell type of interest)
+
+
+# Do some reorganizing
+markers.dlpfc.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){
+  # Basically take the 'stats.[1 or 0]' since is redundant with the 'summary'-level stats
+  lapply(x, function(y){ y[ ,4] }) 
+})
+
+# Re-name std.lfc column and the entries; add non-0-median info
+for(i in names(markers.dlpfc.t.1vAll)){
+  colnames(markers.dlpfc.t.1vAll[[i]][["0"]])[1] <- "std.logFC"
+  colnames(markers.dlpfc.t.1vAll[[i]][["1"]])[1] <- "std.logFC"
+  # Add non0median Boolean - might be informative for both sets of stats
+  markers.dlpfc.t.1vAll[[i]][["0"]] <- cbind(markers.dlpfc.t.1vAll[[i]][["0"]],
+                                           medianNon0.dlpfc[[i]][match(rownames(markers.dlpfc.t.1vAll[[i]][["0"]]),
+                                                                     names(medianNon0.dlpfc[[i]]))])
+  colnames(markers.dlpfc.t.1vAll[[i]][["0"]])[4] <- "non0median"
+  
+  # "1" aka 'enriched'
+  markers.dlpfc.t.1vAll[[i]][["1"]] <- cbind(markers.dlpfc.t.1vAll[[i]][["1"]],
+                                           medianNon0.dlpfc[[i]][match(rownames(markers.dlpfc.t.1vAll[[i]][["1"]]),
+                                                                     names(medianNon0.dlpfc[[i]]))])
+  colnames(markers.dlpfc.t.1vAll[[i]][["1"]])[4] <- "non0median"
+  
+  # Then re-name the entries to more interpretable, because we'll keeping both contrasts
+  names(markers.dlpfc.t.1vAll[[i]]) <- paste0(i,c("_depleted", "_enriched"))
+}
+
+## Some interactive exploration of Inhib_E / Inhib_F ===
+    # More believable markers numbers
+    markerList.t.1vAll <- lapply(markers.dlpfc.t.1vAll, function(x){
+      rownames(x[[2]])[ x[[2]]$log.FDR < log(0.05) & x[[2]]$non0median==TRUE ]
+      }
+    )
+    lengths(markerList.t.1vAll)
+        #   Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C 
+        #     769    4500    3534    4868    3241    4122    3720    2631    2104    3085 
+        # Inhib_D Inhib_E Inhib_F   Micro   Mural   Oligo     OPC   Tcell 
+        #    3692     552     491     649     305     903    1129     250
+    
+    # Inhib_E
+    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Inhib_E",
+                         features=head(markerList.t.1vAll[["Inhib_E"]])) +
+      scale_color_manual(values = cell_colors)
+    
+    # Inhib_F
+    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Inhib_F",
+                         features=head(markerList.t.1vAll[["Inhib_F"]])) +
+      scale_color_manual(values = cell_colors)
+
+        # Observation: These indeed look like quite believable [rarer] neuronal types
+
+
+## Load previous results for reference
+load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda", verbose=T)
+    # markers.t.1vAll, markers.t.1vAll.db, markers.t.pw, markers.wilcox.block
+
+    # ** Another observation: These are interesting
+    table(rownames(markers.t.1vAll[["Inhib_C"]]) ==
+            rownames(markers.dlpfc.t.1vAll[["Inhib_C"]][["Inhib_C_enriched"]]))
+        # 97 FALSE (and this varies on the cell class tested)
+
+
+# Save back into a 'duplicate'/MNT copy, with the new objects
+save(markers.t.pw, markers.wilcox.block,
+     markers.dlpfc.t.1vAll, medianNon0.dlpfc,
+     file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT2021.rda")
+
+
 
 ### Session info for 03Jun2021 ============
 sessionInfo()
