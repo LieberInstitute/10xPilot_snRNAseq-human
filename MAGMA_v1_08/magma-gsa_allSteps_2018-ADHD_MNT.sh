@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -cwd
 #$ -N magma-gsa_step3_ADHD
-#$ -o ./logs/magma-gsa_step3-ADHD_MNT22Jun2021.o
-#$ -e ./logs/magma-gsa_step3-ADHD_MNT22Jun2021.e
+#$ -o ./logs/magma-gsa_step3-ADHD_MNT12Jul2021.o
+#$ -e ./logs/magma-gsa_step3-ADHD_MNT12Jul2021.e
 #$ -l bluejay,mem_free=16G,h_vmem=24G
 
 echo "**** Job starts ****"
@@ -16,11 +16,11 @@ PREVPATH=/dcl02/lieber/ajaffe/Nick_Clifton/magma
 setcol=1
 genecol=2
 
-gs_dlpfc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/dlpfcMarkerSets_fdr1e-12.txt
-gs_sacc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/saccMarkerSets_fdr1e-12.txt
-gs_hpc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/hpcMarkerSets_fdr1e-12.txt
-gs_nac=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/nacMarkerSets_fdr1e-12.txt
-gs_amy=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/amyMarkerSets_fdr1e-12.txt
+gs_dlpfc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/dlpfcMarkerSets_fdr1e-6.txt
+gs_sacc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/saccMarkerSets_fdr1e-6.txt
+gs_hpc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/hpcMarkerSets_fdr1e-6.txt
+gs_nac=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/nacMarkerSets_fdr1e-6.txt
+gs_amy=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/amyMarkerSets_fdr1e-6.txt
 
 SUMMSTATS=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/GWAS_Results/daner_adhd_meta_filtered_NA_iPSYCH23_PGC11_sigPCs_woSEX_2ell6sd_EUR_Neff_70.meta
 
@@ -33,12 +33,13 @@ SUMMSTATS=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/GW
 
 ## Step 3 - Gene set analyses (using gene-level output)  -  for five brain regions
 echo "MNT comment 22Jun2021 - running an iteration (into 'Results_v2') with the preprint stats, applying a filter for non-0-median expression, in each respective subcluster. \n This is being done after prepint; only running to see what result looks like with reported preprint cell type subpopulations."
+echo "Update MNT 12Jul2021 - running an iteration (into 'Results_rev') following the above approach, finally with final revision cell classes."
 
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_v2/dlpfc_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_v2/sacc_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_v2/hpc_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_v2/nac_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_v2/amy_ADHD
+$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_rev/dlpfc_ADHD
+$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_ADHD
+$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_rev/hpc_ADHD
+$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_rev/nac_ADHD
+$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_ADHD
 
 
 echo "**** Job ends ****"
