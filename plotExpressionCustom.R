@@ -7,7 +7,7 @@
 
 
 plotExpressionCustom <- function(sce, features, features_name, anno_name = "cellType",
-                                 point_alpha=0.2, point_size=0.7, ncol=2,
+                                 point_alpha=0.2, point_size=0.7, ncol=2, xlab = NULL,
                                  exprs_values = "logcounts", scales = "fixed"){
   scater::plotExpression(sce, 
                          exprs_values = exprs_values, 
@@ -15,6 +15,7 @@ plotExpressionCustom <- function(sce, features, features_name, anno_name = "cell
                          x = anno_name, 
                          colour_by = anno_name,
                          ncol = ncol,
+                         xlab = xlab,
                          point_alpha = point_alpha, 
                          point_size = point_size,
                          add_legend = F,
