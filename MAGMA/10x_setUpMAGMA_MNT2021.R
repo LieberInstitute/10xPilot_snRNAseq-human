@@ -249,38 +249,33 @@ rm(list=ls(pattern=".AD"))
 library(SingleCellExperiment)
 
 ## DLPFC ===
-load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda", verbose=T)
-    # markers.t.1vAll, markers.t.1vAll.db, markers.t.pw, markers.wilcox.block
-    rm(markers.t.1vAll.db, markers.t.pw, markers.wilcox.block)
+load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.t.pw, markers.wilcox.block, markers.dlpfc.t.1vAll, medianNon0.dlpfc
+    rm(markers.t.pw, markers.wilcox.block)
 
-sapply(markers.t.1vAll, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
-    #       Oligo Astro Inhib.4 Excit.L4:5 Micro Inhib.6   OPC Excit.L2:3 Excit.ambig Excit.L3:4
-    # FALSE 27306 27536   25959      25458 27527   26421 27198      26506       26040      26748
-    # TRUE    805   575    2152       2653   584    1690   913       1605        2071       1363
-
-    #       Excit.L5:6 Excit.L6.broad Inhib.5 Excit.L5 Inhib.1 Inhib.2 Inhib.3
-    # FALSE      26325          26010   26964    26884   27917   27883   27509
-    # TRUE        1786           2101    1147     1227     194     228     602
-
-    ## Btw:
-        layerMarkers <- read.table("/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/MAGMA/laminar_sets.txt",
-                                   sep="\t", header=T)
-        table(layerMarkers$Set)
-            #    All_Neuropil          Layer1 Layer1_Neuropil          Layer2 Layer2_Neuropil
-            #             581            1876              27            1512              20
-            #          Layer3 Layer3_Neuropil          Layer4 Layer4_Neuropil          Layer5
-            #             270             344             610             296             794
-            # Layer5_Neuropil          Layer6 Layer6_Neuropil              WM     WM_Neuropil
-            #             253             432             246            5010             215
-
+# For EnsemblIDs
+load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    
+## These stats now have both an '_enriched' & '_depleted' result - take the '_enriched'
+names(markers.dlpfc.t.1vAll[[1]])
+markers.dlpfc.enriched <- lapply(markers.dlpfc.t.1vAll, function(x){x[[2]]})
+    
+sapply(markers.dlpfc.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
+    #       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B
+    # FALSE 28620   26037   26423   25833   27548   26947   26999   27592   27788
+    # TRUE    690    3273    2887    3477    1762    2363    2311    1718    1522
+    
+    #       Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural Oligo   OPC Tcell
+    # FALSE   27371   26679   29211   29236 28734 29148 28444 28393 29209
+    # TRUE     1939    2631      99      74   576   162   866   917   101
 
 
 dlpfc.markerSet <- data.frame()
-for(i in names(markers.dlpfc.t.1vAll)){
-  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.t.1vAll[[i]]$log.FDR < log(1e-6) &
-                                         markers.dlpfc.t.1vAll[[i]]$non0median==TRUE)),
-             Gene=rownames(markers.dlpfc.t.1vAll[[i]])[markers.dlpfc.t.1vAll[[i]]$log.FDR < log(1e-6) &
-                                                         markers.dlpfc.t.1vAll[[i]]$non0median==TRUE])
+for(i in names(markers.dlpfc.enriched)){
+  dlpfc.i <- data.frame(Set=rep(i, sum(markers.dlpfc.enriched[[i]]$log.FDR < log(1e-6) &
+                                         markers.dlpfc.enriched[[i]]$non0median==TRUE)),
+             Gene=rownames(markers.dlpfc.enriched[[i]])[markers.dlpfc.enriched[[i]]$log.FDR < log(1e-6) &
+                                                          markers.dlpfc.enriched[[i]]$non0median==TRUE])
   dlpfc.markerSet <- rbind(dlpfc.markerSet, dlpfc.i)
 }
 
