@@ -681,17 +681,91 @@ plotExpressionCustom(sce.nac, anno_name="cellType", features_name="select RNAsco
 dev.off()
 
 
+## For RNAscope images ===
+ #  -> For each experiment, print four probes (in the relevant subset of cell classes) in a single column
+ #     ( will show side-by-side with the quantified RNAscope images )
 
-# On-the-fly printing ===
-sce.nac.all <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
-sce.nac.all$cellType <- droplevels(sce.nac.all$cellType)
+## 'Circle' (main fig one) - D1 classes
+sce.d1 <- sce.nac[ ,grep("MSN.D1", sce.nac$cellType)]
+sce.d1$cellType <- droplevels(sce.d1$cellType)
 
-plotExpression(sce.nac.all, exprs_values = "logcounts", features=c("RXFP1"),
-               x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.3, ncol=5,
-               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                            geom = "crossbar", width = 0.3,
-                                            colour=rep(tableau20[1:14], 1)) +
-  theme(axis.text.x = element_text(angle = 90, hjust=1, size=20), plot.title = element_text(size = 25))
+pdf("./rnascope/circle_pdfs/MNT-revision_snRNA-seq-D1-classes_circleProbes.pdf", width=2)
+plotExpressionCustom(sce.d1, anno_name="cellType", features=c("DRD1","TAC1","RXFP1","CRHR2"),
+                     features_name="D1-classes differentiation", ncol=1, scales="free_y", xlab="") +
+  scale_color_manual(values = cell_colors.nac) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 13),
+        plot.title = element_text(size = 10),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
+
+## 'Swirl' - Inhib. interneuron classes
+sce.inter <- sce.nac[ ,grep("Inhib", sce.nac$cellType)]
+sce.inter$cellType <- droplevels(sce.inter$cellType)
+
+pdf("./rnascope/swirl_pdfs/MNT-revision_snRNA-seq-interneuron-classes_swirlProbes.pdf", width=2)
+plotExpressionCustom(sce.inter, anno_name="cellType", features=c("GAD1","KIT","PTHLH","PVALB"),
+                     features_name="Interneuron-classes differentiation", ncol=1, scales="free_y",
+                     xlab="", point_size=1.1, point_alpha=0.4) +
+  scale_color_manual(values = cell_colors.nac) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 13),
+        plot.title = element_text(size = 10),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
+
+## 'Triangle' - MSN classes - neuropeptides
+sce.msn <- sce.nac[ ,grep("MSN", sce.nac$cellType)]
+sce.msn$cellType <- droplevels(sce.msn$cellType)
+
+pdf("./rnascope/triangle_pdfs/MNT-revision_snRNA-seq-MSN-classes-neuropeptides_triangleProbes.pdf", width=2.7)
+plotExpressionCustom(sce.msn, anno_name="cellType", features=c("DRD1","DRD2","TAC1","PENK"),
+                     features_name="MSN classes - neuropeptide", ncol=1, scales="free_y", xlab="") +
+  scale_color_manual(values = cell_colors.nac) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 13),
+        plot.title = element_text(size = 10),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
+
+## 'Star' - add'l D1 or D2 class misc markers 
+pdf("./rnascope/star_pdfs/MNT-revision_snRNA-seq-MSN-classes-CRHR2-HTR7_starProbes.pdf", width=2.7)
+plotExpressionCustom(sce.msn, anno_name="cellType", features=c("DRD1","DRD2","CRHR2","HTR7"),
+                     features_name="MSN classes - misc", ncol=1, scales="free_y", xlab="") +
+  scale_color_manual(values = cell_colors.nac) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 13),
+        plot.title = element_text(size = 10),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
+
+## 'Square' - D1 classes add'l markers
+sce.d1 <- sce.nac[ ,grep("MSN.D1", sce.nac$cellType)]
+sce.d1$cellType <- droplevels(sce.d1$cellType)
+
+pdf("./rnascope/square_pdfs/MNT-revision_snRNA-seq-D1-classes-addl_squareProbes.pdf", width=2)
+plotExpressionCustom(sce.d1, anno_name="cellType", features=c("DRD1","TAC1","RXFP2","GABRQ"),
+                     features_name="D1-classes add'l differentiation", ncol=1, scales="free_y", xlab="") +
+  scale_color_manual(values = cell_colors.nac) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 13),
+        plot.title = element_text(size = 10),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
 
 
 
