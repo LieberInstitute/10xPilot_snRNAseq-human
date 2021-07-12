@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -cwd
-#$ -N magma-gsa_steps1-2_AD
-#$ -o ./logs/magma-gsa_steps1-2-AD_MNT09Jul2021.o
-#$ -e ./logs/magma-gsa_steps1-2-AD_MNT09Jul2021.e
+#$ -N magma-gsa_step3-gsa_AD
+#$ -o ./logs/magma-gsa_step3-gsa_AD_MNT11Jul2021.o
+#$ -e ./logs/magma-gsa_step3-gsa_AD_MNT11Jul2021.e
 #$ -l mem_free=30G,h_vmem=32G
 
 echo "**** Job starts ****"
@@ -16,29 +16,29 @@ PREVPATH=/dcl02/lieber/ajaffe/Nick_Clifton/magma
 setcol=1
 genecol=2
 
-gs_dlpfc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/dlpfcMarkerSets_fdr1e-12.txt
-gs_sacc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/saccMarkerSets_fdr1e-12.txt
-gs_hpc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/hpcMarkerSets_fdr1e-12.txt
-gs_nac=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/nacMarkerSets_fdr1e-12.txt
-gs_amy=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/amyMarkerSets_fdr1e-12.txt
+gs_dlpfc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/dlpfcMarkerSets_fdr1e-6.txt
+gs_sacc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/saccMarkerSets_fdr1e-6.txt
+gs_hpc=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/hpcMarkerSets_fdr1e-6.txt
+gs_nac=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/nacMarkerSets_fdr1e-6.txt
+gs_amy=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/amyMarkerSets_fdr1e-6.txt
 
 SUMMSTATS=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/GWAS_Results/AD_sumstats_Jansenetal_2019sept.txt
 
 ## Step 1 - Annotation (SNP : gene mapping)
-$MAGMA --annotate window=35,10 --snp-loc ../MAGMA/GWAS_Results/AD_PGC-IGAP-ADSP-UKB_2019.snploc --gene-loc $ANNO --out SNP_Data/AD_Jansen2019_10xPilotGenes
+# $MAGMA --annotate window=35,10 --snp-loc ../MAGMA/GWAS_Results/AD_PGC-IGAP-ADSP-UKB_2019.snploc --gene-loc $ANNO --out SNP_Data/AD_Jansen2019_10xPilotGenes
 
 
 ## Step 2 - Gene analysis (from SNP-wise summary stats)
-$MAGMA --bfile $BFILE --gene-annot SNP_Data/AD_Jansen2019_10xPilotGenes.genes.annot --pval $SUMMSTATS use=SNP,P ncol=Neff --gene-model ${model} --out SNP_Data/AD_Jansen2019_10xPilotGenes_${model}
+# $MAGMA --bfile $BFILE --gene-annot SNP_Data/AD_Jansen2019_10xPilotGenes.genes.annot --pval $SUMMSTATS use=SNP,P ncol=Neff --gene-model ${model} --out SNP_Data/AD_Jansen2019_10xPilotGenes_${model}
 
 
 ## Step 3 - Gene set analyses (using gene-level output)  -  for five brain regions
 
-# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_v2/dlpfc_AD
-# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_v2/sacc_AD
-# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_v2/hpc_AD
-# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_v2/nac_AD
-# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_v2/amy_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_v2/dlpfc_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_v2/sacc_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_v2/hpc_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_v2/nac_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_v2/amy_AD
 
 
 echo "**** Job ends ****"
