@@ -15,6 +15,7 @@ library(DropletUtils)
 library(jaffelab)
 library(dendextend)
 library(dynamicTreeCut)
+library(gridExtra)
 
 source("plotExpressionCustom.R")
 
@@ -139,201 +140,99 @@ save(sce.allRegions, chosen.hvgs.union, ref.sampleInfo,
 
 ### (Optional:) Dimensionality reduction =========================================
 
-# Run PCA, taking top 250 (instead of default 50 PCs)
+# First remove those which are not being reported in the main Results section
+#   i.e. 'drop.' and the 'OPC_COP', 'Macro_infilt', 'Micro_resting'
+
+remove.idx <- c(grep("drop.", sce.allRegions$cellType),
+                grep("OPC_COP", sce.allRegions$cellType),
+                grep("Macro_infilt", sce.allRegions$cellType),
+                grep("Micro_resting", sce.allRegions$cellType))
+
+sce.allRegions <- sce.allRegions[ ,-remove.idx]
+sce.allRegions$cellType <- droplevels(sce.allRegions$cellType)
+
+## Run `fastMNN` (internally uses `multiBatchPCA`), taking default top 50
+ #  (Note: won't cluster in these dimensions - just for TSNE/UMAP)
 set.seed(109)
-sce.all.n12 <- runPCA(sce.all.n12, subset_row=chosen.hvgs.all.n12, ncomponents=250,
-                  BSPARAM=BiocSingular::RandomParam())
+mnn.hold <-  fastMNN(sce.allRegions, batch=sce.allRegions$donor,
+                     merge.order=c("br5161","br5212","br5400","br5207",
+                                   "br5701","br5276","br5182","br5287"),
+                     subset.row=chosen.hvgs.union, d=50,
+                     correct.all=TRUE, get.variance=TRUE,
+                     BSPARAM=BiocSingular::IrlbaParam())
+    # This temp file just used for getting batch-corrected components (drops a variety of entries)
+    date()
 
-# Save into a new data file, which will dedicate for pan-brain-analyses
-save(sce.all.n12, chosen.hvgs.all.n12, file="rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda")
+table(colnames(mnn.hold) == colnames(sce.allRegions))  # all TRUE
+table(mnn.hold$batch == sce.allRegions$donor)
+
+# Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+reducedDim(sce.allRegions, "PCA_corrected_50") <- reducedDim(mnn.hold, "corrected")
+metadata(sce.allRegions) <- metadata(mnn.hold)
+names(metadata(sce.allRegions)) <- paste0(names(metadata(sce.allRegions)),"_50")
 
 
+## For options, re-run but computing 100 corrected PCs ===
+    set.seed(109)
+    mnn.hold <-  fastMNN(sce.allRegions, batch=sce.allRegions$donor,
+                         merge.order=c("br5161","br5212","br5400","br5207",
+                                       "br5701","br5276","br5182","br5287"),
+                         subset.row=chosen.hvgs.union, d=100,
+                         correct.all=TRUE, get.variance=TRUE,
+                         BSPARAM=BiocSingular::IrlbaParam())
+    date()
 
-### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
-     verbose=TRUE)
-    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12
-
-
-# How many PCs is optimal?:
-metadata(pc.choice.n12)$chosen
-    ## 204
-
-## Assign this chosen ( PCs) to 'PCA_opt'
-reducedDim(sce.all.n12, "PCA_opt") <- reducedDim(sce.all.n12, "PCA")[ ,1:(metadata(pc.choice.n12)$chosen)]
+    dim(reducedDim(mnn.hold))
+    table(colnames(mnn.hold) == colnames(sce.allRegions))  # all TRUE
+    table(mnn.hold$batch == sce.allRegions$donor)
+    
+    # Add them to the SCE, as well as the metadata (though the latter might not be so usefl)
+    reducedDim(sce.allRegions, "PCA_corrected_100") <- reducedDim(mnn.hold, "corrected")
+    metadata(sce.allRegions)[["merge.info_100"]] <- metadata(mnn.hold)[[1]]
+    metadata(sce.allRegions)[["pca.info_100"]] <- metadata(mnn.hold)[[2]]
+    
+# Save for now
+Readme <- "This SCE is just for MNT processing for main Fig only. Has 'drop.' clusters, in addition to those rarer/unexpected-to-be-normal-brain-niche cell types removed."
+save(sce.allRegions, chosen.hvgs.union, ref.sampleInfo, Readme,
+     file="rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda")
 
 
 ## t-SNE
 set.seed(109)
-sce.all.n12 <- runTSNE(sce.all.n12, dimred="PCA_opt")
-
+sce.allRegions <- runTSNE(sce.allRegions, dimred="PCA_corrected_50")
 
 ## UMAP
 set.seed(109)
-sce.all.n12 <- runUMAP(sce.all.n12, dimred="PCA_opt")
+sce.allRegions <- runUMAP(sce.allRegions, dimred="PCA_corrected_100")
+
+
+# Save
+save(sce.allRegions, chosen.hvgs.union, ref.sampleInfo, Readme,
+     file="rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda")
 
 
 
-# Save for now
-save(sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda")
+## For main Fig3: Facet some different iterations of the best tSNE by region
 
-
-
-## Added chunk 11May2020: add in NON-collapsed region-specific annotations ===
-    # First, just load all objects but don't collapse, above
-
-    # Temp - call everything $cellType.split (if not already)
-    sce.nac$cellType.split <- sce.nac$cellType.final
-    sce.sacc$cellType.split <- sce.sacc$cellType
-    
-    regions <- list(sce.amy, sce.dlpfc.st, sce.hpc, sce.nac, sce.sacc)
-    names(regions) <- c("amy", "dlpfc", "hpc", "nac", "sacc")
-    BC.sample.ii <- paste0(colnames(sce.all.n12),".",sce.all.n12$sample)
-    
-    # Add that annotation
-    for(r in names(regions)){
-      matchTo <- paste0(colnames(regions[[r]]),".",regions[[r]]$sample)
-      BC.sample.sub <- BC.sample.ii %in% matchTo
-      # Shorten
-      regions[[r]]$cellType.split <- gsub("Excit", "Ex", regions[[r]]$cellType.split)
-      regions[[r]]$cellType.split <- gsub("Inhib", "In", regions[[r]]$cellType.split)
-      # Add region
-      regions[[r]]$cellType.split <- paste0(regions[[r]]$cellType.split, "_", r)
-      sce.all.n12$cellType.RS.sub[BC.sample.sub] <- as.character(regions[[r]]$cellType.split[match(BC.sample.ii[BC.sample.sub], matchTo)])
-    }
-    sce.all.n12$cellType.RS.sub <- factor(sce.all.n12$cellType.RS.sub)
-    unique(sce.all.n12$cellType.RS.sub)    
-        # 73 == 68 + 5 'Ambig.lowNtrxts' for each region.  good.
-
-
-
-# Getting rid of sub-cell types in sACC sample and the pan-brain assignments to compare
-table(gsub("MSN","Inhib",ss(as.character(sce.all.n12$cellType.RS),"\\.",1)) ==
-        ss(as.character(sce.all.n12$cellType),"\\.",1))
-    # FALSE  TRUE
-    #   866 33204    - 33204/(866+ 33204) = 97.5% congruence
-
-# Region specific
-table(ss(as.character(sce.all.n12$cellType.RS),"\\.",1))
-    # Ambig Astro Excit Inhib Micro   MSN Oligo   OPC Tcell
-    #   445  3864  2927  2019  2956   642 18664  2527    26
-
-table( ss(as.character(sce.all.n12$cellType),"\\.",1))
-    #Ambig Astro Excit Inhib Micro Oligo   OPC
-    #   32  3828  2848  3110  3077 18614  2561
-
-
-## Pretty good - let's save
-save(sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda")
-
-
-### Re-print some visualizations - MNT 10Apr2020 ====================
-# With original coordinates and annotation
-pdf("pdfs/panBrain-n12_reducedDims-with-collapsedClusters_Apr2020.pdf")
-plotReducedDim(sce.all.n12, dimred="PCA", ncomponents=5, colour_by="cellType", point_alpha=0.5)
-plotTSNE(sce.all.n12, colour_by="region", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
-plotTSNE(sce.all.n12, colour_by="processDate", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
-plotTSNE(sce.all.n12, colour_by="sample", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
-plotTSNE(sce.all.n12, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
-# Region-specific annotation
-plotTSNE(sce.all.n12, colour_by="cellType.RS", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204): region-specific annot")
-plotTSNE(sce.all.n12, colour_by="sum", point_alpha=0.5, point_size=2.5) + ggtitle("t-SNE on opt PCs (d=204)")
-plotUMAP(sce.all.n12, colour_by="cellType", point_alpha=0.5, point_size=2.5) + ggtitle("UMAP on opt PCs (d=204)")
-dev.off()
-
-# How many PCs?
-head(attr(reducedDim(sce.all.n12, "PCA"), "percentVar"), n=75)
-    # [1] 19.93610257  8.56551975  5.48499030  2.69104457  2.29910336  0.86823624  0.71376460
-    # [8]  0.48377800  0.32700635  0.31751426  0.29901816  0.25911566  0.22686401  0.21400937
-    # [15]  0.20303113  0.18768708  0.18136268  0.17008113  0.15380352  0.14366776  0.13666573
-    # [22]  0.12527399  0.11727016  0.11141297  0.10514416  0.10317094  0.09743560  0.09296292
-    # [29]  0.08796466  0.08415014  0.08363044  0.08132186  0.08054339  0.07687419  0.07353210
-    # [36]  0.07313253  0.07035361  0.06841083  0.06810964  0.06737097  0.06464408  0.06338695
-    # [43]  0.06261076  0.06170788  0.06062411  0.05978423  0.05923917  0.05845309  0.05738356
-    # [50]  0.05623525  0.05588523  0.05546358  0.05420676  0.05329303  0.05254012  0.05199590
-    # [57]  0.05148879  0.05073573  0.05023337  0.04904533  0.04896795  0.04883193  0.04804923
-    # [64]  0.04767100  0.04691248  0.04680456  0.04633970  0.04582236  0.04560561  0.04480624
-    # [71]  0.04469499  0.04421348  0.04352501  0.04339655  0.04307707
-
-# 0.05% var or greater
-reducedDim(sce.all.n12, "PCA_59") <- reducedDim(sce.all.n12, "PCA")[ ,c(1:59)]
-# 0.1% var or greater
-reducedDim(sce.all.n12, "PCA_26") <- reducedDim(sce.all.n12, "PCA")[ ,c(1:26)]
-
-# First remove this reducedDim bc this has caused trouble previously
-reducedDim(sce.all.n12, "TSNE") <- NULL
-
-## 59 PCs tsNE === (this one looks better than 26 PCs actually)
-set.seed(109)
-sce.all.tsne.59pcs <- runTSNE(sce.all.n12, dimred="PCA_59")
-
-save(sce.all.tsne.59pcs, file="rdas/ztemp_panBrain-n12_SCE-with-tSNEon59PCs_MNT.rda")
-rm(sce.all.tsne.59pcs)
-
-
-# MNT 16Apr: Deciding to remove the clusters won't focus on for plotting:
-    #'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
-sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType.RS != "Ambig.lowNtrxts"] # 445
-sce.all.tsne.59pcs$cellType.RS <- droplevels(sce.all.tsne.59pcs$cellType.RS)
-
-sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Ambig.hiVCAN"] # 32 nuclei
-sce.all.tsne.59pcs <- sce.all.tsne.59pcs[ ,sce.all.tsne.59pcs$cellType != "Excit.4"]  # 33 nuclei
-sce.all.tsne.59pcs$cellType <- droplevels(sce.all.tsne.59pcs$cellType)
-
-# Add broad cell type taken from pan-brain annotation
-sce.all.tsne.59pcs$cellType.broad <- ss(as.character(sce.all.tsne.59pcs$cellType), "\\.", 1)
-
-#pdf("pdfs/exploration/ztemp_panBrain-n12_TSNEon59PCs_MNT.pdf")
-pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_3x3PCA_smallClustersDropped_MNTApr2020.pdf", width=9)
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=4.0,
-         text_by="cellType.broad", text_size=8, theme_size=18) +
-  ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=19))
-
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.broad", point_alpha=0.5, point_size=4.0,
-         text_by="cellType.broad", text_size=7, theme_size=22) +
-  ggtitle("t-SNE on top 59 PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
-
-plotTSNE(sce.all.tsne.59pcs, colour_by="cellType.RS", point_alpha=0.5, point_size=4.0,
-         text_by="cellType.RS", text_size=5.5, theme_size=17) +
-  ggtitle("t-SNE on top 59 PCs (region-specific annot.)") + theme(plot.title = element_text(size=18))
-
-# Top 3 PCs
-plotReducedDim(sce.all.tsne.59pcs, dimred="PCA", ncomponents=3, colour_by="cellType.broad",
-               point_alpha=0.5, theme_size=15, add_legend=FALSE) + 
-  ggtitle("Top three PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
-dev.off()
-
-
-    ### MNT update 31Aug2020 === ===
-      # Facet some different iterations of this 'best' tSNE: maybe by region
-    
-    pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_faceted_Aug2020.pdf", width=9)
-    plotTSNE(sce.all.tsne.59pcs, colour_by="region", point_alpha=0.5, point_size=4.0, theme_size=22) +
-      facet_wrap(~ sce.all.tsne.59pcs$region)
-      ggtitle("t-SNE on top 59 PCs (broad pan-brain annot.)") + theme(plot.title = element_text(size=18))
-    dev.off()
+# pdf("pdfs/revision/pubFigures/across-regions-n24_tSNEon50PCs_faceted_MNT2021.pdf", width=9)
+# plotTSNE(sce.allRegions, colour_by="region", point_alpha=0.5, point_size=4.0, theme_size=22) +
+#   facet_wrap(~ sce.allRegions$region)
+#   ggtitle("t-SNE on top 50 corrected PCs") + theme(plot.title = element_text(size=18))
+# dev.off()
     
     ## More manually to have shadow of those for each region ======
-    custom.cols <- c("DLPFC"=tableau20[1],
-                  "sACC"=tableau20[3],
-                  "HPC"=tableau20[5],
-                  "AMY"=tableau20[7],
-                  "NAc"=tableau20[9])
-    
-    sce.temp <- sce.all.tsne.59pcs
+    sce.temp <- sce.allRegions
     
     ## DLPFC
     # Reorder to plot the region nuclei last
     sce.temp <- cbind(sce.temp[ ,sce.temp$region!="dlpfc"],
                       sce.temp[ ,sce.temp$region=="dlpfc"])
-    # Grey out other regions
-    sce.temp$reg.temp <- ifelse(sce.temp$region=="dlpfc", "DLPFC", NA)
+    # Color by region-specific annot
+    sce.temp$annot.temp <- ifelse(sce.temp$region=="dlpfc", ss(as.character(sce.temp$cellType),"dlpfc_",2), NA)
     
-    p.dlpfc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
-             add_legend=FALSE) +
-      scale_fill_manual(values=custom.cols["DLPFC"]) + ggtitle("DLPFC") +
+    p.dlpfc <- plotTSNE(sce.temp, colour_by="annot.temp", point_alpha=0.6, point_size=3.5, theme_size=15,
+                        add_legend=FALSE) + #, text_by="annot.temp", text_size=4) +
+      ggtitle("DLPFC") + scale_color_manual(values=cell_colors.dlpfc) +
       theme(plot.title = element_text(size=30),
             axis.title = element_text(size=0),
             axis.text = element_text(size=20))
@@ -342,12 +241,12 @@ dev.off()
     # Reorder to plot the region nuclei last
     sce.temp <- cbind(sce.temp[ ,sce.temp$region!="hpc"],
                       sce.temp[ ,sce.temp$region=="hpc"])
-    # Grey out other regions
-    sce.temp$reg.temp <- ifelse(sce.temp$region=="hpc", "HPC", NA)
+    # Color by region-specific annot
+    sce.temp$annot.temp <- ifelse(sce.temp$region=="hpc", ss(as.character(sce.temp$cellType),"hpc_",2), NA)
     
-    p.hpc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
-                        add_legend=FALSE) +
-      scale_fill_manual(values=custom.cols["HPC"]) + ggtitle("HIPPO") +
+    p.hpc <- plotTSNE(sce.temp, colour_by="annot.temp", point_alpha=0.6, point_size=3.5, theme_size=15,
+                      add_legend=FALSE) + #, text_by="annot.temp", text_size=4) +
+      ggtitle("HPC") + scale_color_manual(values=cell_colors.hpc) +
       theme(plot.title = element_text(size=30),
             axis.title = element_text(size=0),
             axis.text = element_text(size=20))
@@ -356,12 +255,12 @@ dev.off()
     # Reorder to plot the region nuclei last
     sce.temp <- cbind(sce.temp[ ,sce.temp$region!="sacc"],
                       sce.temp[ ,sce.temp$region=="sacc"])
-    # Grey out other regions
-    sce.temp$reg.temp <- ifelse(sce.temp$region=="sacc", "sACC", NA)
+    # Color by region-specific annot
+    sce.temp$annot.temp <- ifelse(sce.temp$region=="sacc", ss(as.character(sce.temp$cellType),"sacc_",2), NA)
     
-    p.sacc <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
-                      add_legend=FALSE) +
-      scale_fill_manual(values=custom.cols["sACC"]) + ggtitle("sACC") +
+    p.sacc <- plotTSNE(sce.temp, colour_by="annot.temp", point_alpha=0.6, point_size=3.5, theme_size=15,
+                       add_legend=FALSE) + #, text_by="annot.temp", text_size=4) +
+      ggtitle("sACC") + scale_color_manual(values=cell_colors.sacc) +
       theme(plot.title = element_text(size=30),
             axis.title = element_text(size=0),
             axis.text = element_text(size=20))
@@ -370,12 +269,12 @@ dev.off()
     # Reorder to plot the region nuclei last
     sce.temp <- cbind(sce.temp[ ,sce.temp$region!="amy"],
                       sce.temp[ ,sce.temp$region=="amy"])
-    # Grey out other regions
-    sce.temp$reg.temp <- ifelse(sce.temp$region=="amy", "AMY", NA)
+    # Color by region-specific annot
+    sce.temp$annot.temp <- ifelse(sce.temp$region=="amy", ss(as.character(sce.temp$cellType),"amy_",2), NA)
     
-    p.amy <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
-                       add_legend=FALSE) +
-      scale_fill_manual(values=custom.cols["AMY"]) + ggtitle("AMY") +
+    p.amy <- plotTSNE(sce.temp, colour_by="annot.temp", point_alpha=0.6, point_size=3.5, theme_size=15,
+                      add_legend=FALSE) + #, text_by="annot.temp", text_size=4) +
+      ggtitle("AMY") + scale_color_manual(values=cell_colors.amy) +
       theme(plot.title = element_text(size=30),
             axis.title = element_text(size=0),
             axis.text = element_text(size=20))
@@ -384,38 +283,40 @@ dev.off()
     # Reorder to plot the region nuclei last
     sce.temp <- cbind(sce.temp[ ,sce.temp$region!="nac"],
                       sce.temp[ ,sce.temp$region=="nac"])
-    # Grey out other regions
-    sce.temp$reg.temp <- ifelse(sce.temp$region=="nac", "NAc", NA)
+    # Color by region-specific annot
+    sce.temp$annot.temp <- ifelse(sce.temp$region=="nac", ss(as.character(sce.temp$cellType),"nac_",2), NA)
     
-    p.nac <- plotTSNE(sce.temp, colour_by="reg.temp", point_alpha=0.9, point_size=3.5, theme_size=15,
-                      add_legend=FALSE) +
-      scale_fill_manual(values=custom.cols["NAc"]) + ggtitle("NAc") +
+    p.nac <- plotTSNE(sce.temp, colour_by="annot.temp", point_alpha=0.6, point_size=3.5, theme_size=15,
+                      add_legend=FALSE) + #, text_by="annot.temp", text_size=4) +
+      ggtitle("NAc") + scale_color_manual(values=cell_colors.nac) +
       theme(plot.title = element_text(size=30),
             axis.title = element_text(size=0),
             axis.text = element_text(size=20))
     
-            ## end region-colored t-SNEs ========
+    ## end region-colored t-SNEs ========
     
     
-    ## All nuclei (pan-brain annotation, from above) ===
-    p.full <- plotTSNE(sce.all.tsne.59pcs, colour_by="cellType", point_alpha=0.5, point_size=4.0,
-             text_by="cellType.broad", text_size=8, theme_size=24) +
-      ggtitle("t-SNE on top 59 PCs (pan-brain annot.)") + theme(plot.title = element_text(size=28))
+    ## All nuclei (by region) ===
+    p.full <- plotTSNE(sce.allRegions, colour_by="region", point_alpha=0.2, point_size=4.0,
+                       text_size=8, theme_size=24) +
+      ggtitle("t-SNE on top 50 corrected PCs") + theme(plot.title = element_text(size=28))
     
     lay <- rbind(c(1,1,2),
                  c(1,1,3),
                  c(6,5,4))
     
-    pdf("pdfs/pubFigures/panBrain-n12_tSNEon59PCs_faceted_v2_Aug2020.pdf", width=13.5, height=12.5)
+    pdf("pdfs/revision/pubFigures/across-regions-n24_tSNEon50PCs_rs-cellClasses_faceted_MNT2021.pdf", width=13.5, height=12.5)
+    #pdf("pdfs/revision/pubFigures/across-regions-n24_tSNEon50PCs_rs-cellClasses_faceted_labeled_MNT2021.pdf", width=13.5, height=12.5)
     grid.arrange(grobs=list(p.full,
-                         p.nac,
-                         p.amy,
-                         p.hpc,
-                         p.dlpfc,
-                         p.sacc),
+                            p.nac,
+                            p.amy,
+                            p.hpc,
+                            p.dlpfc,
+                            p.sacc),
                  layout_matrix=lay)
     dev.off()
-
+    
+    
 
         
 ## Print broad marker heatmap of pan-brain-defined clusters === === ===
@@ -448,4 +349,71 @@ pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0
 dev.off()
 
 
+
+### Session info for 12-13Jul2021 ============
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
+# 
+# other attached packages:
+#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0           jaffelab_0.99.30           
+# [4] rafalib_1.0.0               DropletUtils_1.10.3         batchelor_1.6.3            
+# [7] scran_1.18.7                scater_1.18.6               ggplot2_3.3.3              
+# [10] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [13] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
+# [16] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
+# [19] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
+# [22] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] Rtsne_0.15                googledrive_1.0.1         ggbeeswarm_0.6.0         
+# [4] colorspace_2.0-0          ellipsis_0.3.2            scuttle_1.0.4            
+# [7] bluster_1.0.0             XVector_0.30.0            BiocNeighbors_1.8.2      
+# [10] rstudioapi_0.13           bit64_4.0.5               RSpectra_0.16-0          
+# [13] fansi_0.4.2               xml2_1.3.2                codetools_0.2-18         
+# [16] splines_4.0.4             R.methodsS3_1.8.1         sparseMatrixStats_1.2.1  
+# [19] cachem_1.0.4              Rsamtools_2.6.0           ResidualMatrix_1.0.0     
+# [22] dbplyr_2.1.1              R.oo_1.24.0               uwot_0.1.10              
+# [25] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
+# [28] dqrng_0.3.0               assertthat_0.2.1          Matrix_1.3-4             
+# [31] fastmap_1.1.0             lazyeval_0.2.2            limma_3.46.0             
+# [34] BiocSingular_1.6.0        prettyunits_1.1.1         tools_4.0.4              
+# [37] rsvd_1.0.5                igraph_1.2.6              gtable_0.3.0             
+# [40] glue_1.4.2                GenomeInfoDbData_1.2.4    dplyr_1.0.5              
+# [43] rappdirs_0.3.3            Rcpp_1.0.6                vctrs_0.3.8              
+# [46] Biostrings_2.58.0         rhdf5filters_1.2.0        rtracklayer_1.50.0       
+# [49] DelayedMatrixStats_1.12.3 stringr_1.4.0             beachmat_2.6.4           
+# [52] lifecycle_1.0.0           irlba_2.3.3               statmod_1.4.35           
+# [55] XML_3.99-0.6              edgeR_3.32.1              zlibbioc_1.36.0          
+# [58] scales_1.1.1              hms_1.0.0                 ProtGenerics_1.22.0      
+# [61] rhdf5_2.34.0              RColorBrewer_1.1-2        curl_4.3                 
+# [64] memoise_2.0.0             gridExtra_2.3             segmented_1.3-4          
+# [67] biomaRt_2.46.3            stringi_1.5.3             RSQLite_2.2.7            
+# [70] BiocParallel_1.24.1       rlang_0.4.11              pkgconfig_2.0.3          
+# [73] bitops_1.0-7              lattice_0.20-41           purrr_0.3.4              
+# [76] Rhdf5lib_1.12.1           GenomicAlignments_1.26.0  bit_4.0.4                
+# [79] tidyselect_1.1.1          RcppAnnoy_0.0.18          magrittr_2.0.1           
+# [82] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+# [85] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+# [88] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+# [91] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
+# [94] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
+# [97] blob_1.2.1                R.utils_2.10.1            openssl_1.4.3            
+# [100] munsell_0.5.0             beeswarm_0.4.0            viridisLite_0.4.0        
+# [103] vipor_0.4.5               askpass_1.1 
 
