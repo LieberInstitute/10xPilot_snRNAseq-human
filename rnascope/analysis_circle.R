@@ -8,7 +8,7 @@ library(RColorBrewer)
 dir.create("circle_pdfs")
 
 ## read in reference data
-ref = read_excel("raw_data/Circle_expected_expression.xlsx")
+ref = read_excel("raw_data/Circle_expected_expression_revisionMNT.xlsx")
 ref = as.data.frame(ref[,1:5])
 ref_mat = as.matrix(ref[,2:5])
 rownames(ref_mat) = ref$Population
@@ -188,3 +188,154 @@ length(table(pheno$BrNum))
 length(unique(paste0(pheno$Section,":", pheno$BrNum)))
 
 dim(dat_d1)
+
+### MNT / ABS update May2021 =============
+# objective: make more-interpretable graphics with RNAscope quantification data
+#(Abby can add/save this to the end of Andrew's script - analysis_square.R:)
+# Some ideas ===
+### 1) boxplot log2-transformed (/maybe add RVolume normalization)
+## For PTHLH (Opal690)
+pdf("circle_pdfs/TAC1_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal690Lp30 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("circle_pdfs/TAC1_norm_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal690Lp30/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For KIT
+pdf("circle_pdfs/DRD1_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal620_LP10 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("circle_pdfs/DRD1_norm_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal620_LP10/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For PVALB
+pdf("circle_pdfs/CRHR2circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal570Lp1_0 + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("circle_pdfs/CRHR2_norm_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal570Lp1_0/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+## For GAD1
+pdf("circle_pdfs/RXFP1_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal520_Lp20  + 1) ~ d1_match$cell_name)
+dev.off()
+
+# or (with $RVolume normalization)
+pdf("circle_pdfs/RXFP1_norm_circle_rnascope.pdf")
+boxplot(log2(dat_d1$MD_Opal520_Lp20/dat_d1$RVolume + 1) ~ d1_match$cell_name)
+dev.off()
+
+
+### MNT add 12Jul2021 ===
+  # Above boxplots with predictions to the new cell classes. Prediction groups combine
+  #   cell classes where not able to be differentiated, given only four probes
+quantile(dat_d1$RVolume)
+    #    0%      25%      50%      75%     100% 
+    # 480.0  11062.5  15648.0  20667.5 128348.0 
+    
+    # -> Normalization scheme: by '10k ROI pixels' keeps relatively on the same scale
+    #    (and is more interpretable than 0.003, e.g.)
+
+pdf("circle_pdfs/quantified-dotsPerROI_all-circle-probes_MNT2021.pdf")
+# TAC1
+boxplot(log2(dat_d1$MD_Opal690Lp30 + 1) ~ d1_match$cell_name,
+        ylab="log2( TAC1 dots per ROI )",
+        main="TAC1, quantified by predicted cell class")
+boxplot(log2(dat_d1$MD_Opal690Lp30/dat_d1$RVolume*10000 + 1) ~ d1_match$cell_name,
+        ylab="log2( TAC1 dots per 10k ROI pixels )",
+        main="TAC1, quantified by predicted cell class \n (ROI volume-normalized)")
+# DRD1
+boxplot(log2(dat_d1$MD_Opal620_LP10 + 1) ~ d1_match$cell_name,
+        ylab="log2( DRD1 dots per ROI )",
+        main="DRD1, quantified by predicted cell class")
+boxplot(log2(dat_d1$MD_Opal620_LP10/dat_d1$RVolume*10000 + 1) ~ d1_match$cell_name,
+        ylab="log2( DRD1 dots per 10k ROI pixels )",
+        main="DRD1, quantified by predicted cell class \n (ROI volume-normalized)")
+# CRHR2
+boxplot(log2(dat_d1$MD_Opal570Lp1_0 + 1) ~ d1_match$cell_name,
+        ylab="log2( CRHR2 dots per ROI )",
+        main="CRHR2, quantified by predicted cell class")
+boxplot(log2(dat_d1$MD_Opal570Lp1_0/dat_d1$RVolume*10000 + 1) ~ d1_match$cell_name,
+        ylab="log2( CRHR2 dots per 10k ROI pixels )",
+        main="CRHR2, quantified by predicted cell class \n (ROI volume-normalized)")
+# RXFP1
+boxplot(log2(dat_d1$MD_Opal520_Lp20  + 1) ~ d1_match$cell_name,
+        ylab="log2( RXFP1 dots per ROI )",
+        main="RXFP1, quantified by predicted cell class")
+boxplot(log2(dat_d1$MD_Opal520_Lp20/dat_d1$RVolume*10000  + 1) ~ d1_match$cell_name,
+        ylab="log2( RXFP1 dots per 10k ROI pixels )",
+        main="RXFP1, quantified by predicted cell class \n (ROI volume-normalized)")
+dev.off()
+
+
+## Forcing to use like SCE data, for aesthetics ===
+library(scater)
+library(SingleCellExperiment)
+source('../plotExpressionCustom.R')
+tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
+              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
+              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
+blgngy <- tableau20[c(1:2, 19:20, 5:6, 17:18, 15:16)]
+
+MDcounts <- t(dat_d1[ ,colnames(dat_d1)[grep('^MD', colnames(dat_d1))]])
+rownames(MDcounts) <- c("rnascope_RXFP1", "rnascope_CRHR2",
+                        "rnascope_DRD1","rnascope_TAC1")
+# check
+table(colnames(MDcounts) == rownames(d1_match))
+    # all 251 TRUE
+colnames(d1_match)[colnames(d1_match)=="cell_name"] <- "class_predict"
+
+# Create SCE
+sce.circle <- SingleCellExperiment(list(counts=MDcounts), colData=d1_match)
+# a couple normalizations:
+assay(sce.circle, "logcounts") <- log2(assay(sce.circle, "counts") + 1)
+assay(sce.circle, "logcounts.RVnorm") <- t(apply(assay(sce.circle, "counts"),
+                                               1,function(x){
+  log2( x/dat_d1$RVolume*10000 + 1 )
+}))
+
+
+pdf("circle_pdfs/quantified-dotsPerROI_all-circle-probes_betterVlnPlots_MNT2021.pdf", width=2)
+# Log2-transform, only
+plotExpressionCustom(sce.circle, exprs_values="logcounts", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_TAC1",
+                                "rnascope_RXFP1", "rnascope_CRHR2"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+# + RVolume normalization
+plotExpressionCustom(sce.circle, exprs_values="logcounts.RVnorm", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_TAC1",
+                                "rnascope_RXFP1", "rnascope_CRHR2"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class (ROI volume-normalized)",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
