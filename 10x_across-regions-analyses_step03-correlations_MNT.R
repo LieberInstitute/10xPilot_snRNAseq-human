@@ -145,7 +145,7 @@ ts.list <- lapply(FMstats.list, function(x){
   sapply(x, function(y){y$t.stat})
   }
 )
-# Add back in row names and region suffix
+# Add back in region suffix
 for(i in names(ts.list)){
   colnames(ts.list[[i]]) <- paste0(colnames(ts.list[[i]]), "_", i)
 }
@@ -158,8 +158,21 @@ colnames(ts.fullMat) <- gsub("Excit", "Ex", colnames(ts.fullMat))
 colnames(ts.fullMat) <- gsub("Inhib", "In", colnames(ts.fullMat))
 colnames(ts.fullMat) <- gsub("Astro", "As", colnames(ts.fullMat))
 colnames(ts.fullMat)[colnames(ts.fullMat)=="Neu_FAT2.CDH15_sacc"] <- "Neu_ambig_sacc"
-cor_t_xRegions <- cor(ts.fullMat)
 
+# Perform in cluster-specific gene space, as with across-species comparisons
+    clus_specific_indices = mapply(function(t) {
+      oo = order(t, decreasing = TRUE)[1:100]
+      },
+    as.data.frame(ts.fullMat)
+    )
+    clus_ind = unique(as.numeric(clus_specific_indices))
+    length(clus_ind)  # so of up to 10200 (100 x 102 cellType), 3500 unique
+    
+    ts.defined <- ts.fullMat[clus_ind, ]
+
+
+cor_t_xRegions <- cor(ts.fullMat)
+cor_t_defined <- cor(ts.defined)
 
 
 ### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
@@ -171,45 +184,85 @@ pdf("pdfs/revision/acrossRegions_correlation_region-specific-subcluster-ts_MNT20
 pheatmap(cor_t_xRegions,
          color=my.col.all,
          breaks=theSeq.all,
-         fontsize_row=6.5, fontsize_col=6.5,
+         fontsize_row=4.5, fontsize_col=4.5,
          main="Correlation of cluster-specific t's from all regions \n (all shared expressed genes)")
+pheatmap(cor_t_defined,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=4.5, fontsize_col=4.5,
+         main="Correlation of cluster-specific t's from all regions \n (top 100 cluster genes space)")
+
 dev.off()
 
 
 ## Subset on neuronal subcluster t's and check
 ts.fullMat.neu <- ts.fullMat
+ts.defined.neu <- ts.defined
 for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell")){
   ts.fullMat.neu <- ts.fullMat.neu[ ,-grep(i, colnames(ts.fullMat.neu))]
+  ts.defined.neu <- ts.defined.neu[ ,-grep(i, colnames(ts.defined.neu))]
 }
 
 cor_t_xRegions.neu <- cor(ts.fullMat.neu)
+cor_t_defined.neu <- cor(ts.defined.neu)
 
 
-### Heatmap - typically use levelplot (e.g. below), but will want pheatmap bc can cluster cols/rows
-theSeq.all = seq(-1, 1, by = 0.025)
-my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
-
-## Updated 31Aug2020 - for paper === === ===
 # Add some cluster info for add'l heatmap annotations
 clusterInfo <- data.frame(region=ss(colnames(ts.fullMat.neu), "_",3))
 rownames(clusterInfo) <- colnames(ts.fullMat.neu)
 
+# Region cols to be consistent with the TSNE
+clusterCols <- list(region=tableau10medium[1:5])
+names(clusterCols[["region"]]) <- levels(as.factor(clusterInfo$region))
 
 # Print
-pdf("pdfs/revision/acrossRegions_correlation_region-specific-NeuronalSubcluster-ts_MNT2021.pdf")
+pdf("pdfs/revision/acrossRegions_correlation_region-specific-NeuronalSubcluster-ts_MNT2021.pdf",width=9, height=9)
+# All genes
 pheatmap(cor_t_xRegions.neu,
          annotation_col=clusterInfo,
+         annotation_colors=clusterCols,
          #show_colnames=FALSE,
          color=my.col.all,
          breaks=theSeq.all,
-         fontsize_row=5, fontsize_col=5,
+         fontsize_row=6.2, fontsize_col=6.2,
          main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
+# With numbers
+pheatmap(cor_t_xRegions.neu,
+         annotation_col=clusterInfo,
+         annotation_colors=clusterCols,
+         #show_colnames=FALSE,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=6.2, fontsize_col=6.2,
+         display_numbers=TRUE, fontsize_number=2.8,
+         main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
+
+# Top 100 cluster genes space
+pheatmap(cor_t_defined.neu,
+         annotation_col=clusterInfo,
+         annotation_colors=clusterCols,
+         #show_colnames=FALSE,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=6.2, fontsize_col=6.2,
+         main="Correlation of neuronal cluster-specific t's from all regions \n (top 100 cluster genes space, incl'g glial)")
+# With numbers
+pheatmap(cor_t_defined.neu,
+         annotation_col=clusterInfo,
+         annotation_colors=clusterCols,
+         #show_colnames=FALSE,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=6.2, fontsize_col=6.2,
+         display_numbers=TRUE, fontsize_number=2.8,
+         main="Correlation of neuronal cluster-specific t's from all regions \n (top 100 cluster genes space, incl'g glial)")
 dev.off()
 
 
 
 ## Non-neuronal set for supplement === === ===
 ts.fullMat.non <- ts.fullMat
+ts.defined.non <- ts.defined
 glia.idx <- NA
 for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell")){
   glia.idx <- c(glia.idx, grep(i, colnames(ts.fullMat.non)))
@@ -217,13 +270,11 @@ for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell")){
 # Rm the empty NA
 glia.idx <- glia.idx[-1]
 ts.fullMat.non <- ts.fullMat.non[ ,glia.idx]
+ts.defined.non <- ts.defined.non[ ,glia.idx]
 
 cor_t_xRegions.non <- cor(ts.fullMat.non)
+cor_t_defined.non <- cor(ts.defined.non)
 
-
-### Heatmap ===
-theSeq.all = seq(-1, 1, by = 0.025)
-my.col.all <- colorRampPalette(brewer.pal(7, "PRGn"))(length(theSeq.all)-1)
 
 # Add some cluster info for add'l heatmap annotations
 clusterInfo.glia <- data.frame(region=ifelse(is.na(ss(colnames(ts.fullMat.non), "_",3)),
@@ -233,24 +284,26 @@ clusterInfo.glia <- data.frame(region=ifelse(is.na(ss(colnames(ts.fullMat.non), 
 
 rownames(clusterInfo.glia) <- colnames(ts.fullMat.non)
 
-# annotColors <- list(class = tableau10medium[1:5][factor(unique(clusterInfo$class))],
-#                     region = tableau10medium[6:10][factor(unique(clusterInfo$region))])
-# 
-# names(annotColors[["class"]]) <- unique(clusterInfo$class)
-# names(annotColors[["region"]]) <- unique(clusterInfo$region)
-
-
 # Print
 pdf("pdfs/revision/acrossRegions_correlation_region-specific-NON-NeuronalSubcluster-ts_MNT2021.pdf",width=9)
 pheatmap(cor_t_xRegions.non,
          annotation_col=clusterInfo.glia,
-         # annotation_colors=annotColors,
+         annotation_colors=clusterCols,
          #show_colnames=FALSE,
          color=my.col.all,
          breaks=theSeq.all,
-         fontsize_row=6, fontsize_col=6,
+         fontsize_row=7, fontsize_col=7,
          display_numbers=TRUE, fontsize_number=5,
          main="Correlation of glia/other cluster-specific t's from all regions \n (all shared expressed genes)")
+pheatmap(cor_t_defined.non,
+         annotation_col=clusterInfo.glia,
+         annotation_colors=clusterCols,
+         #show_colnames=FALSE,
+         color=my.col.all,
+         breaks=theSeq.all,
+         fontsize_row=7, fontsize_col=7,
+         display_numbers=TRUE, fontsize_number=5,
+         main="Correlation of glia/other cluster-specific t's from all regions \n (top 100 cluster genes space, incl'g neuronal)")
 dev.off()
 
 
