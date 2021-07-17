@@ -267,6 +267,20 @@ for(i in names(markers.nac.t.1vAll)){
 save(markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac,
      file="rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda")
 
+## MNT add 17Jul: change 'Macro_infilt' annotation to 'Macrophage':
+load("rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+
+names(medianNon0.nac)[names(medianNon0.nac)=="Macro_infilt"] <- "Macrophage"
+names(markers.nac.t.pw)[names(markers.nac.t.pw)=="Macro_infilt"] <- "Macrophage"
+names(markers.nac.t.1vAll)[names(markers.nac.t.1vAll)=="Macro_infilt"] <- "Macrophage"
+    # and for the _enriched vs _depleted for this one:
+    names(markers.nac.t.1vAll[["Macrophage"]]) <- gsub("Macro_infilt", "Macrophage",
+                                                       names(markers.nac.t.1vAll[["Macrophage"]]))
+
+save(markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac,
+     file="rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda")
+    # -> since this is pretty negligible, don't worry about re-printing the top 40 marker plots
+    #    (just re-print the top 40 marker lists, below)
 
 ## Print these to pngs
 markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
