@@ -363,7 +363,7 @@ annotationTab.nac$cellType[c(2,7,11,20)] <- paste0("MSN.D2_", c("A","B","C","D")
 annotationTab.nac$cellType[c(5,10)] <- c("Oligo_A","Oligo_B")
 annotationTab.nac$cellType[c(16,17,22)] <- c("Astro_A","Astro_B","Micro")
 annotationTab.nac$cellType[c(18,29)] <- c("OPC","OPC_COP")
-annotationTab.nac$cellType[c(14,19)] <- c("Micro_resting","Macro_infilt")
+annotationTab.nac$cellType[c(14,19)] <- c("Micro_resting","Macrophage")
 annotationTab.nac$cellType[c(13, 23,24,26,28)] <- c("drop.lowNTx",
                                                     paste0("drop.doublet_", c("A","B","C","D")))
 
@@ -375,16 +375,16 @@ sce.nac$cellType <- factor(sce.nac$cellType)
 cell_colors.nac <- c(tableau20, tableau10medium)[1:29]
 names(cell_colors.nac) <- annotationTab.nac$cellType
 cell_colors.nac
-    # MSN.D1_A       MSN.D2_A       MSN.D1_B        Inhib_A        Oligo_A       MSN.D1_C 
-    # "#1F77B4"      "#AEC7E8"      "#FF7F0E"      "#FFBB78"      "#2CA02C"      "#98DF8A" 
-    # MSN.D2_B       MSN.D1_D        Inhib_B        Oligo_B       MSN.D2_C       MSN.D1_E 
-    # "#D62728"      "#FF9896"      "#9467BD"      "#C5B0D5"      "#8C564B"      "#C49C94" 
-    # drop.lowNTx  ambig.glial_A        Inhib_C        Astro_A        Astro_B            OPC 
-    # "#E377C2"      "#F7B6D2"      "#7F7F7F"      "#C7C7C7"      "#BCBD22"      "#DBDB8D" 
-    # ambig.glial_B       MSN.D2_D       MSN.D1_F          Micro drop.doublet_A drop.doublet_B 
-    # "#17BECF"      "#9EDAE5"      "#729ECE"      "#FF9E4A"      "#67BF5C"      "#ED665D" 
-    # Inhib_D drop.doublet_C        Inhib_E drop.doublet_D        OPC_COP 
-    # "#AD8BC9"      "#A8786E"      "#ED97CA"      "#A2A2A2"      "#CDCC5D" 
+    #      MSN.D1_A       MSN.D2_A       MSN.D1_B        Inhib_A        Oligo_A       MSN.D1_C 
+    #     "#1F77B4"      "#AEC7E8"      "#FF7F0E"      "#FFBB78"      "#2CA02C"      "#98DF8A" 
+    #      MSN.D2_B       MSN.D1_D        Inhib_B        Oligo_B       MSN.D2_C       MSN.D1_E 
+    #     "#D62728"      "#FF9896"      "#9467BD"      "#C5B0D5"      "#8C564B"      "#C49C94" 
+    #   drop.lowNTx  Micro_resting        Inhib_C        Astro_A        Astro_B            OPC 
+    #     "#E377C2"      "#F7B6D2"      "#7F7F7F"      "#C7C7C7"      "#BCBD22"      "#DBDB8D" 
+    #    Macrophage       MSN.D2_D       MSN.D1_F          Micro drop.doublet_A drop.doublet_B 
+    #     "#17BECF"      "#9EDAE5"      "#729ECE"      "#FF9E4A"      "#67BF5C"      "#ED665D" 
+    #       Inhib_D drop.doublet_C        Inhib_E drop.doublet_D        OPC_COP 
+    #     "#AD8BC9"      "#A8786E"      "#ED97CA"      "#A2A2A2"      "#CDCC5D"
 
 
 # Save
