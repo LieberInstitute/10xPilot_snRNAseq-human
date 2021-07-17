@@ -366,7 +366,7 @@ rownames(ts.nac) <- rowData(sce.hsap.sub)$JAX.geneID[match(rownames(ts.nac), row
 table(rownames(ts.rat) %in% rownames(ts.nac)) # all good
 ts.rat <- ts.rat[rownames(ts.nac), ]
 
-    # Save the ts matrices to reduce work next time
+# Save the ts matrices to reduce work next time
 Readme <- "These t-statistic matrices are subsetted and matched for shared 'JAX.geneID', so `cor()` can simply be run or other gene subsets applied first."
 save(ts.nac, ts.rat, Readme, file="rdas/revision/zTsMats_libd-NAc_and_DayLab-ratNAc_sharedGenes_MNT2021.rda")
 
@@ -407,7 +407,10 @@ homologInfo <- data.frame(JAX.geneID = rownames(ts.nac),
 save(ts.nac, ts.rat, homologInfo, Readme,
      file="rdas/revision/zTsMats_libd-NAc_and_DayLab-ratNAc_sharedGenes_MNT2021.rda")
 
-
+    ## MNT add 17Jul: change 'Macro_infilt' annotation to 'Macrophage':
+    # load the above
+    colnames(ts.nac)[colnames(ts.nac)=="Macro_infilt"] <- "Macrophage"
+        #   -> re-save
 
 ## On just hsap cluster-specific homologous genes ===
 hsap_specific_indices = mapply(function(t) {
