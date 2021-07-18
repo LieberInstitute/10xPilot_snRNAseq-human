@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd
 #$ -N magma-gsa_step3-gsa_AD
-#$ -o ./logs/magma-gsa_step3-gsa_AD_MNT11Jul2021.o
-#$ -e ./logs/magma-gsa_step3-gsa_AD_MNT11Jul2021.e
-#$ -l mem_free=30G,h_vmem=32G
+#$ -o ./logs/magma-gsa_step3-gsa_AD_MNT18Jul2021.o
+#$ -e ./logs/magma-gsa_step3-gsa_AD_MNT18Jul2021.e
+#$ -l bluejay,mem_free=16G,h_vmem=20G
 
 echo "**** Job starts ****"
 date
@@ -34,11 +34,11 @@ SUMMSTATS=/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/MAGMA/GW
 
 ## Step 3 - Gene set analyses (using gene-level output)  -  for five brain regions
 
-$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_v2/dlpfc_AD
-$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_v2/sacc_AD
-$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_v2/hpc_AD
-$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_v2/nac_AD
-$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_v2/amy_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_rev/dlpfc_AD
+# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_rev/hpc_AD
+$MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_rev/nac_AD
+# $MAGMA --gene-results SNP_Data/AD_Jansen2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_AD
 
 
 echo "**** Job ends ****"

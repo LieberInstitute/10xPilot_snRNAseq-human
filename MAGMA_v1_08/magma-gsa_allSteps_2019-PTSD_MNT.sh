@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -cwd
 #$ -N magma-gsa_step3_PTSD-rev_MNT
-#$ -o ./logs/magma-gsa_step3-PTSD_rev_MNT14Jul2021.o
-#$ -e ./logs/magma-gsa_step3-PTSD_rev_MNT14Jul2021.e
+#$ -o ./logs/magma-gsa_step3-PTSD_rev_MNT18Jul2021.o
+#$ -e ./logs/magma-gsa_step3-PTSD_rev_MNT18Jul2021.e
 #$ -l bluejay,mem_free=16G,h_vmem=20G
 
 echo "**** Job starts ****"
@@ -35,10 +35,10 @@ echo "Update MNT 14Jul2021 - running an iteration (into 'Results_rev') following
 
 
 $MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_rev/dlpfc_PTSD
-$MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PTSD
+# $MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PTSD
 $MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_rev/hpc_PTSD
 $MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_rev/nac_PTSD
-$MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PTSD
+# $MAGMA --gene-results SNP_Data/PTSD_Nievergelt2019_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PTSD
 
 
 echo "**** Job ends ****"

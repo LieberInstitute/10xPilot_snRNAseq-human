@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd
 #$ -N magma-gsa_step3_ADHD
-#$ -o ./logs/magma-gsa_step3-ADHD_MNT12Jul2021.o
-#$ -e ./logs/magma-gsa_step3-ADHD_MNT12Jul2021.e
-#$ -l bluejay,mem_free=16G,h_vmem=24G
+#$ -o ./logs/magma-gsa_step3-ADHD_MNT18Jul2021.o
+#$ -e ./logs/magma-gsa_step3-ADHD_MNT18Jul2021.e
+#$ -l bluejay,mem_free=16G,h_vmem=20G
 
 echo "**** Job starts ****"
 date
@@ -36,10 +36,10 @@ echo "MNT comment 22Jun2021 - running an iteration (into 'Results_v2') with the 
 echo "Update MNT 12Jul2021 - running an iteration (into 'Results_rev') following the above approach, finally with final revision cell classes."
 
 $MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_rev/dlpfc_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_ADHD
+# $MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_ADHD
 $MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_rev/hpc_ADHD
 $MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_rev/nac_ADHD
-$MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_ADHD
+# $MAGMA --gene-results SNP_Data/ADHD_PGC2018_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_ADHD
 
 
 echo "**** Job ends ****"

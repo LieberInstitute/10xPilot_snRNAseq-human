@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -cwd
 #$ -N magma-gsa_step3-GSA_rev
-#$ -o ./logs/magma-gsa_step3-GSA_rev_MNT12Jul2021.o
-#$ -e ./logs/magma-gsa_step3-GSA_rev_MNT12Jul2021.e
-#$ -l bluejay,mem_free=32G,h_vmem=40G
+#$ -o ./logs/magma-gsa_step3-GSA_rev_MNT18Jul2021.o
+#$ -e ./logs/magma-gsa_step3-GSA_rev_MNT18Jul2021.e
+#$ -l bluejay,mem_free=20G,h_vmem=24G
 
 echo "**** Job starts ****"
 date
@@ -61,28 +61,28 @@ echo "** DLPFC MAGMA gene sets analyses complete **"
 
 ## sACC ==================
 # pgc clozuk2 schizophrenia
-$MAGMA --gene-results SNP_Data/clozuk_pgc2_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_clozuk_pgc2
+# $MAGMA --gene-results SNP_Data/clozuk_pgc2_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_clozuk_pgc2
 
 # PGC3 schizophrenia
-$MAGMA --gene-results SNP_Data/pgc3_scz_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_pgc3_scz
+# $MAGMA --gene-results SNP_Data/pgc3_scz_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_pgc3_scz
 
 # bipolar disorder
-$MAGMA --gene-results SNP_Data/daner_PGC_BIP32b_mds7a_0416a_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PGC_BIP
+# $MAGMA --gene-results SNP_Data/daner_PGC_BIP32b_mds7a_0416a_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PGC_BIP
 
 # depression
-$MAGMA --gene-results SNP_Data/MDD29_23andMe_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_MDD29_23andMe
+# $MAGMA --gene-results SNP_Data/MDD29_23andMe_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_MDD29_23andMe
 
 # autism
-$MAGMA --gene-results SNP_Data/PGC_ASD_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PGC_ASD
+# $MAGMA --gene-results SNP_Data/PGC_ASD_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_PGC_ASD
 
 ## Addiction GWAS set
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_AgeofInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_AgeSmk
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_CigarettesPerDay_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_CigDay
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_DrinksPerWeek_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_DrnkWk
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingCessation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_SmkCes
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_SmkInit
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_AgeofInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_AgeSmk
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_CigarettesPerDay_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_CigDay
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_DrinksPerWeek_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_DrnkWk
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingCessation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_SmkCes
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_SmkInit
 
-echo "** sACC MAGMA gene sets analyses complete **"
+echo "** sACC MAGMA gene sets analyses skipped **"
 
 
 
@@ -142,36 +142,36 @@ echo "** NAc MAGMA gene sets analyses complete **"
 
 ## AMY ==================
 # pgc clozuk2 schizophrenia
-$MAGMA --gene-results SNP_Data/clozuk_pgc2_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_clozuk_pgc2
+# $MAGMA --gene-results SNP_Data/clozuk_pgc2_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_clozuk_pgc2
 
 # PGC3 schizophrenia
-$MAGMA --gene-results SNP_Data/pgc3_scz_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_pgc3_scz
+# $MAGMA --gene-results SNP_Data/pgc3_scz_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_pgc3_scz
 
 # bipolar disorder
-$MAGMA --gene-results SNP_Data/daner_PGC_BIP32b_mds7a_0416a_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PGC_BIP
+# $MAGMA --gene-results SNP_Data/daner_PGC_BIP32b_mds7a_0416a_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PGC_BIP
 
 # depression
-$MAGMA --gene-results SNP_Data/MDD29_23andMe_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_MDD29_23andMe
+# $MAGMA --gene-results SNP_Data/MDD29_23andMe_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_MDD29_23andMe
 
 # autism
-$MAGMA --gene-results SNP_Data/PGC_ASD_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PGC_ASD
+# $MAGMA --gene-results SNP_Data/PGC_ASD_ensembl_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_PGC_ASD
 
 ## Addiction GWAS set
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_AgeofInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_AgeSmk
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_CigarettesPerDay_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_CigDay
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_DrinksPerWeek_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_DrnkWk
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingCessation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_SmkCes
-$MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_SmkInit
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_AgeofInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_AgeSmk
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_CigarettesPerDay_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_CigDay
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_DrinksPerWeek_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_DrnkWk
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingCessation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_SmkCes
+# $MAGMA --gene-results SNP_Data/Liu-etal_Addiction_SmokingInitiation_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_SmkInit
 
-echo "** AMY MAGMA gene sets analyses complete **"
+echo "** AMY MAGMA gene sets analyses skipped **"
 
 
 ## 'Negative control': Meta-GWAS for CAD (CARDIoGRAM+C4D) === ===
 $MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_dlpfc gene-col=${genecol} set-col=${setcol} --out Results_rev/dlpfc_CAD
-$MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_CAD
+# $MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_sacc gene-col=${genecol} set-col=${setcol} --out Results_rev/sacc_CAD
 $MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_hpc gene-col=${genecol} set-col=${setcol} --out Results_rev/hpc_CAD
 $MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_nac gene-col=${genecol} set-col=${setcol} --out Results_rev/nac_CAD
-$MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_CAD
+# $MAGMA --gene-results SNP_Data/CoronaryArteryDisease_10xPilotGenes_snp-wise.genes.raw --set-annot $gs_amy gene-col=${genecol} set-col=${setcol} --out Results_rev/amy_CAD
 
 
 echo "**** Job ends ****"
