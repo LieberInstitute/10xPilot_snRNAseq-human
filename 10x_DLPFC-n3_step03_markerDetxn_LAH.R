@@ -285,6 +285,37 @@ write.csv(top40genes, file=here("tables/revision/top40genesLists_DLPFC-n3_cellTy
 ### MNT add 09Jul2021 =========
   # Another way ('cluster-vs-all-others' method used in other regions):
 
+## Post-hoc: 'prelimCluster' 101 are T cells; 90 look like macrophages;
+ #           (from interactively exploration) -> Edit/make a copy of this SCE for MNT work
+load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda", verbose=T)
+
+table(droplevels(sce.dlpfc$prelimCluster[sce.dlpfc$cellType == "Tcell"]))
+    #  90 101 
+    #  10   9
+
+# First convert to 'character' class
+sce.dlpfc$cellType <- as.character(sce.dlpfc$cellType)
+sce.dlpfc$cellType[sce.dlpfc$prelimCluster == "90"] <- "Macrophage"
+# Re-factor
+sce.dlpfc$cellType <- factor(sce.dlpfc$cellType)
+
+# Add new color
+cell_colors["Macrophage"] <- setdiff(tableau20, cell_colors)[1]
+
+# For reference
+    annotationTab.dlpfc$cellType[annotationTab.dlpfc$cellType=="Tcell"] <- "Tcell_Macrophage"
+    clusterRefTab.dlpfc$annot.MNT <- annotationTab.dlpfc$cellType[match(clusterRefTab.dlpfc$merged,
+                                                                        annotationTab.dlpfc$collapsedCluster)]
+    clusterRefTab.dlpfc$annot.MNT[clusterRefTab.dlpfc$origClust=="90"] <- "Macrophage"
+    clusterRefTab.dlpfc$annot.MNT[clusterRefTab.dlpfc$origClust=="101"] <- "Tcell"
+    
+# Check
+plotTSNE(sce.dlpfc, colour_by="cellType", point_alpha=0.5, text_by="cellType") +
+  scale_color_manual(values = cell_colors) + labs(colour="Cell type")
+
+save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors, 
+     file="rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_MNT2021.rda")
+
 ## (Filter all-0 genes; set up `logNormCounts()`, as above)
 
 ## Re-create list of Boolean param / cell subtype (will append/save this info):
@@ -296,7 +327,20 @@ medianNon0.dlpfc <- lapply(cellSubtype.idx, function(x){
 })
 
 sapply(medianNon0.dlpfc, table) # see above
+    #      Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C
+    # FALSE 28052   23023   24201   22110   23293   22397   23313   25080   25774   24528
+    # TRUE   1258    6287    5109    7200    6017    6913    5997    4230    3536    4782
+    #       Inhib_D Inhib_E Inhib_F   Macrophage Micro Mural Oligo   OPC Tcell
+    # FALSE   23874   25636   24170        28283 28439 28287 27985 27262 28655
+    # TRUE     5436    3674    5140         1027   871  1023  1325  2048   655
+    #     - now we can see that 'Tcell's have more non-0-median-expressing genes
 
+    # Confirm with some consistent T cell markers seen in other regionos:
+    c("SKAP1","ITK","CD247") %in% names(medianNon0.dlpfc[["Tcell"]][medianNon0.dlpfc[["Tcell"]]==T])
+    # and similarly (to NAc's 'Macrophage')
+    c("CD163","MRC1","SIGLEC1") %in% names(medianNon0.dlpfc[["Macrophage"]][medianNon0.dlpfc[["Macrophage"]]==T])
+
+    
 mod <- with(colData(sce.dlpfc), model.matrix(~ donor))
 mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
 
@@ -357,19 +401,24 @@ for(i in names(markers.dlpfc.t.1vAll)){
         #     769    4500    3534    4868    3241    4122    3720    2631    2104    3085 
         # Inhib_D Inhib_E Inhib_F   Micro   Mural   Oligo     OPC   Tcell 
         #    3692     552     491     649     305     903    1129     250
-    
-    # Inhib_E
-    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Inhib_E",
-                         features=head(markerList.t.1vAll[["Inhib_E"]])) +
+            # With splitting the 'Tcell' into 'Tcell' & 'Macrophage', only difference:
+            # Tcell   Macrophage
+            #   260          429
+
+    # Macrophage
+    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Macrophage",
+                         features=head(markerList.t.1vAll[["Macrophage"]])) +
       scale_color_manual(values = cell_colors)
     
-    # Inhib_F
-    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Inhib_F",
-                         features=head(markerList.t.1vAll[["Inhib_F"]])) +
+    # Tcell
+    plotExpressionCustom(sce.dlpfc, anno_name="cellType",features_name="Check: Tcell",
+                         features=head(markerList.t.1vAll[["Tcell"]])) +
       scale_color_manual(values = cell_colors)
 
-        # Observation: These indeed look like quite believable [rarer] neuronal types
-
+        # Save this into a separate iteration of .rda
+        save(markers.dlpfc.t.1vAll, medianNon0.dlpfc,
+             file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT_v2_2021.rda")
+        
 
 ## Load previous results for reference
 load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda", verbose=T)
