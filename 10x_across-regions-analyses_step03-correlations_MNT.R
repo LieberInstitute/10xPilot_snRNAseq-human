@@ -1,6 +1,6 @@
 ### MNT 10x snRNA-seq workflow: step 04 - downstream comparisons
 ###   **Pan-brain analyses**
-###     - n=12 samples from 5 regions, up to three donors
+###     - n=24 samples from 5 regions
 ###   * Cross-region analysis/correlation and comp. to other datasets
 #####################################################################
 
@@ -28,9 +28,9 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 # ===
 
-load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
-    # markers.t.pw, markers.wilcox.block, markers.dlpfc.t.1vAll, medianNon0.dlpfc
-    rm(markers.t.pw, markers.wilcox.block, medianNon0.dlpfc)
+load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT_v2_2021.rda", verbose=T)
+    # markers.dlpfc.t.1vAll, medianNon0.dlpfc
+    rm(medianNon0.dlpfc)
 
 load("rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
     # markers.hpc.t.pw, markers.hpc.t.1vAll, medianNon0.hpc
@@ -44,7 +44,7 @@ load("rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", ver
     # markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
     rm(markers.amy.t.pw, markers.amy.wilcox.block, medianNon0.amy)
 
-load("rdas/markers-stats_sACC-n2_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
+load("rdas/revision/markers-stats_sACC-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
     # markers.sacc.t.pw, markers.sacc.wilcox.block, markers.sacc.t.1vAll, medianNon0.sacc
     rm(markers.sacc.t.pw, markers.sacc.wilcox.block, medianNon0.sacc)
 
@@ -77,7 +77,7 @@ FMstats.list <- list(amy=lapply(markers.amy.t.1vAll,function(x){x[[2]]}),
     # How many subclusters in each region?
     sapply(FMstats.list, length)
         #  amy dlpfc   hpc   nac  sacc
-        #   19    18    20    24    25
+        #   19    19    20    24    25
     
     sapply(FMstats.list, function(x){nrow(x[[1]])})
         #  amy dlpfc   hpc   nac  sacc 
@@ -96,14 +96,6 @@ sapply(FMstats.list, function(x){nrow(x[[1]])})
 sapply(FMstats.list, function(x){head(x[[1]], n=3)})
 
 
-## Clean up those decided a priori to remove from reported set
-FMstats.list[["hpc"]][["OPC_COP"]] <- NULL
-FMstats.list[["nac"]][["OPC_COP"]] <- NULL
-FMstats.list[["nac"]][["Macro_infilt"]] <- NULL
-FMstats.list[["nac"]][["Micro_resting"]] <- NULL
-sapply(FMstats.list, length)  # good
-
-
 ### Get n Nuclei numbers for each region so can compute t-statistics ===
   # This can be done with Cohen's D (the 'std.lfc'), as d = t/sqrt(N)
 
@@ -115,7 +107,7 @@ sce.allRegions
     # dim: 33538 70497
 table(sce.allRegions$region)
     #  amy dlpfc   hpc   nac  sacc 
-    #14039 11202 10124 19789 15343
+    #14039 11202 10139 19892 15343
 
 table(sce.allRegions$cellType)
 
@@ -166,7 +158,7 @@ colnames(ts.fullMat)[colnames(ts.fullMat)=="Neu_FAT2.CDH15_sacc"] <- "Neu_ambig_
     as.data.frame(ts.fullMat)
     )
     clus_ind = unique(as.numeric(clus_specific_indices))
-    length(clus_ind)  # so of up to 10200 (100 x 102 cellType), 3500 unique
+    length(clus_ind)  # so of up to 10200 (100 x 102 cellType), 3715 unique
     
     ts.defined <- ts.fullMat[clus_ind, ]
 
@@ -191,14 +183,13 @@ pheatmap(cor_t_defined,
          breaks=theSeq.all,
          fontsize_row=4.5, fontsize_col=4.5,
          main="Correlation of cluster-specific t's from all regions \n (top 100 cluster genes space)")
-
 dev.off()
 
 
 ## Subset on neuronal subcluster t's and check
 ts.fullMat.neu <- ts.fullMat
 ts.defined.neu <- ts.defined
-for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell")){
+for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell", "Macro")){
   ts.fullMat.neu <- ts.fullMat.neu[ ,-grep(i, colnames(ts.fullMat.neu))]
   ts.defined.neu <- ts.defined.neu[ ,-grep(i, colnames(ts.defined.neu))]
 }
@@ -234,7 +225,7 @@ pheatmap(cor_t_xRegions.neu,
          color=my.col.all,
          breaks=theSeq.all,
          fontsize_row=6.2, fontsize_col=6.2,
-         display_numbers=TRUE, fontsize_number=2.8,
+         display_numbers=TRUE, fontsize_number=2.6,
          main="Correlation of neuronal cluster-specific t's from all regions \n (all shared expressed genes)")
 
 # Top 100 cluster genes space
@@ -254,7 +245,7 @@ pheatmap(cor_t_defined.neu,
          color=my.col.all,
          breaks=theSeq.all,
          fontsize_row=6.2, fontsize_col=6.2,
-         display_numbers=TRUE, fontsize_number=2.8,
+         display_numbers=TRUE, fontsize_number=2.6,
          main="Correlation of neuronal cluster-specific t's from all regions \n (top 100 cluster genes space, incl'g glial)")
 dev.off()
 
@@ -264,7 +255,7 @@ dev.off()
 ts.fullMat.non <- ts.fullMat
 ts.defined.non <- ts.defined
 glia.idx <- NA
-for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell")){
+for(i in c("As", "Micro", "Endo", "Mural","Oligo", "OPC", "Tcell", "Macro")){
   glia.idx <- c(glia.idx, grep(i, colnames(ts.fullMat.non)))
 }
 # Rm the empty NA
@@ -293,7 +284,7 @@ pheatmap(cor_t_xRegions.non,
          color=my.col.all,
          breaks=theSeq.all,
          fontsize_row=7, fontsize_col=7,
-         display_numbers=TRUE, fontsize_number=5,
+         display_numbers=TRUE, fontsize_number=4,
          main="Correlation of glia/other cluster-specific t's from all regions \n (all shared expressed genes)")
 pheatmap(cor_t_defined.non,
          annotation_col=clusterInfo.glia,
@@ -302,12 +293,121 @@ pheatmap(cor_t_defined.non,
          color=my.col.all,
          breaks=theSeq.all,
          fontsize_row=7, fontsize_col=7,
-         display_numbers=TRUE, fontsize_number=5,
+         display_numbers=TRUE, fontsize_number=4,
          main="Correlation of glia/other cluster-specific t's from all regions \n (top 100 cluster genes space, incl'g neuronal)")
 dev.off()
 
 
-# Session info for 13Jul2021 ==============
+## For main section on AMY 'Astro_B' ===
+table(droplevels(sce.allRegions$cellType[grep("Astro", sce.allRegions$cellType)])) 
+    # amy_Astro_A  amy_Astro_B  dlpfc_Astro  hpc_Astro_A  hpc_Astro_B  nac_Astro_A 
+    #        1555           83          782          936          234           99 
+    # nac_Astro_B sacc_Astro_A sacc_Astro_B 
+    #        1000          747          160
+
+sce.astro <- sce.allRegions[ ,grep("Astro", sce.allRegions$cellType)]
+sce.astro$cellType <- droplevels(sce.astro$cellType)
+    #                br5161 br5207 br5212 br5276 br5287 br5400 br5701
+    # amy_Astro_A     484      0    350    230      0    111    380
+    # amy_Astro_B       7      0     10     49      0     12      5
+    # dlpfc_Astro     371    274    137      0      0      0      0
+    # hpc_Astro_A     424      0    375      0    137      0      0
+    # hpc_Astro_B      83      0    125      0     26      0      0
+    # nac_Astro_A      27      0      5      8      3     56      0
+    # nac_Astro_B     115      0    377    173      8    294     33
+    # sacc_Astro_A     87      0    390      8      0    224     38
+    # sacc_Astro_B     85      0     19     23      0     28      5
+    #       Note: br5182 not represented bc it was only used for an NAc-NeuN sample
+
+# As in the step03's, re-create 'logcounts'
+sce.astro.hold <- sce.astro
+assay(sce.astro, "logcounts") <- NULL
+sizeFactors(sce.astro) <- NULL
+sce.astro <- logNormCounts(sce.astro)
+
+
+## PW markers?
+mod <- with(colData(sce.astro), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+# Run pairwise t-tests
+markers.astro.t.pw <- findMarkers(sce.astro, groups=sce.astro$cellType,
+                                assay.type="logcounts", design=mod, test="t",
+                                direction="up", pval.type="all", full.stats=T)
+
+sapply(markers.astro.t.pw, function(x){table(x$FDR<0.05)})
+    #       amy_Astro_A amy_Astro_B dlpfc_Astro hpc_Astro_A hpc_Astro_B nac_Astro_A
+    # FALSE       33520       33403       33534       33534       33368       33104
+    # TRUE           18         135           4           4         170         434
+    #       nac_Astro_B sacc_Astro_A sacc_Astro_B
+    # FALSE       33260        33432        33532
+    # TRUE          278          106            6
+
+markerList.astro <- lapply(markers.astro.t.pw, function(x){
+  rownames(x)[x$FDR < 0.05]
+  })
+
+# non-0-median
+amy_astro_B <- which(sce.astro$cellType == "amy_Astro_B")
+non0median.amy.As_B <- apply(as.matrix(assay(sce.astro, "logcounts")), 1, function(y){
+  median(y[amy_astro_B]) > 0
+})
+
+table(non0median.amy.As_B)  # 146
+markers.amy.As_B <- markers.astro.t.pw[["amy_Astro_B"]]
+markers.amy.As_B <- cbind(markers.amy.As_B, non0median.amy.As_B[match(rownames(markers.amy.As_B),
+                                                                      names(non0median.amy.As_B))])
+colnames(markers.amy.As_B)[12] <- "non0median"
+table(markers.amy.As_B$FDR < 0.05 & markers.amy.As_B$non0median==TRUE)  # just 4
+rownames(markers.amy.As_B)[markers.amy.As_B$FDR < 0.05 & markers.amy.As_B$non0median==TRUE]
+    # [1] "DST"     "COL19A1" "MACF1"   "RBFOX1"
+
+# Check out these
+plotExpressionCustom(sce.astro.hold, anno_name="cellType", features_name="Astro sub-class",
+                     features=c("DST", "COL19A1", "MACF1", "RBFOX1"), ncol=2)
+
+sce.astro$prelimCluster <- droplevels(sce.astro$prelimCluster)
+table(sce.astro$cellType, sce.astro$prelimCluster)
+
+sapply(splitit(sce.astro$region), function(x){table(droplevels(sce.astro$cellType[x]),
+                                                    droplevels(sce.astro$prelimCluster[x]))})
+    # $amy
+    #               8  17  18  27  38  52  55
+    # amy_Astro_A 836 131 107 347  90   0  44
+    # amy_Astro_B   0   0   0   0   0  83   0
+    # 
+    # $dlpfc  * Note this:
+    #              10  32  49  64  65  78  88  98
+    # dlpfc_Astro  64  32 109  65 205 230  47  30
+    # 
+    # $hpc
+    #               2   7  13  15  29  31  35  38
+    # hpc_Astro_A 302 112   0 168  32 231  91   0
+    # hpc_Astro_B   0   0 117   0   0   0   0 117
+    # 
+    # $nac
+    #               16   17
+    # nac_Astro_A   99    0
+    # nac_Astro_B    0 1000
+    # 
+    # $sacc
+    #               14  28  47
+    # sacc_Astro_A 641   0 106
+    # sacc_Astro_B   0 160   0
+
+
+
+## AMY 'Inhib_B' vs DLPFC 'Inhib_A' - r=0.86 ===
+sce.dlpfc <- sce.allRegions[ ,sce.allRegions$region=="dlpfc"]
+sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
+
+# Plot some AMY 'Inhib_B' markers (seen in Louise's DLPFC 'Inhib_A' lists)
+plotExpressionCustom(sce.dlpfc, anno_name="cellType", features_name="some AMY 'Inhib_B'",
+                     features=c("VIP", "CALB2", "CRH", "PTHLH"), ncol=2)
+
+
+
+# Session info for 18Jul2021 ==============
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -328,16 +428,15 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] lattice_0.20-41             pheatmap_1.0.12             RColorBrewer_1.1-2         
-# [4] gridExtra_2.3               dynamicTreeCut_1.63-1       dendextend_1.14.0          
-# [7] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
-# [10] batchelor_1.6.3             scran_1.18.7                scater_1.18.6              
-# [13] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
-# [16] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
-# [19] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0 Biobase_2.50.0             
-# [22] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7         IRanges_2.24.1             
-# [25] S4Vectors_0.28.1            BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
-# [28] matrixStats_0.58.0         
+#   [1] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
+# [4] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
+# [7] DropletUtils_1.10.3         batchelor_1.6.3             scran_1.18.7               
+# [10] scater_1.18.6               ggplot2_3.3.3               org.Hs.eg.db_3.12.0        
+# [13] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [16] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
+# [19] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
+# [22] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
+# [25] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
 #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
@@ -349,29 +448,28 @@ sessionInfo()
 # [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
 # [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
 # [25] dqrng_0.3.0               assertthat_0.2.1          Matrix_1.3-4             
-# [28] fastmap_1.1.0             lazyeval_0.2.2            limma_3.46.0             
-# [31] BiocSingular_1.6.0        prettyunits_1.1.1         tools_4.0.4              
-# [34] rsvd_1.0.5                igraph_1.2.6              gtable_0.3.0             
-# [37] glue_1.4.2                GenomeInfoDbData_1.2.4    dplyr_1.0.5              
-# [40] rappdirs_0.3.3            Rcpp_1.0.6                vctrs_0.3.8              
-# [43] Biostrings_2.58.0         rhdf5filters_1.2.0        rtracklayer_1.50.0       
-# [46] DelayedMatrixStats_1.12.3 stringr_1.4.0             beachmat_2.6.4           
-# [49] lifecycle_1.0.0           irlba_2.3.3               statmod_1.4.35           
-# [52] XML_3.99-0.6              edgeR_3.32.1              zlibbioc_1.36.0          
-# [55] scales_1.1.1              hms_1.0.0                 ProtGenerics_1.22.0      
-# [58] rhdf5_2.34.0              curl_4.3                  memoise_2.0.0            
+# [28] fastmap_1.1.0             lazyeval_0.2.2            BiocSingular_1.6.0       
+# [31] prettyunits_1.1.1         tools_4.0.4               rsvd_1.0.5               
+# [34] igraph_1.2.6              gtable_0.3.0              glue_1.4.2               
+# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5               rappdirs_0.3.3           
+# [40] Rcpp_1.0.6                vctrs_0.3.8               Biostrings_2.58.0        
+# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
+# [46] stringr_1.4.0             beachmat_2.6.4            lifecycle_1.0.0          
+# [49] irlba_2.3.3               statmod_1.4.35            XML_3.99-0.6             
+# [52] edgeR_3.32.1              zlibbioc_1.36.0           scales_1.1.1             
+# [55] hms_1.0.0                 ProtGenerics_1.22.0       rhdf5_2.34.0             
+# [58] curl_4.3                  memoise_2.0.0             gridExtra_2.3            
 # [61] segmented_1.3-4           biomaRt_2.46.3            stringi_1.5.3            
 # [64] RSQLite_2.2.7             BiocParallel_1.24.1       rlang_0.4.11             
 # [67] pkgconfig_2.0.3           bitops_1.0-7              purrr_0.3.4              
-# [70] Rhdf5lib_1.12.1           labeling_0.4.2            GenomicAlignments_1.26.0 
-# [73] cowplot_1.1.1             bit_4.0.4                 tidyselect_1.1.1         
-# [76] magrittr_2.0.1            R6_2.5.0                  generics_0.1.0           
-# [79] DelayedArray_0.16.3       DBI_1.1.1                 pillar_1.6.0             
-# [82] withr_2.4.2               RCurl_1.98-1.3            tibble_3.1.1             
-# [85] crayon_1.4.1              utf8_1.2.1                BiocFileCache_1.14.0     
-# [88] viridis_0.6.0             progress_1.2.2            locfit_1.5-9.4           
-# [91] grid_4.0.4                blob_1.2.1                digest_0.6.27            
-# [94] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
-# [97] beeswarm_0.4.0            viridisLite_0.4.0         vipor_0.4.5              
-# [100] askpass_1.1
+# [70] Rhdf5lib_1.12.1           GenomicAlignments_1.26.0  bit_4.0.4                
+# [73] tidyselect_1.1.1          magrittr_2.0.1            R6_2.5.0                 
+# [76] generics_0.1.0            DelayedArray_0.16.3       DBI_1.1.1                
+# [79] pillar_1.6.0              withr_2.4.2               RCurl_1.98-1.3           
+# [82] tibble_3.1.1              crayon_1.4.1              utf8_1.2.1               
+# [85] BiocFileCache_1.14.0      viridis_0.6.0             progress_1.2.2           
+# [88] locfit_1.5-9.4            grid_4.0.4                blob_1.2.1               
+# [91] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
+# [94] beeswarm_0.4.0            viridisLite_0.4.0         vipor_0.4.5              
+# [97] askpass_1.1 
 
