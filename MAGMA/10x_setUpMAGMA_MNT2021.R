@@ -249,9 +249,8 @@ rm(list=ls(pattern=".AD"))
 library(SingleCellExperiment)
 
 ## DLPFC ===
-load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
-    # markers.t.pw, markers.wilcox.block, markers.dlpfc.t.1vAll, medianNon0.dlpfc
-    rm(markers.t.pw, markers.wilcox.block)
+load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_MNT_v2_2021.rda", verbose=T)
+    # markers.dlpfc.t.1vAll, medianNon0.dlpfc
 
 # For EnsemblIDs
 load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
@@ -265,9 +264,9 @@ sapply(markers.dlpfc.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0m
     # FALSE 28620   26037   26423   25833   27548   26947   26999   27592   27788
     # TRUE    690    3273    2887    3477    1762    2363    2311    1718    1522
     
-    #       Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural Oligo   OPC Tcell
-    # FALSE   27371   26679   29211   29236 28734 29148 28444 28393 29209
-    # TRUE     1939    2631      99      74   576   162   866   917   101
+    #      Inhib_C Inhib_D Inhib_E Inhib_F Macrophage Micro Mural Oligo   OPC Tcell
+    # FALSE   27371   26679   29211   29236      29110 28734 29148 28444 28393 29194
+    # TRUE     1939    2631      99      74        200   576   162   866   917   116
 
 
 dlpfc.markerSet <- data.frame()
@@ -283,6 +282,8 @@ head(dlpfc.markerSet)
 table(dlpfc.markerSet$Set)  # looks good
 
 dlpfc.markerSet$Gene <- rowData(sce.dlpfc)$gene_id[match(dlpfc.markerSet$Gene, rownames(sce.dlpfc))]
+    # (btw:)
+    length(unique(dlpfc.markerSet$Gene)) #[1] 6925
 
 # Write out
 write.table(dlpfc.markerSet, file="./MAGMA/dlpfcMarkerSets_fdr1e-6.txt", sep="\t",
@@ -363,9 +364,6 @@ sapply(markers.hpc.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0med
     # FALSE 28491
     # TRUE    273
 
-# A priori: Remove rare / not-homeostatic cell pops
-markers.hpc.enriched[["OPC_COP"]] <- NULL
-
 hpc.markerSet <- data.frame()
 for(i in names(markers.hpc.enriched)){
   hpc.i <- data.frame(Set=rep(i, sum(markers.hpc.enriched[[i]]$log.FDR < log(1e-6) &
@@ -380,7 +378,7 @@ table(hpc.markerSet$Set)  # looks good
 
 hpc.markerSet$Gene <- rowData(sce.hpc)$gene_id[match(hpc.markerSet$Gene, rownames(sce.hpc))]
     # (btw:)
-    length(unique(hpc.markerSet$Gene)) # [1] 6517
+    length(unique(hpc.markerSet$Gene)) # [1] 6561
 
 # Write out
 write.table(hpc.markerSet, file="./MAGMA/hpcMarkerSets_fdr1e-6.txt", sep="\t",
@@ -400,7 +398,7 @@ load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose
 markers.nac.enriched <- lapply(markers.nac.t.1vAll, function(x){x[[2]]})
 
 sapply(markers.nac.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0median==TRUE)})
-    #       Astro_A Astro_B Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Macro_infilt
+    #       Astro_A Astro_B Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E   Macrophage
     # FALSE   29115   28198   27938   29267   28462   28230   29161        29258
     # TRUE      565    1482    1742     413    1218    1450     519          422
     
@@ -411,11 +409,6 @@ sapply(markers.nac.enriched, function(x){table(x$log.FDR < log(1e-6) & x$non0med
     #       MSN.D2_A MSN.D2_B MSN.D2_C MSN.D2_D Oligo_A Oligo_B   OPC OPC_COP
     # FALSE    26742    28484    28741    29393   28377   29010 28461   29434
     # TRUE      2938     1196      939      287    1303     670  1219     246
-
-# A priori: Remove rare / not-homeostatic cell pops
-for(i in c("Macro_infilt", "Micro_resting", "OPC_COP")){
-  markers.nac.enriched[[i]] <- NULL
-}
 
 nac.markerSet <- data.frame()
 for(i in names(markers.nac.enriched)){
@@ -431,7 +424,7 @@ table(nac.markerSet$Set)  # looks good
 
 nac.markerSet$Gene <- rowData(sce.nac)$gene_id[match(nac.markerSet$Gene, rownames(sce.nac))]
     # (btw:)
-    length(unique(nac.markerSet$Gene)) # [1] 7224
+    length(unique(nac.markerSet$Gene)) # [1] 7313
 
 # Write out
 write.table(nac.markerSet, file="./MAGMA/nacMarkerSets_fdr1e-6.txt", sep="\t",
