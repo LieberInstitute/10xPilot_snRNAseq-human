@@ -1,9 +1,8 @@
 ### for MAGMA with LIBD 10x pilot analyses
-  #     - plotting Results_v2/heatmaps
+  #     - plotting Results_rev/heatmaps
   # UPDATE: re-running with new v1.08
-  # nvm - don't include this 13Sep2020: PGC3-SCZD GWAS now published. lol. 
-  # MNT 05May2021: print stats from iteration with 'non0median' filter 
-  #                for subcluster markers ================================
+  # MNT 14Jul2021: plotting all stats from GSA tests with 102 revision
+  #                cell class markers ================================
 
 library(readr)
 library(stringr)
@@ -18,23 +17,24 @@ regions <- c("dlpfc","sacc","hpc","nac","amy")
 magmaStats <- list()
 
 for(i in regions){
-  magmaStats[[i]][["PGC2.SCZ"]] <- read.table(paste0("./Results_v2/",i,"_clozuk_pgc2.gsa.out"), header=T)
-  #magmaStats[[i]][["PGC3.SCZ"]] <- read.table(paste0("./Results_v2/",i,"_pgc3_scz.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.ASD"]] <- read.table(paste0("./Results_v2/",i,"_PGC_ASD.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.BIP"]] <- read.table(paste0("./Results_v2/",i,"_PGC_BIP.gsa.out"), header=T)
-  magmaStats[[i]][["PGC.MDD"]] <- read.table(paste0("./Results_v2/",i,"_MDD29_23andMe.gsa.out"), header=T)
-  # PTSD - added 09Sep
-  magmaStats[[i]][["PGCFr2.PTSD"]] <- read.table(paste0("./Results_v2/",i,"_PTSD.gsa.out"), header=T)
+  magmaStats[[i]][["SCZ.PGC2"]] <- read.table(paste0("./Results_rev/",i,"_clozuk_pgc2.gsa.out"), header=T)
+  #magmaStats[[i]][["PGC3.SCZ"]] <- read.table(paste0("./Results_rev/",i,"_pgc3_scz.gsa.out"), header=T)
+  magmaStats[[i]][["ASD.PGC"]] <- read.table(paste0("./Results_rev/",i,"_PGC_ASD.gsa.out"), header=T)
+  magmaStats[[i]][["BIP.PGC"]] <- read.table(paste0("./Results_rev/",i,"_PGC_BIP.gsa.out"), header=T)
+  magmaStats[[i]][["MDD.PGC"]] <- read.table(paste0("./Results_rev/",i,"_MDD29_23andMe.gsa.out"), header=T)
+  magmaStats[[i]][["PTSD.PGC2"]] <- read.table(paste0("./Results_rev/",i,"_PTSD.gsa.out"), header=T)
+  magmaStats[[i]][["ADHD.PGC.iPsych"]] <- read.table(paste0("./Results_rev/",i,"_ADHD.gsa.out"), header=T)
+  magmaStats[[i]][["AD.metaPh3"]] <- read.table(paste0("./Results_rev/",i,"_AD.gsa.out"), header=T)
   
   # Addiction GWAS
-  magmaStats[[i]][["addxn.AgeSmk"]] <- read.table(paste0("./Results_v2/",i,"_AgeSmk.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.CigDay"]] <- read.table(paste0("./Results_v2/",i,"_CigDay.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.DrnkWk"]] <- read.table(paste0("./Results_v2/",i,"_DrnkWk.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.SmkInit"]] <- read.table(paste0("./Results_v2/",i,"_SmkInit.gsa.out"), header=T)
-  magmaStats[[i]][["addxn.SmkCes"]] <- read.table(paste0("./Results_v2/",i,"_SmkCes.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.AgeSmk"]] <- read.table(paste0("./Results_rev/",i,"_AgeSmk.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.CigDay"]] <- read.table(paste0("./Results_rev/",i,"_CigDay.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.DrnkWk"]] <- read.table(paste0("./Results_rev/",i,"_DrnkWk.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.SmkInit"]] <- read.table(paste0("./Results_rev/",i,"_SmkInit.gsa.out"), header=T)
+  magmaStats[[i]][["addxn.SmkCes"]] <- read.table(paste0("./Results_rev/",i,"_SmkCes.gsa.out"), header=T)
   # Added for control but not including in multiple test corrxn, and just for supplement:
   #   - CARDIoGRAM+C4D coronary artery dx meta-GWAS
-  #magmaStats[[i]][["CoronArtDx"]] <- read.table(paste0("./Results_v2/",i,"_CAD.gsa.out"), header=T)
+  #magmaStats[[i]][["CoronArtDx"]] <- read.table(paste0("./Results_rev/",i,"_CAD.gsa.out"), header=T)
 }
 
 ## merge to assess significance thresholds (did this before adding CAD meta-GWAS) ===
@@ -50,48 +50,25 @@ magmaStats_wide$CellType = rownames(magmaStats_wide)
 ## reshape to long
 magmaStats_long = reshape2::melt(magmaStats_wide)
 colnames(magmaStats_long)[3:4] = c("GWAS", "P")
-
+dim(magmaStats_long)
+    # [1] 1284    4     - 1248 bc 107 reported cell classes x 12 GWAS'
 
 table(p.adjust(magmaStats_long$P, "fdr") < 0.05)
-    # FALSE  TRUE 
-    #   356   324 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    #FALSE  TRUE 
+    #  892   392
 betacut.fdr <- max(magmaStats_long$P[p.adjust(magmaStats_long$P, "fdr") < 0.05])
-    # [1] 0.023635 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    # [1] 0.015109
 table(p.adjust(magmaStats_long$P, "bonf") < 0.05)
     # FALSE  TRUE 
-    #   579   101 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    #  1168   116
 betacut.bonf <- max(magmaStats_long$P[p.adjust(magmaStats_long$P, "bonf") < 0.05])
-    #[1] 7.2478e-05 (PGC2-SCZ-only + PTSD, no CAD; v1.08)
+    #[1] 3.7819e-05
 
-
-    ## Btw - for Discussion:
-              ## Thresholds are (PGC3-SCZ-only + PTSD, no CAD; v1.08)
-              # betacut.bonf
-              #   [1] 6.7732e-05
-              # betacut.fdr
-              #   [1] 0.017309
-    
-    magmaStats_long$P.adj.fdr <- p.adjust(magmaStats_long$P, "fdr")
-              
-    magmaStats_long[which(magmaStats_long$P.adj.fdr < 0.05 & magmaStats_long$GWAS=="PGCFr2.PTSD"), ]
-        # ** NOTE: these were preprint stats (prior to 05May2021 update;
-        #          AMY 'Inhib.5' no longer meets FDR significance)
-        #     Region       CellType        GWAS         P   P.adj.fdr
-        # 279  dlpfc Excit.L6.broad PGCFr2.PTSD 0.0048336 0.020935338
-        # 289  dlpfc          Oligo PGCFr2.PTSD 0.0035806 0.016340993
-        # 291   sacc        Excit.1 PGCFr2.PTSD 0.0017134 0.009488194
-        # 303    hpc      Excit.3.1 PGCFr2.PTSD 0.0154070 0.046153128
-        # 310    hpc      Inhib.5.1 PGCFr2.PTSD 0.0015284 0.008660933
-        # 313    hpc        Oligo.2 PGCFr2.PTSD 0.0093868 0.033244917
-        # 316    nac      Inhib.1.3 PGCFr2.PTSD 0.0084156 0.031442901
-        # 317    nac      Inhib.2.3 PGCFr2.PTSD 0.0169410 0.049230256
-        # 319    nac      Inhib.4.2 PGCFr2.PTSD 0.0037616 0.017052587
-        # 320    nac       MSN.D1.1 PGCFr2.PTSD 0.0100760 0.034957551
-        # 324    nac       MSN.D2.1 PGCFr2.PTSD 0.0024500 0.012250000
-        # 328    nac        Oligo.3 PGCFr2.PTSD 0.0146640 0.045027027
-        # 330    amy      Excit.1.2 PGCFr2.PTSD 0.0115380 0.038871089
-        # 337    amy      Inhib.5.2 PGCFr2.PTSD 0.0141300 0.044075229 *TLL1/NPFFR2 (HPA stress axis-involved)
-        # 340    amy        Oligo.4 PGCFr2.PTSD 0.0143040 0.044414247      - none meet Bonf. for PTSD
+magmaStats_long$P.adj.fdr <- p.adjust(magmaStats_long$P, "fdr")
+          
+# (for interactive exploration:)
+magmaStats_long[which(magmaStats_long$P.adj.fdr < 0.05 &
+                        magmaStats_long$GWAS=="AD.metaPh3"), ]
 
 
     
@@ -117,16 +94,14 @@ magmaStats_long$Beta <- magmaStats_long.beta$Beta
 # Reorder
 magmaStats_long <- magmaStats_long[ ,c("Region", "CellType", "GWAS", "Beta", "P", "P.adj.fdr")]
 
-## Supplementary table: PGC3.SCZ in lieu of PGC2 & PTSD ===
-# write.csv(magmaStats_long, file = "../tables/suppTable_magma-v1.08_byCluster_GWASinMainSection.csv",
-#           row.names=F)
-write.csv(magmaStats_long, file = "../tables/suppTable_magma-v1.08_byCluster_GWASinMainSection_MNT05May2021.csv",
+## Supplementary table: All GWAS included in main section (12 phenotypes, no PGC3-SCZD) ===
+write.csv(magmaStats_long, file = "../tables/revision/suppTable_magma-v1.08_byCluster_12xGWAS_MNT2021.csv",
           row.names=F)
 
-# PTSD results, separately because not part of main section
+# CAD results, separately (without computing 'P.adj.fdr') because not part of main section
 #   -> first include all GWAS in 'magmaStats' & remake 'magmaStats_long'/'magmaStats_long.beta'
-magmaStats.sup2 <- magmaStats_long[magmaStats_long$GWAS %in% c("PGC2.SCZ","PGCFr2.PTSD"), ]
-write.csv(magmaStats.sup2, file = "../tables/suppTable_magma-v1.08_byCluster_GWAS-PGC2-CAD_separately.csv",
+magmaStats.sup2 <- magmaStats_long[magmaStats_long$GWAS %in% c("CoronArtDx"), ]
+write.csv(magmaStats.sup2, file = "../tables/revision/suppTable_magma-v1.08_byCluster_CAD-GWAS_MNT2021.csv",
           row.names=F)
 
 
@@ -297,7 +272,7 @@ customMAGMAplot.b = function(region, Pthresh, fdrThresh, bonfThresh, ...) {
   axis(2, rownames(wide_p), at=midpoint(clusterHeights), las=1)
   axis(1, rep("", ncol(wide_p)), at = seq(0.5,ncol(wide_p)-0.5))
   text(x = seq(0.5,ncol(wide_p)-0.5), y=-1*max(nchar(xlabs))/2, xlabs,
-       xpd=TRUE, srt=45,cex=1.25,adj= 1)
+       xpd=TRUE, srt=45, cex=1.2, adj= 1)
   abline(h=clusterHeights,v=0:ncol(wide_p))
   
   # Print top decile of betas
@@ -312,53 +287,58 @@ customMAGMAplot.b = function(region, Pthresh, fdrThresh, bonfThresh, ...) {
 
 ## Now just need one plot per region :)
 # DLPFC
-pdf("graphics/heatmap-v2_dlpfc-magma-v.08_PGC-and-addiction_GWAS_MNT15Sep2020.pdf", w=8)
+pdf("graphics/heatmap-rev_dlpfc-magma-v.08_PGC-and-addiction_GWAS_MNT2021.pdf", w=8)
 par(mar=c(8,7.5,6,1), cex.axis=1.0, cex.lab=0.5)
 customMAGMAplot.b(region="dlpfc", Pthresh=12, fdrThresh=betacut.fdr, bonfThresh=betacut.bonf)
-abline(v=5,lwd=3)
-text(x = c(2.5,7.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=1.0, font=2)
-text(x = 5, y=185, "MAGMA gene set analyses: DLPFC subclusters", xpd=TRUE, cex=1.5, font=2)
-text(x = 5, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+abline(v=7,lwd=3)
+text(x = c(3.5,9.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=0.9, font=2)
+text(x = 6, y=185, "MAGMA gene set analyses: DLPFC cell classes", xpd=TRUE, cex=1.5, font=2)
+text(x = 6, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+grid::grid.text(label="-log10(p-value)", x=0.93, y=0.825, gp=gpar(fontsize=9))
 dev.off()
 
 # sACC
-pdf("graphics/heatmap-v2_sacc-magma-v.08_PGC-and-addiction_GWAS_MNT15Sep2020.pdf", w=8)
-par(mar=c(8,7.5,6,1), cex.axis=1.3, cex.lab=0.5)
+pdf("graphics/heatmap-rev_sacc-magma-v.08_PGC-and-addiction_GWAS_MNT2021.pdf", w=8, h=8)
+par(mar=c(8,7.5,6,1), cex.axis=0.9, cex.lab=0.5)
 customMAGMAplot.b(region="sacc", Pthresh=12, fdrThresh=betacut.fdr, bonfThresh=betacut.bonf)
-abline(v=5,lwd=3)
-text(x = c(2.5,7.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=1.0, font=2)
-text(x = 5, y=185, "MAGMA gene set analyses: sACC subclusters", xpd=TRUE, cex=1.5, font=2)
-text(x = 5, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+abline(v=7,lwd=3)
+text(x = c(3.5,9.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=0.9, font=2)
+text(x = 6, y=185, "MAGMA gene set analyses: sACC cell classes", xpd=TRUE, cex=1.5, font=2)
+text(x = 6, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+grid::grid.text(label="-log10(p-value)", x=0.93, y=0.835, gp=gpar(fontsize=9))
 dev.off()
 
 # HIPPO
-pdf("graphics/heatmap-v2_hpc-magma-v.08_PGC-and-addiction_GWAS_MNT15Sep2020.pdf", w=8)
-par(mar=c(8,7.5,5,1), cex.axis=1.1, cex.lab=0.5)
+pdf("graphics/heatmap-rev_hpc-magma-v.08_PGC-and-addiction_GWAS_MNT2021.pdf", w=8)
+par(mar=c(8,7.5,6,1), cex.axis=1.0, cex.lab=0.5)
 customMAGMAplot.b(region="hpc", Pthresh=12, fdrThresh=betacut.fdr, bonfThresh=betacut.bonf)
-abline(v=5,lwd=3)
-text(x = c(2.5,7.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=1.0, font=2)
-text(x = 5, y=185, "MAGMA gene set analyses: HIPPO subclusters", xpd=TRUE, cex=1.5, font=2)
-text(x = 5, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+abline(v=7,lwd=3)
+text(x = c(3.5,9.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=0.9, font=2)
+text(x = 6, y=185, "MAGMA gene set analyses: HPC cell classes", xpd=TRUE, cex=1.5, font=2)
+text(x = 6, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+grid::grid.text(label="-log10(p-value)", x=0.93, y=0.825, gp=gpar(fontsize=9))
 dev.off()
 
 # NAc
-pdf("graphics/heatmap-v2_nac-magma-v.08_PGC-and-addiction_GWAS_MNT15Sep2020.pdf", w=8)
+pdf("graphics/heatmap-rev_nac-magma-v.08_PGC-and-addiction_GWAS_MNT2021.pdf", w=8)
 par(mar=c(8,7.5,6,1), cex.axis=1.0, cex.lab=0.5)
 customMAGMAplot.b(region="nac", Pthresh=12, fdrThresh=betacut.fdr, bonfThresh=betacut.bonf)
-abline(v=5,lwd=3)
-text(x = c(2.5,7.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=1.0, font=2)
-text(x = 5, y=185, "MAGMA gene set analyses: NAc subclusters", xpd=TRUE, cex=1.5, font=2)
-text(x = 5, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+abline(v=7,lwd=3)
+text(x = c(3.5,9.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=0.9, font=2)
+text(x = 6, y=185, "MAGMA gene set analyses: NAc cell classes", xpd=TRUE, cex=1.5, font=2)
+text(x = 6, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+grid::grid.text(label="-log10(p-value)", x=0.93, y=0.825, gp=gpar(fontsize=9))
 dev.off()
 
 # AMY
-pdf("graphics/heatmap-v2_amy-magma-v.08_PGC-and-addiction_GWAS_MNT15Sep2020.pdf", w=8)
-par(mar=c(8,7.5,5,1), cex.axis=1.2, cex.lab=0.5)
+pdf("graphics/heatmap-rev_amy-magma-v.08_PGC-and-addiction_GWAS_MNT2021.pdf", w=8)
+par(mar=c(8,7.5,6,1), cex.axis=1.0, cex.lab=0.5)
 customMAGMAplot.b(region="amy", Pthresh=12, fdrThresh=betacut.fdr, bonfThresh=betacut.bonf)
-abline(v=5,lwd=3)
-text(x = c(2.5,7.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=1.0, font=2)
-text(x = 5, y=185, "MAGMA gene set analyses: AMY subclusters", xpd=TRUE, cex=1.5, font=2)
-text(x = 5, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+abline(v=7,lwd=3)
+text(x = c(3.5,9.5), y=165, c("Psychiatric disorder GWAS", "Alcohol/substance use GWAS"), xpd=TRUE, cex=0.9, font=2)
+text(x = 6, y=185, "MAGMA gene set analyses: AMY cell classes", xpd=TRUE, cex=1.5, font=2)
+text(x = 6, y=175, "(Betas controlling all tests at FDR < 0.05)", xpd=TRUE, cex=1, font=1)
+grid::grid.text(label="-log10(p-value)", x=0.93, y=0.825, gp=gpar(fontsize=9))
 dev.off()
 
 
