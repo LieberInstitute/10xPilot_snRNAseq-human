@@ -361,7 +361,82 @@ plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-cont
      #    -> Might look better here too
 
 
+### AMY cell classes markers' enrichment ===================================
+load("../rdas/revision/markerStats-and-SCE_NAc-n8_sn-level_cleaned_MNTNov2020.rda", verbose=T)
+# markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
+rm()
 
+sapply(markers.amy.t.pw, function(x){table(x$FDR<0.05 & x$non0median==TRUE)["TRUE"]})
+# Astro_A.TRUE Astro_B.TRUE    Endo.TRUE Excit_A.TRUE Excit_B.TRUE Excit_C.TRUE 
+#          326            3          180           59          173          142 
+# Inhib_A.TRUE Inhib_B.TRUE Inhib_C.TRUE Inhib_D.TRUE Inhib_E.TRUE Inhib_F.TRUE 
+#           26           88           14          131          147           43 
+# Inhib_G.TRUE Inhib_H.TRUE   Micro.TRUE   Mural.TRUE   Oligo.TRUE     OPC.TRUE 
+#            4           79          284          172          306          172 
+#   Tcell.TRUE 
+#          112
+sum(sapply(markers.amy.t.pw, function(x){table(x$FDR<0.05 & x$non0median==TRUE)["TRUE"]}), na.rm=T)
+# [1] 2461
+
+markers.amy.specific <- data.frame()
+for(i in names(markers.amy.t.pw)){
+  markers.temp <- as.data.frame(markers.amy.t.pw[[i]])[ ,c("p.value", "FDR", "non0median")]
+  markers.temp$gene <- rownames(markers.temp)
+  markers.temp$cellType <- i
+  markers.amy.specific <- rbind(markers.amy.specific,
+                                markers.temp[markers.temp$FDR<0.05 & markers.temp$non0median==TRUE,
+                                             c("p.value", "FDR", "cellType","gene")])
+}
+
+table(markers.amy.specific$cellType)
+length(unique(markers.amy.specific$gene)) # [1] 2461 - good.
+
+# Add ensemblID so can match, and color
+markers.amy.specific$geneID <- rowData(sce.amy)$gene_id[match(markers.amy.specific$gene,
+                                                              rowData(sce.amy)$Symbol.uniq)]
+
+# Make same plots, coloring genes by their cell-type-specific color
+pdf("graphics/MAGMA-vs-PASCAL-gene-levelResults-from-Liu-etal2019_AMY-Markers_MNT2021.pdf")
+for(i in names(geneStats)){
+  
+  pascal.temp <- liu.pascal.list[[i]]
+  pascal.temp$cellType <- markers.amy.specific$cellType[match(pascal.temp$ensemblID, markers.amy.specific$geneID)]
+  pascal.temp$cellType <- ifelse(is.na(pascal.temp$cellType), "nonspecific", pascal.temp$cellType)
+  
+  print(
+    ggplot(data=pascal.temp, aes(x=z.pascal, y=z.magma.gene)) +
+      geom_point(aes(color=cellType), size=ifelse(pascal.temp$cellType=="nonspecific",2.5,5.0),
+                 alpha=ifelse(pascal.temp$cellType=="nonspecific",0.1,0.8)) +
+      scale_color_manual(values=c(cell_colors.amy, nonspecific="#333333")) +
+      geom_smooth(method = "lm", se=FALSE) +
+      labs(title = paste0(i," (Liu, et al. 2019): AMY cell class markers"),
+           subtitle = paste0("Pearson's r = ", round(cor(liu.pascal.list[[i]]$z.pascal, liu.pascal.list[[i]]$z.magma.gene, method="pearson"),3)),
+           x = "PASCAL gene-level z-scores",
+           y = "Corresponding MAGMA z-scores") +
+      theme(plot.title = element_text(size=16, face="bold"),
+            axis.title=element_text(size=15,face="bold"),
+            axis.text = element_text(size=12))
+  )
+  
+  # With gene labels
+  print(
+    ggplot(data=pascal.temp, aes(x=z.pascal, y=z.magma.gene)) +
+      geom_point(aes(color=cellType), size=ifelse(pascal.temp$cellType=="nonspecific",2.5,5.0),
+                 alpha=ifelse(pascal.temp$cellType=="nonspecific",0.1,0.8)) +
+      geom_text(label=ifelse(!pascal.temp$cellType=="nonspecific",pascal.temp$Gene.Symbol,NA), hjust=0, check_overlap=F,
+                fontface="italic", size=3) + #, position=position_jitter(width=0.05,height=0.05)) +
+      scale_color_manual(values=c(cell_colors.amy, nonspecific="#333333")) +
+      geom_smooth(method = "lm", se=FALSE) +
+      labs(title = paste0(i," (Liu, et al. 2019): AMY cell class markers"),
+           subtitle = paste0("Pearson's r = ", round(cor(liu.pascal.list[[i]]$z.pascal, liu.pascal.list[[i]]$z.magma.gene, method="pearson"),3)),
+           x = "PASCAL gene-level z-scores",
+           y = "Corresponding MAGMA z-scores") +
+      theme(plot.title = element_text(size=16, face="bold"),
+            axis.title=element_text(size=15,face="bold"),
+            axis.text = element_text(size=12))
+  )
+}
+dev.off()
 
 
 
