@@ -41,7 +41,7 @@ load("rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda", ve
 
     
 ## DLPFC
-load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda", verbose=T)
     # sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors
     rm(pc.choice.dlpfc, clusterRefTab.dlpfc, annotationTab.dlpfc)
     cell_colors.dlpfc <- cell_colors
