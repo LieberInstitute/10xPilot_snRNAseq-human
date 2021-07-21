@@ -8,7 +8,7 @@ library(RColorBrewer)
 dir.create("square_pdfs")
 
 ## read in reference data
-ref = read_excel("raw_data/Square_expected_expression.xlsx")
+ref = read_excel("raw_data/Square_expected_expression_revisionMNT.xlsx")
 ref = as.data.frame(ref[,1:5])
 ref_mat = as.matrix(ref[,2:5])
 rownames(ref_mat) = ref$Population
@@ -126,26 +126,25 @@ d1_match = cbind(roi_mat, round(dist_mat,2),
 d1_match$cell_name = rownames(ref_mat)[d1_match$cell_type]
 
 table(d1_match$dist)
-  # 0   1
-# 166 175
+    #    0               1 1.4142135623731 
+    #  119             160              62
 mean(d1_match$dist==0)
-# [1] 0.4868035
+    # [1] 0.3489736
 
 table(d1_match$cell_name, d1_match$dist)
-         # 0   1
-  # D1.1   9  19
-  # D1.2   6   0
-  # D1.3  45 156
-  # D1.4 106   0
+    #             0   1 1.4142135623731
+    # D1_A/D/E  94 151              62
+    # D1_B      10   0               0
+    # D1_C       6   9               0
+    # D1_F       9   0               0
   
 
-prop.table(table(d1_match$cell_name, d1_match$dist), 2)
-
-                # 0          1
-  # D1.1 0.05421687 0.10857143
-  # D1.2 0.03614458 0.00000000
-  # D1.3 0.27108434 0.89142857
-  # D1.4 0.63855422 0.00000000
+round(prop.table(table(d1_match$cell_name, d1_match$dist), 2),3)
+    #              0     1 1.4142135623731
+    # D1_A/D/E 0.790 0.944           1.000
+    # D1_B     0.084 0.000           0.000
+    # D1_C     0.050 0.056           0.000
+    # D1_F     0.076 0.000           0.000
 
 #######################
 ## numbers for paper ##
@@ -247,7 +246,7 @@ dim(dat_d1)
 ### 1) boxplot log2-transformed (/maybe add RVolume normalization)
 ## For PTHLH (Opal690)
 pdf("square_pdfs/TAC1_square_rnascope.pdf")
-boxplot(log2(dat_inhib$MD_Opal690Lp30 + 1) ~ d1_match$cell_name)
+boxplot(log2(dat_d1$MD_Opal690Lp30 + 1) ~ d1_match$cell_name)
 dev.off()
 
 # or (with $RVolume normalization)
@@ -285,7 +284,108 @@ pdf("square_pdfs/RXFP2_norm_square_rnascope.pdf")
 boxplot(log2(dat_d1$MD_Opal520_Lp20/dat_d1$RVolume + 1) ~ d1_match$cell_name)
 dev.off()
 
+###Violin plots look prettier
+library(ggplot2)
+
+#RXFP2 520
+p <- ggplot(dat_d1, aes(x=d1_match$cell_name, y=log2(dat_d1$MD_Opal520_Lp20/dat_d1$RVolume + 1))) + 
+  geom_violin() + geom_jitter(shape=16, position=position_jitter(0.2)) + theme_minimal()
+
+pdf("square_pdfs/RXFP2_norm_square_rnascope_violin.pdf")
+p
+dev.off()
+
+library(scater)
+### Palette taken from `scater`
+tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
+                    "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
+                    "#CDCC5D", "#6DCCDA")
+
+library(SingleCellExperiment)
+library(scater)
+counts <- t(dat_d1[,12:55])
+sce <- SingleCellExperiment(list(counts=counts),colData=d1_match)
+pdf("square_pdfs/RXFP2_norm_square_rnascope_violin_scater.pdf")
+plotExpression(sce, exprs_values = "counts",features="MD_Opal690Lp30",
+               x="cell_name", colour_by="cell_name", point_alpha=1, point_size=2, ncol=2,
+               add_legend=F, theme_size=16, show_median=TRUE)
+dev.off()
+
+source('../plotExpressionCustom.R')
+assay(sce,"logcounts") <- assay(sce,"counts")
+pdf("square_pdfs/RXFP2_norm_square_rnascope_test_plotExpressionCustom.pdf")
+plotExpressionCustom(sce, features="MD_Opal690Lp30",
+               features_name = "", anno_name="cell_name", point_alpha=1, point_size=2, ncol=2)
+dev.off()
+
+
 ### 2) Hierarchically cluster the 212 (GAD1+) ROIs on normalized (i.e. `/RVolume`)
 #    n transcript dots? (so 212 x 3 probes as input matrix)
 #    (MD_* : total transcript dots in that ROI after Lipofuscin masking)
 # - hopefully would see four (for four inhib. subpops) main branches??
+
+## Forcing to use like SCE data, for aesthetics ===
+library(scater)
+library(SingleCellExperiment)
+source('../plotExpressionCustom.R')
+tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
+              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
+              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
+blgngy <- tableau20[c(1:2, 19:20, 5:6, 17:18, 15:16)]
+
+MDcounts <- t(dat_d1[ ,colnames(dat_d1)[grep('^MD', colnames(dat_d1))]])
+rownames(MDcounts)
+    # [1] "MD_Opal520_Lp20" "MD_Opal570Lp1_0" "MD_Opal620_LP10" "MD_Opal690Lp30"
+# (check with ref_mat)
+rownames(MDcounts) <- c("rnascope_RXFP2", "rnascope_GABRQ", "rnascope_DRD1",
+                        "rnascope_TAC1")
+# check
+table(colnames(MDcounts) == rownames(d1_match))
+# TRUE
+# 341
+colnames(d1_match)[colnames(d1_match)=="cell_name"] <- "class_predict"
+
+# Create SCE
+sce.square <- SingleCellExperiment(list(counts=MDcounts), colData=d1_match)
+# a couple normalizations:
+assay(sce.square, "logcounts") <- log2(assay(sce.square, "counts") + 1)
+assay(sce.square, "logcounts.RVnorm") <- t(apply(assay(sce.square, "counts"),
+                                                 1,function(x){
+                                                   log2( x/dat_d1$RVolume*10000 + 1 )
+                                                 }))
+
+
+pdf("square_pdfs/quantified-dotsPerROI_all-square-probes_betterVlnPlots_MNT2021.pdf", width=2)
+# Log2-transform, only
+plotExpressionCustom(sce.square, exprs_values="logcounts", scales="free_y",
+                     features=c("rnascope_DRD1","rnascope_TAC1",
+                                "rnascope_RXFP2", "rnascope_GABRQ"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+# + RVolume normalization
+plotExpressionCustom(sce.square, exprs_values="logcounts.RVnorm", scales="free_y",
+                     features=c("rnascope_DRD1","rnascope_TAC1",
+                                "rnascope_RXFP2", "rnascope_GABRQ"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class (ROI volume-normalized)",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
