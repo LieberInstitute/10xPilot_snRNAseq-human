@@ -8,7 +8,7 @@ dir.create("star_pdfs")
 options(width=100)
 
 ## read in reference data
-ref = read_excel("raw_data/Star_expected_expression.xlsx")
+ref = read_excel("raw_data/Star_expected_expression_revisionMNT.xlsx")
 ref = as.data.frame(ref[,1:5])
 ref_mat = as.matrix(ref[,2:5])
 rownames(ref_mat) = ref$Population
@@ -127,36 +127,30 @@ d_match$cell_name = factor(d_match$cell_name, rownames(ref_mat))
 d_match$dist = signif(d_match$dist, 2)
 
 table(d_match$dist)
-  # 0   1 1.4
-# 199 250  33
+    #   0   1 1.4
+    # 157 324   1
 
 
 
 mean(d_match$dist==0)
-# [1] 0.4128631
+    # [1] 0.3257261
 
 table(d_match$cell_name, d_match$dist)
-         # 0   1 1.4
-  # D1.1  61  85  33
-  # D1.2   0   0   0
-  # D1.3 112 164   0
-  # D1.4   0   0   0
-  # D2.1  12   1   0
-  # D2.2  14   0   0
+    #                0   1 1.4
+    # D1_A/B/C/D/F  61  15   1
+    # D1_E          70 144   0
+    # D2_C          12 165   0
+    # D2_A/B/D      14   0   0
 
 
 
 
 prop.table(table(d_match$cell_name, d_match$dist),2)
-
-
-                # 0          1        1.4
-  # D1.1 0.30653266 0.34000000 1.00000000
-  # D1.2 0.00000000 0.00000000 0.00000000
-  # D1.3 0.56281407 0.65600000 0.00000000
-  # D1.4 0.00000000 0.00000000 0.00000000
-  # D2.1 0.06030151 0.00400000 0.00000000
-  # D2.2 0.07035176 0.00000000 0.00000000
+    #                       0          1        1.4
+    # D1_A/B/C/D/F 0.38853503 0.04629630 1.00000000
+    # D1_E         0.44585987 0.44444444 0.00000000
+    # D2_C         0.07643312 0.50925926 0.00000000
+    # D2_A/B/D     0.08917197 0.00000000 0.00000000
 
 ##############
 ## plots #####
@@ -188,4 +182,69 @@ length(table(pheno$BrNum))
 length(unique(paste0(pheno$Section,":", pheno$BrNum)))
 
 dim(dat_d)
+
+## Forcing to use like SCE data, for aesthetics ===
+library(scater)
+library(SingleCellExperiment)
+source('../plotExpressionCustom.R')
+tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
+              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
+              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
+blgngy <- tableau20[c(1:2, 19:20, 5:6, 17:18, 15:16)]
+
+MDcounts <- t(dat_d[ ,colnames(dat_d)[grep('^MD', colnames(dat_d))]])
+rownames(MDcounts)
+    #[1] "MD_Opal520_Lp20" "MD_Opal570Lp1_0" "MD_Opal620_LP10" "MD_Opal690Lp30" 
+rownames(MDcounts) <- c("rnascope_DRD1", "rnascope_HTR7",
+                        "rnascope_DRD2","rnascope_CRHR2")
+
+# check
+table(colnames(MDcounts) == rownames(d_match))
+    # all 482 TRUE
+colnames(d_match)[colnames(d_match)=="cell_name"] <- "class_predict"
+
+# Create SCE
+sce.star <- SingleCellExperiment(list(counts=MDcounts), colData=d_match)
+# a couple normalizations:
+assay(sce.star, "logcounts") <- log2(assay(sce.star, "counts") + 1)
+assay(sce.star, "logcounts.RVnorm") <- t(apply(assay(sce.star, "counts"),
+                                                 1,function(x){
+                                                   log2( x/dat_d$RVolume*10000 + 1 )
+                                                 }))
+
+
+pdf("star_pdfs/quantified-dotsPerROI_all-star-probes_betterVlnPlots_MNT2021.pdf", width=2)
+# Log2-transform, only
+plotExpressionCustom(sce.star, exprs_values="logcounts", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_DRD2",
+                                "rnascope_CRHR2", "rnascope_HTR7"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.5, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+# + RVolume normalization
+plotExpressionCustom(sce.star, exprs_values="logcounts.RVnorm", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_DRD2",
+                                "rnascope_CRHR2", "rnascope_HTR7"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.5, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class (ROI volume-normalized)",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
 	
