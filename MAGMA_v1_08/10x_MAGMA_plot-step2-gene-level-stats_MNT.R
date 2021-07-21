@@ -13,6 +13,8 @@ library(jaffelab)
 library(SingleCellExperiment)
 library(readxl)
 
+source("../plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -341,6 +343,35 @@ plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_C-cont
   scale_color_manual(values=cell_colors.nac)
 
 
+# Print an iteration for Fig 4C, highlighting the Bonf-significant classes' PW markers
+i <- "SmkInit"
+pascal.temp <- liu.pascal.list[[i]]
+pascal.temp$cellType <- markers.nac.specific$cellType[match(pascal.temp$ensemblID, markers.nac.specific$geneID)]
+pascal.temp$cellType <- ifelse(is.na(pascal.temp$cellType), "nonspecific", pascal.temp$cellType)
+
+pdf("graphics/MAGMA-vs-PASCAL-gene-levelResults-from-Liu-etal2019_NAc-SmkInit-highlight_MNT2021.pdf")
+set.seed(901)
+print(
+  ggplot(data=pascal.temp, aes(x=z.pascal, y=z.magma.gene)) +
+    geom_point(aes(color=cellType), size=ifelse(pascal.temp$cellType=="nonspecific",2.5,5.0),
+               alpha=ifelse(pascal.temp$cellType=="nonspecific",0.1,0.8)) +
+    geom_text(label=ifelse(pascal.temp$cellType %in% c("Inhib_A","MSN.D1_C","MSN.D2_C","OPC"),
+                           pascal.temp$Gene.Symbol,NA), hjust=0, check_overlap=F,
+              fontface="italic", size=3, position=position_jitter(width=0.03,height=0.07)) +
+    scale_color_manual(values=c(cell_colors.nac, nonspecific="#333333")) +
+    geom_smooth(method = "lm", se=FALSE) +
+    labs(title = paste0(i," (Liu, et al. 2019): gene-level scores"),
+         subtitle = "Pairwise-significant markers for Bonferroni-significant NAc cell classes",
+         x = "PASCAL gene-level z-scores",
+         y = "Corresponding MAGMA z-scores",
+         colour="Cell type") +
+    theme(plot.title = element_text(size=16, face="bold"),
+          axis.title=element_text(size=15,face="bold"),
+          axis.text = element_text(size=12))
+)
+dev.off()
+
+
 
 ### MSN.D1_E for 'CigDay'
 D1_E.markers.enriched <- markerList.nac[["MSN.D1_E"]]
@@ -362,9 +393,9 @@ plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-cont
 
 
 ### AMY cell classes markers' enrichment ===================================
-load("../rdas/revision/markerStats-and-SCE_NAc-n8_sn-level_cleaned_MNTNov2020.rda", verbose=T)
-# markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
-rm()
+load("../rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
+    rm(markers.amy.wilcox.block, medianNon0.amy)
 
 sapply(markers.amy.t.pw, function(x){table(x$FDR<0.05 & x$non0median==TRUE)["TRUE"]})
 # Astro_A.TRUE Astro_B.TRUE    Endo.TRUE Excit_A.TRUE Excit_B.TRUE Excit_C.TRUE 
@@ -439,6 +470,113 @@ for(i in names(geneStats)){
 dev.off()
 
 
+## 'CigDay'
+sce.amy <- sce.amy[ ,-grep("drop.", sce.amy$cellType)]
+sce.amy$cellType <- droplevels(sce.amy$cellType)
+
+plotExpressionCustom(sce.amy, anno_name="cellType", features_name="'CigDay'-containing AMY cell class", ncol=3,
+                     features=c("CLU","GRK4","SEZ6","BTBD3","RASGRF1","ADD1","DRD2","SOX6"), scales="free_y") +
+  scale_color_manual(values=cell_colors.amy)
+
+
+## 'DrnkWk' - highlight Inhib_E & Inhib_G '_enriched' markers
+markers.amy.enriched <- lapply(markers.amy.t.1vAll, function(x){x[[2]]})
+markerList.amy <- lapply(markers.amy.enriched, function(x){rownames(x)[x$log.FDR < log(1e-6) & x$non0median==T]})
+
+Inhib_E.enriched <- markerList.amy[["Inhib_E"]]
+Inhib_G.enriched <- markerList.amy[["Inhib_G"]]
+
+# Which are more enriched in one or the other?
+intersect(setdiff(Inhib_G.enriched, Inhib_E.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+    # [1] "RUNX1T1"
+intersect(setdiff(Inhib_E.enriched, Inhib_G.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+    #  [1] "DRD2"      "TENM2"     "SLC24A2"   "RAB11FIP4" "RPS6KA5"   "CELF1"    
+    # [7] "POU2F2"    "RABGAP1L"  "PHC2"      "RAI1"      "AUTS2"     "FTO"      
+    # [13] "INPP4B"    "NR6A1"
+
+intersect(intersect(Inhib_G.enriched, Inhib_E.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+    # [1] "MYT1L"   "GRIK5"   "ST8SIA3" "SULT1A1"
+
+    # The above are those that are _in_ the Liu et al. PASCAL stats - what about original input?
+    length(setdiff(Inhib_G.enriched, Inhib_E.enriched)) # 38 specific to Inhib_G
+    length(setdiff(Inhib_E.enriched, Inhib_G.enriched)) # 979 specific to Inhib_E
+    length(intersect(Inhib_G.enriched, Inhib_E.enriched)) # 267 shared enriched markers
+        # So most of 'Inhib_G' were captured in the input for 'Inhib_E'
+    head(intersect(Inhib_G.enriched, Inhib_E.enriched),n=20)
+        #  [1] "AC008574.1"  "CRYM"        "STARD4-AS1"  "C3orf67-AS1" "AC093523.1" 
+        #  [6] "KCNH4"       "YPEL1"       "GPR149"      "MME"         "ST6GALNAC5" 
+        # [11] "GABRA5"      "LAMB1"       "LDB2"        "CNTNAP3B"    "LINC01250"  
+        # [16] "GNAL"        "ITPR1"       "CDH9"        "GRM1"        "SLC47A1"
+
+i <- "DrnkWk"
+pascal.temp <- liu.pascal.list[[i]]
+
+    inhib.g <- intersect(setdiff(Inhib_G.enriched, Inhib_E.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+    inhib.e <- intersect(setdiff(Inhib_E.enriched, Inhib_G.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+    both <- intersect(intersect(Inhib_G.enriched, Inhib_E.enriched), liu.pascal.list[["DrnkWk"]]$Gene.Symbol)
+
+    pascal.temp$cellType <- ifelse(pascal.temp$Gene.Symbol %in% inhib.g, "Inhib_G", NA)
+    pascal.temp$cellType <- ifelse(pascal.temp$Gene.Symbol %in% inhib.e, "Inhib_E", pascal.temp$cellType)
+    pascal.temp$cellType <- ifelse(pascal.temp$Gene.Symbol %in% both, "shared", pascal.temp$cellType)
+    
+pascal.temp$cellType <- ifelse(is.na(pascal.temp$cellType), "neither", pascal.temp$cellType)
+
+#pdf("graphics/MAGMA-vs-PASCAL-gene-levelResults-from-Liu-etal2019_AMY-DrnkWk-highlight_MNT2021.pdf")
+# set.seed(901)
+# print(
+#   ggplot(data=pascal.temp, aes(x=z.pascal, y=z.magma.gene)) +
+#     geom_point(aes(color=cellType), size=ifelse(pascal.temp$cellType=="nonspecific",2.5,5.0),
+#                alpha=ifelse(pascal.temp$cellType=="neither",0.1,0.8)) +
+#     geom_text(label=ifelse(pascal.temp$cellType %in% c("Inhib_G","Inhib_E","shared"),
+#                            pascal.temp$Gene.Symbol,NA), hjust=0, check_overlap=F,
+#               fontface="italic", size=3, position=position_jitter(width=0.03,height=0.07)) +
+#     scale_color_manual(values=c(cell_colors.amy, shared="#669966", neither="#333333")) +
+#     geom_smooth(method = "lm", se=FALSE) +
+#     labs(title = paste0(i," (Liu, et al. 2019): gene-level scores"),
+#          subtitle = "Enriched markers for FDR-significant AMY classes Inhib_E/_G",
+#          x = "PASCAL gene-level z-scores",
+#          y = "Corresponding MAGMA z-scores",
+#          colour="Enriched in:") +
+#     theme(plot.title = element_text(size=16, face="bold"),
+#           axis.title=element_text(size=15,face="bold"),
+#           axis.text = element_text(size=12))
+# )
+#dev.off()
+    # Nvm don't like this
+
+
+## For 4D ===
+# Print an iteration for Fig 4C, highlighting the Bonf-significant classes' PW markers
+i <- "DrnkWk"
+pascal.temp <- liu.pascal.list[[i]]
+pascal.temp$cellType <- markers.amy.specific$cellType[match(pascal.temp$ensemblID, markers.amy.specific$geneID)]
+pascal.temp$cellType <- ifelse(is.na(pascal.temp$cellType), "nonspecific", pascal.temp$cellType)
+
+pdf("graphics/MAGMA-vs-PASCAL-gene-levelResults-from-Liu-etal2019_AMY-DrnkWk-highlight_MNT2021.pdf")
+set.seed(720)
+print(
+  ggplot(data=pascal.temp, aes(x=z.pascal, y=z.magma.gene)) +
+    geom_point(aes(color=cellType), size=ifelse(pascal.temp$cellType=="nonspecific",2.5,5.0),
+               alpha=ifelse(pascal.temp$cellType=="nonspecific",0.1,0.8)) +
+    geom_text(label=ifelse(!pascal.temp$cellType=="nonspecific",pascal.temp$Gene.Symbol,NA), hjust=0, check_overlap=F,
+              fontface="italic", size=2.7, position=position_jitter(width=0.07,height=0.07)) +
+    scale_color_manual(values=c(cell_colors.amy, nonspecific="#333333")) +
+    geom_smooth(method = "lm", se=FALSE) + xlim(4.4,7.1) +
+    labs(title = paste0(i," (Liu, et al. 2019): gene-level scores"),
+         subtitle = "Pairwise-significant markers in AMY cell classes",
+         x = "PASCAL gene-level z-scores",
+         y = "Corresponding MAGMA z-scores",
+         colour="Cell type") +
+    theme(plot.title = element_text(size=16, face="bold"),
+          axis.title=element_text(size=15,face="bold"),
+          axis.text = element_text(size=12))
+)
+dev.off()
+
+
+
+### Session info for 20Jul2021 ====================================
+sessionInfo()
 
 
 
