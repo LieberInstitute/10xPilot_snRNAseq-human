@@ -9,14 +9,17 @@ options(width=100)
 dir.create("triangle_pdfs")
 
 ## read in reference data
-ref = read_excel("raw_data/Triangle_expected_expression.xlsx")
+ref = read_excel("raw_data/Triangle_expected_expression_revisionMNT.xlsx")
 ref = as.data.frame(ref[,1:5])
 ref_mat = as.matrix(ref[,2:5])
 rownames(ref_mat) = ref$Population
+ref_mat
 
-head(ref_mat)
-
-image(ref_mat)
+# Swap 'D1_A/D' & 'D1_E' row order
+ref_mat <- ref_mat[c(1,3,2,4:5), ]
+# Call 'D1_E' expression of DRD2 == 1 because the median is non-0
+ref_mat["D1_E", "Channel_1_620_DRD2"] <- 1
+ref_mat
 
 ## read in long data
 dat =read.csv("raw_data/long_data_Triangle.csv",as.is=TRUE)
@@ -132,31 +135,29 @@ d_match = cbind(roi_mat, round(dist_mat,2),
 d_match$cell_name = rownames(ref_mat)[d_match$cell_type]
 d_match$cell_name = factor(d_match$cell_name, rownames(ref_mat))
 table(d_match$dist)
-  # 0   1
-# 133 138
+    #  0   1 
+    # 86 185
 
 mean(d_match$dist==0)
-# [1] 0.4907749
+   # [1] 0.3173432
 
 table(d_match$cell_name, d_match$dist)
-        # 0  1
-  # D1.1 17 38
-  # D1.2  0  0
-  # D1.3 37 82
-  # D1.4 26  0
-  # D2.1  7 18
-  # D2.2 46  0
+    #           0  1
+    # D1_B/C/F 17 30
+    # D1_A/D    8 26
+    # D1_E      8 37
+    # D2_C      7 48
+    # D2_A/B/D 46 44
 
 
 prop.table(table(d_match$cell_name, d_match$dist),2)
 
-                # 0          1
-  # D1.1 0.12781955 0.27536232
-  # D1.2 0.00000000 0.00000000
-  # D1.3 0.27819549 0.59420290
-  # D1.4 0.19548872 0.00000000
-  # D2.1 0.05263158 0.13043478
-  # D2.2 0.34586466 0.00000000
+    #                   0          1
+    # D1_B/C/F 0.19767442 0.16216216
+    # D1_A/D   0.09302326 0.14054054
+    # D1_E     0.09302326 0.20000000
+    # D2_C     0.08139535 0.25945946
+    # D2_A/B/D 0.53488372 0.23783784
 
 ########################
 ## make figure for paper
@@ -193,3 +194,70 @@ length(table(pheno$BrNum))
 length(unique(paste0(pheno$Section,":", pheno$BrNum)))
 
 dim(dat_d)
+
+## Forcing to use like SCE data, for aesthetics ===
+library(scater)
+library(SingleCellExperiment)
+source('../plotExpressionCustom.R')
+tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
+              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
+              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
+blgngy <- tableau20[c(1:2, 19:20, 5:6, 17:18, 15:16)]
+
+MDcounts <- t(dat_d[ ,colnames(dat_d)[grep('^MD', colnames(dat_d))]])
+rownames(MDcounts)
+    #[1] "MD_Opal520_Lp20" "MD_Opal570Lp1_0" "MD_Opal620_LP10" "MD_Opal690Lp30"
+# From ref_mat:
+rownames(MDcounts) <- c("rnascope_TAC1", "rnascope_DRD1",
+                        "rnascope_DRD2","rnascope_PENK1")
+
+# check
+table(colnames(MDcounts) == rownames(d_match))
+    # all 271 TRUE
+colnames(d_match)[colnames(d_match)=="cell_name"] <- "class_predict"
+
+# Create SCE
+sce.triangle <- SingleCellExperiment(list(counts=MDcounts), colData=d_match)
+# a couple normalizations:
+assay(sce.triangle, "logcounts") <- log2(assay(sce.triangle, "counts") + 1)
+assay(sce.triangle, "logcounts.RVnorm") <- t(apply(assay(sce.triangle, "counts"),
+                                                 1,function(x){
+                                                   log2( x/dat_d$RVolume*10000 + 1 )
+                                                 }))
+
+
+pdf("triangle_pdfs/quantified-dotsPerROI_all-triangle-probes_betterVlnPlots_MNT2021.pdf", width=2)
+# Log2-transform, only
+plotExpressionCustom(sce.triangle, exprs_values="logcounts", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_DRD2",
+                                "rnascope_TAC1","rnascope_PENK1"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+# + RVolume normalization
+plotExpressionCustom(sce.triangle, exprs_values="logcounts.RVnorm", scales="free_y",
+                     features=c("rnascope_DRD1", "rnascope_DRD2",
+                                "rnascope_TAC1","rnascope_PENK1"),
+                     anno_name="class_predict", point_alpha=0.8, point_size=1.75, ncol=1,
+                     features_name = "RNAscope quantified by predicted cell class (ROI volume-normalized)",
+                     xlab="Distance-predicted cell class [group]") +
+  scale_color_manual(values = blgngy)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        axis.title.x = element_text(size = 7),
+        axis.text.y = element_text(size = 9),
+        axis.title.y = element_text(angle = 90, size = 12),
+        plot.title = element_text(size = 6),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
