@@ -231,10 +231,10 @@ unname(clust.treeCut[order.dendrogram(dend)])
     ## Cutting at 250 looks good for the main neuronal branch, but a lot of glial
      #    prelim clusters are dropped off (0's)
 
-    # Cut at 400 for broad glia branch (will manually merge remaining dropped off)
-    glia.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-                                  minClusterSize=2, deepSplit=1, cutHeight=400)
-    unname(glia.treeCut[order.dendrogram(dend)])
+    # # Cut at 400 for broad glia branch (will manually merge remaining dropped off)
+    # glia.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
+    #                               minClusterSize=2, deepSplit=1, cutHeight=400)
+    # unname(glia.treeCut[order.dendrogram(dend)])
 
     # Take those and re-assign to the first assignments
 
@@ -243,7 +243,7 @@ unname(clust.treeCut[order.dendrogram(dend)])
 # unname(clust2)
 
 # Add new labels to those prelimClusters cut off
-clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1, 1, 2, 3, 4, 5, 5)
+clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <- max(clust.treeCut)+c(1, 6, 2, 3, 4, 5, 5)
 
 # 'Re-write', since there are missing numbers
 # clust.treeCut[order.dendrogram(dend)] <- as.numeric(as.factor(clust2))
@@ -283,6 +283,7 @@ plotUMAP(sce.dlpfc, colour_by="sampleID", point_alpha=0.5)
 plotUMAP(sce.dlpfc, colour_by="collapsedCluster", point_alpha=0.5)
 dev.off()
 
+tail(table(sce.dlpfc$prelimCluster, sce.dlpfc$collapsedCluster),20)
 
 ## Print marker genes for annotation
 load(here("rdas","revision","markers.rda"), verbose = TRUE)
@@ -305,64 +306,63 @@ annotationTab.dlpfc$cellType <- NA
 annotationTab.dlpfc$cellType[c(1:3, 6, 17,18)] <- paste0("Inhib_", c("A","B","C","D","E","F"))
 annotationTab.dlpfc$cellType[c(4,5,8,10:13)] <- paste0("Excit_", c("A","B","C","D","E","F","G"))
 annotationTab.dlpfc$cellType[c(7, 9, 13, 16)] <- c("Astro", "Oligo", "OPC", "Micro")
-annotationTab.dlpfc$cellType[c(14,15)] <- c("Tcell","Mural")
+annotationTab.dlpfc$cellType[c(14,15,19)] <- c("Macrophage","Mural","Tcell")
 
 
 sce.dlpfc$cellType <- annotationTab.dlpfc$cellType[match(sce.dlpfc$collapsedCluster,
                                                          annotationTab.dlpfc$collapsedCluster)]
 sce.dlpfc$cellType <- factor(sce.dlpfc$cellType)
 
+table(sce.dlpfc$cellType)
+# Astro    Excit_A    Excit_B    Excit_C    Excit_D    Excit_E    Excit_F    Inhib_A    Inhib_B    Inhib_C 
+# 782        529        773        524        132        187        243        333        454        365 
+# Inhib_D    Inhib_E    Inhib_F Macrophage      Micro      Mural      Oligo        OPC      Tcell 
+# 413          7          8         10        388         18       5455        572          9
+
 ## QC - How do the total UMI distribution look?
 # newClusIndex <- splitit(sce.dlpfc$collapsedCluster)
 newClusIndex <- splitit(sce.dlpfc$cellType)
 sapply(newClusIndex, function(x) {quantile(sce.dlpfc$sum[x])})
-#         Astro Excit_A Excit_B   Excit_C  Excit_D  Excit_E Excit_F Inhib_A  Inhib_B Inhib_C Inhib_D Inhib_E  Inhib_F
+# Astro Excit_A Excit_B   Excit_C  Excit_D  Excit_E Excit_F Inhib_A  Inhib_B Inhib_C Inhib_D Inhib_E  Inhib_F
 # 0%     884.00    1201    1838   2295.00  9100.00   3029.0    1099    3045  1708.00    1803    1749  7966.0  8833.00
 # 25%   4008.75   28468   19205  39673.25 26131.75  37044.5   27809   15330 11474.25   18791   23015  9056.5 19428.75
 # 50%   5737.00   34997   25241  49345.00 32065.50  49414.0   37430   18968 16423.50   24138   29623 14241.0 20281.50
 # 75%   7953.00   43590   33292  59114.25 39545.00  61162.0   47099   23036 22355.75   28996   35364 17472.0 22677.00
 # 100% 26618.00   87392   69309 115449.00 69202.00 101625.0   83826   55574 66556.00   81134   67503 42588.0 27504.00
-#         Micro  Mural   Oligo      OPC   Tcell
-# 0%     879.00 1979.0   850.0  2084.00    1774
-# 25%   3019.25 3210.5  4940.5  7371.75    2332
-# 50%   3883.50 4692.5  6385.0  9112.00    2762
-# 75%   4911.75 5218.0  7986.0 11052.75    4379
-# 100% 11137.00 8043.0 25379.0 23492.00    6919
+# Macrophage    Micro  Mural   Oligo      OPC Tcell
+# 0%      1800.00   879.00 1979.0   850.0  2084.00  1774
+# 25%     2113.75  3019.25 3210.5  4940.5  7371.75  2493
+# 50%     3655.00  3883.50 4692.5  6385.0  9112.00  2668
+# 75%     4413.50  4911.75 5218.0  7986.0 11052.75  3031
+# 100%    5076.00 11137.00 8043.0 25379.0 23492.00  6919
 
-sapply(newClusIndex, function(x) {quantile(sce.dlpfc[,x]$doubletScore)})
-#       Astro  Excit_A   Excit_B  Excit_C    Excit_D  Excit_E  Excit_F  Inhib_A   Inhib_B  Inhib_C   Inhib_D  Inhib_E
+sapply(newClusIndex, function(x) {quantile(sce.dlpfc$doubletScore[x])}) 
+#          Astro  Excit_A   Excit_B  Excit_C    Excit_D  Excit_E  Excit_F  Inhib_A   Inhib_B  Inhib_C   Inhib_D  Inhib_E
 # 0%    0.000000 0.000000  0.010588 0.021176  0.0252900  0.09273 0.074116 0.021176  0.000000 0.000000  0.000000 0.021176
 # 25%   0.025290 0.042150  0.077878 0.179996  0.1058800  0.21918 0.635280 0.063528  0.052940 0.095292  0.042352 0.031764
 # 50%   0.063528 0.109590  0.137644 0.292889  0.2117600  0.37058 1.230780 0.128668  0.118020 0.243524  0.075870 0.042150
 # 75%   0.116468 0.370920  0.232936 0.441309  0.4515585  0.56481 1.461144 0.490970  0.243524 0.885150  0.201172 0.107278
 # 100% 11.565960 7.972764 26.671172 9.793900 11.0962240 10.52447 7.232940 6.119864 15.780960 8.788040 10.270360 0.145598
-#      Inhib_F    Micro    Mural     Oligo      OPC    Tcell
-# 0%   0.063528 0.000000 0.021176  0.000000 0.000000 0.006772
-# 25%  0.074116 0.003386 0.031764  0.042352 0.016860 0.008680
-# 50%  0.153526 0.016860 0.052940  0.189616 0.044018 0.010588
-# 75%  0.275288 0.044018 0.119115  0.584085 0.092730 0.010588
-# 100% 1.147854 4.324590 0.556380 11.001150 8.502164 0.067440
+#       Inhib_F Macrophage    Micro    Mural     Oligo      OPC    Tcell
+# 0%   0.063528   0.006772 0.000000 0.021176  0.000000 0.000000 0.006772
+# 25%  0.074116   0.007726 0.003386 0.031764  0.042352 0.016860 0.010588
+# 50%  0.153526   0.010588 0.016860 0.052940  0.189616 0.044018 0.010588
+# 75%  0.275288   0.010588 0.044018 0.119115  0.584085 0.092730 0.031764
+# 100% 1.147854   0.025290 4.324590 0.556380 11.001150 8.502164 0.067440
 
-sapply(newClusIndex, function(x) {median(sce.dlpfc[,x]$doubletScore)})
-#    Astro  Excit_A  Excit_B  Excit_C  Excit_D  Excit_E  Excit_F  Inhib_A  Inhib_B  Inhib_C  Inhib_D  Inhib_E  Inhib_F
-# 0.063528 0.109590 0.137644 0.292889 0.211760 0.370580 1.230780 0.128668 0.118020 0.243524 0.075870 0.042150 0.153526
-#    Micro    Mural    Oligo      OPC    Tcell
-# 0.016860 0.052940 0.189616 0.044018 0.010588
+sapply(newClusIndex, function(x) {median(sce.dlpfc$doubletScore[x])})
 
 table(sce.dlpfc$collapsedCluster)
-# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18
-# 333  454  365  529  773  413  782  524 5455  132  187  243  572   19   18  388    7    8
-
+# 1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16   17   18   19 
+# 333  454  365  529  773  413  782  524 5455  132  187  243  572   10   18  388    7    8    9 
 
 cell_colors <- cluster_colors[order(as.integer(names(cluster_colors)))]
 names(cell_colors) <- annotationTab.dlpfc$cellType
 cell_colors
-# Inhib_A       Inhib_B       Inhib_C       Excit_A       Excit_B       Inhib_D         Astro       Excit_C
-# "#1F77B4"     "#AEC7E8"     "#FF7F0E"     "#FFBB78"     "#2CA02C"     "#98DF8A"     "#D62728"     "#FF9896"
-# Oligo       Excit_D       Excit_E       Excit_F           OPC ambig.glial_A ambig.glial_B         Micro
-# "#9467BD"     "#C5B0D5"     "#8C564B"     "#C49C94"     "#E377C2"     "#F7B6D2"     "#7F7F7F"     "#C7C7C7"
-# Inhib_E       Inhib_F
-# "#BCBD22"     "#DBDB8D"
+# Inhib_A    Inhib_B    Inhib_C    Excit_A    Excit_B    Inhib_D      Astro    Excit_C      Oligo    Excit_D 
+# "#1F77B4"  "#AEC7E8"  "#FF7F0E"  "#FFBB78"  "#2CA02C"  "#98DF8A"  "#D62728"  "#FF9896"  "#9467BD"  "#C5B0D5" 
+# Excit_E    Excit_F        OPC Macrophage      Mural      Micro    Inhib_E    Inhib_F      Tcell 
+# "#8C564B"  "#C49C94"  "#E377C2"  "#F7B6D2"  "#7F7F7F"  "#C7C7C7"  "#BCBD22"  "#DBDB8D"  "#17BECF" 
 
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, clusterRefTab.dlpfc, ref.sampleInfo, annotationTab.dlpfc, cell_colors,
