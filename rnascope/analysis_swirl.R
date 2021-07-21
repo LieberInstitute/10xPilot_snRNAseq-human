@@ -10,7 +10,7 @@ options(width=100)
 dir.create("swirl_pdfs")
 
 ## read in reference data
-ref = read_excel("raw_data/Swirl_expected_expression.xlsx")
+ref = read_excel("raw_data/Swirl_expected_expression_revisionMNT.xlsx")
 ref = as.data.frame(ref[,1:5])
 ref_mat = as.matrix(ref[,2:5])
 rownames(ref_mat) = ref$Population
@@ -137,30 +137,23 @@ dat_match$dist = signif(dat_match$dist, 2)
 ## metrics
 
 table(dat_match$dist)
-  # 0   1
-# 105 107
-
-
+    #  0   1 
+    # 76 136
 
 mean(dat_match$dist==0)
-# [1] 0.495283
+    # [1] 0.3584906
 
 table(dat_match$cell_name, dat_match$dist)
+      #            0  1
+      # Inhib_A    5 92
+      # Inhib_B/E 21 32
+      # Inhib_C/D 50 12
 
-           # 0   1
-  # Inhib1  21   3
-  # Inhib2  29 104
-  # Inhib3  50   0
-  # Inhib4   5   0
-
-
-prop.table(table(dat_match$cell_name, dat_match$dist), 2)
-
-                  # 0          1
-  # Inhib1 0.20000000 0.02803738
-  # Inhib2 0.27619048 0.97196262
-  # Inhib3 0.47619048 0.00000000
-  # Inhib4 0.04761905 0.00000000
+round(prop.table(table(dat_match$cell_name, dat_match$dist), 2),3)
+    #               0     1
+    # Inhib_A   0.066 0.676
+    # Inhib_B/E 0.276 0.235
+    # Inhib_C/D 0.658 0.088
   
 ## figure for paper
 pdf("swirl_pdfs/supp_figure_swirl_rnascope.pdf")
@@ -238,4 +231,71 @@ dim(dat_inhib)
 		#    n transcript dots? (so 212 x 3 probes as input matrix)
 		#    (MD_* : total transcript dots in that ROI after Lipofuscin masking)
 		# - hopefully would see four (for four inhib. subpops) main branches??
+	
+	## Forcing to use like SCE data, for aesthetics ===
+	library(scater)
+	library(SingleCellExperiment)
+	source('../plotExpressionCustom.R')
+	tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
+	              "#98DF8A", "#D62728", "#FF9896", "#9467BD", "#C5B0D5",
+	              "#8C564B", "#C49C94", "#E377C2", "#F7B6D2", "#7F7F7F",
+	              "#C7C7C7", "#BCBD22", "#DBDB8D", "#17BECF", "#9EDAE5")
+	blgngy <- tableau20[c(1:2, 19:20, 5:6, 17:18, 15:16)]
+	
+	MDcounts <- t(dat_inhib[ ,colnames(dat_inhib)[grep('^MD', colnames(dat_inhib))]])
+	rownames(MDcounts)
+	    #[1] "MD_Opal520_Lp20" "MD_Opal570Lp1_0" "MD_Opal620_LP10" "MD_Opal690Lp30" 
+	    # (check these with 'ref_mat' - good)
+	rownames(MDcounts) <- c("rnascope_GAD1", "rnascope_PVALB",
+	                        "rnascope_KIT","rnascope_PTHLH")
+	# check
+	table(colnames(MDcounts) == rownames(dat_match))
+
+	colnames(dat_match)[colnames(dat_match)=="cell_name"] <- "class_predict"
+	
+	# Create SCE
+	sce.swirl <- SingleCellExperiment(list(counts=MDcounts), colData=dat_match)
+	# a couple normalizations:
+	assay(sce.swirl, "logcounts") <- log2(assay(sce.swirl, "counts") + 1)
+	assay(sce.swirl, "logcounts.RVnorm") <- t(apply(assay(sce.swirl, "counts"),
+	                                                 1,function(x){
+	                                                   log2( x/dat_inhib$RVolume*10000 + 1 )
+	                                                 }))
+	
+	
+	pdf("swirl_pdfs/quantified-dotsPerROI_all-swirl-probes_betterVlnPlots_MNT2021.pdf", width=2)
+	# Log2-transform, only
+	plotExpressionCustom(sce.swirl, exprs_values="logcounts", scales="free_y",
+	                     features=c("rnascope_GAD1", "rnascope_KIT",
+	                                "rnascope_PTHLH","rnascope_PVALB"),
+	                     anno_name="class_predict", point_alpha=0.7, point_size=1.5, ncol=1,
+	                     features_name = "RNAscope quantified by predicted cell class",
+	                     xlab="Distance-predicted cell class [group]") +
+	  scale_color_manual(values = blgngy)+
+	  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+	        axis.title.x = element_text(size = 7),
+	        axis.text.y = element_text(size = 9),
+	        axis.title.y = element_text(angle = 90, size = 12),
+	        plot.title = element_text(size = 6),
+	        panel.grid.major=element_line(colour="grey95", size=0.8),
+	        panel.grid.minor=element_line(colour="grey95", size=0.4))
+	
+	# + RVolume normalization
+	plotExpressionCustom(sce.swirl, exprs_values="logcounts.RVnorm", scales="free_y",
+	                     features=c("rnascope_GAD1", "rnascope_KIT",
+	                                "rnascope_PTHLH","rnascope_PVALB"),
+	                     anno_name="class_predict", point_alpha=0.7, point_size=1.5, ncol=1,
+	                     features_name = "RNAscope quantified by predicted cell class (ROI volume-normalized)",
+	                     xlab="Distance-predicted cell class [group]") +
+	  scale_color_manual(values = blgngy)+
+	  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+	        axis.title.x = element_text(size = 7),
+	        axis.text.y = element_text(size = 9),
+	        axis.title.y = element_text(angle = 90, size = 12),
+	        plot.title = element_text(size = 6),
+	        panel.grid.major=element_line(colour="grey95", size=0.8),
+	        panel.grid.minor=element_line(colour="grey95", size=0.4))
+	dev.off()
+	
+	
 	
