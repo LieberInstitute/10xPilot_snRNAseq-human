@@ -403,48 +403,50 @@ dev.off()
 
 ### For reference === == === == ===
 table(sce.dlpfc$cellType, sce.dlpfc$sampleID)
-#         br5161.dlpfc br5207.dlpfc br5212.dlpfc
-# Astro            371          274          137
-# Excit_A          111          298          120
-# Excit_B           75          544          154
-# Excit_C           44          325          155
-# Excit_D           22           83           27
-# Excit_E           77           85           25
-# Excit_F          102          105           36
-# Inhib_A           39          205           89
-# Inhib_B           98          250          106
-# Inhib_C           47          262           56
-# Inhib_D          119          216           78
-# Inhib_E            2            3            2
-# Inhib_F            0            7            1
-# Micro            152          144           92
-# Mural              3           13            2
-# Oligo           2754         2184          517
-# OPC              196          285           91
-# Tcell            3           11            5
+#            br5161.dlpfc br5207.dlpfc br5212.dlpfc
+# Astro               371          274          137
+# Excit_A             111          298          120
+# Excit_B              75          544          154
+# Excit_C              44          325          155
+# Excit_D              22           83           27
+# Excit_E              77           85           25
+# Excit_F             102          105           36
+# Inhib_A              39          205           89
+# Inhib_B              98          250          106
+# Inhib_C              47          262           56
+# Inhib_D             119          216           78
+# Inhib_E               2            3            2
+# Inhib_F               0            7            1
+# Macrophage            1            6            3
+# Micro               152          144           92
+# Mural                 3           13            2
+# Oligo              2754         2184          517
+# OPC                 196          285           91
+# Tcell                 2            5            2
 
 table(sce.dlpfc$prelimCluster, sce.dlpfc$sampleID)
 
 annotationTab.dlpfc
-# collapsedCluster cellType
-# 1                 1  Inhib_A
-# 2                 2  Inhib_B
-# 3                 3  Inhib_C
-# 4                 4  Excit_A
-# 5                 5  Excit_B
-# 6                 6  Inhib_D
-# 7                 7    Astro
-# 8                 8  Excit_C
-# 9                 9    Oligo
-# 10               10  Excit_D
-# 11               11  Excit_E
-# 12               12  Excit_F
-# 13               13      OPC
-# 14               14  Tcell
-# 15               15    Mural
-# 16               16    Micro
-# 17               17  Inhib_E
-# 18               18  Inhib_F
+# collapsedCluster   cellType
+# 1                 1    Inhib_A
+# 2                 2    Inhib_B
+# 3                 3    Inhib_C
+# 4                 4    Excit_A
+# 5                 5    Excit_B
+# 6                 6    Inhib_D
+# 7                 7      Astro
+# 8                 8    Excit_C
+# 9                 9      Oligo
+# 10               10    Excit_D
+# 11               11    Excit_E
+# 12               12    Excit_F
+# 13               13        OPC
+# 14               14 Macrophage
+# 15               15      Mural
+# 16               16      Micro
+# 17               17    Inhib_E
+# 18               18    Inhib_F
+# 19               19      Tcell
 
 ## Reproducibility information
 print("Reproducibility information:")
