@@ -491,12 +491,9 @@ sapply(markers.nac.t.design, function(x){sum(x$FDR < 0.05)})
 
 
 ## Are DRD1/DRD2 ever expressed together? ===
-plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=.7, ncol=5,
-               add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                            geom = "crossbar", width = 0.3,
-                                            colour=rep(tableau20[1:14], 2)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="DRDs",
+                     features=c("DRD1", "DRD2", "DRD3")) +
+  scale_color_manual(values = cell_colors.nac)
 
 geneExprs <- assay(sce.nac, "logcounts")
 
@@ -508,7 +505,7 @@ sce.nac$MSN.D1.0 <- sce.nac$MSN.D1 & geneExprs["DRD1", ]==0
 
 # Now plot & color by this - is DRD2 expressed?
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="MSN.D1.0", point_alpha=0.5, point_size=1.2, ncol=5,
+               x="cellType", colour_by="MSN.D1.0", point_alpha=0.5, point_size=1.2, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
 
@@ -521,7 +518,7 @@ sce.nac$MSN.D2.0 <- sce.nac$MSN.D2 & geneExprs["DRD2", ]==0
 
 # Now plot & color by this - is DRD1 expressed?
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="MSN.D2.0", point_alpha=0.5, point_size=1.2, ncol=5,
+               x="cellType", colour_by="MSN.D2.0", point_alpha=0.5, point_size=1.2, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
 
@@ -531,8 +528,9 @@ plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
 # non-0 expression of BOTH? ===
 table(geneExprs["DRD1", union(which(sce.nac$MSN.D1), which(sce.nac$MSN.D2))] > 0 &
         geneExprs["DRD2", union(which(sce.nac$MSN.D1), which(sce.nac$MSN.D2))] > 0)
-#FALSE  TRUE
-# 8017   819
+    #FALSE  TRUE 
+    # 9596  1214
+    1214 / (1214+9596)  # 11.2%
 
 sce.nac$MSN.broad <- NA
 sce.nac$MSN.broad[grep("MSN", sce.nac$cellType)] <- TRUE
@@ -549,30 +547,30 @@ sce.nac$bothD1D2 <- ifelse(geneExprs.mat["DRD1", sce.nac$MSN.broad] > 0 &
 
 # Now plot & color by this - are these high-expressing in some??
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="bothD1D2", point_alpha=0.5, point_size=1.2, ncol=5,
+               x="cellType", colour_by="bothD1D2", point_alpha=0.5, point_size=1.2, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25))
 
 
 ## Plot these three subsets: ===
-pdf("pdfs/exploration/DRD1-vs-DRD2-exclusivity_all-NAc-n5_May202.pdf", height=6)
+pdf("pdfs/revision/regionSpecific_NAc-n8_DRD1-vs-DRD2-exclusivity_MNT2021.pdf", height=4)
 # D1-MSN but 0 DRD1
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="MSN.D1.0", point_alpha=0.5, point_size=1.3, ncol=5,
+               x="cellType", colour_by="MSN.D1.0", point_alpha=0.3, point_size=1.3, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 12)) +
   ggtitle(label="Classified with D1 subclusters but 0 DRD1 expression")
 
 # D2-MSN but 0 DRD2
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="MSN.D2.0", point_alpha=0.5, point_size=1.3, ncol=5,
+               x="cellType", colour_by="MSN.D2.0", point_alpha=0.3, point_size=1.3, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 12)) +
   ggtitle(label="Classified with D2 subclusters but 0 DRD2 expression")
 
 # MSN but non-0 expression for BOTH
 plotExpression(sce.nac, exprs_values = "logcounts", features=c("DRD1", "DRD2"),
-               x="cellType.final", colour_by="bothD1D2", point_alpha=0.5, point_size=1.3, ncol=5,
+               x="cellType", colour_by="bothD1D2", point_alpha=0.3, point_size=1.3, ncol=5,
                add_legend=T) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 12)) +
   ggtitle(label="Classified as MSN (D1 or D2) but (+) expression of BOTH DRD1/DRD2")
@@ -580,85 +578,56 @@ dev.off()
 
 
 # More exploration of these dual-expressing..??
-table(sce.nac$prelimCluster, sce.nac$bothD1D2)
-# don't seem to make up or be enriched in their own cluster
-
 table(sce.nac$cellType, sce.nac$bothD1D2)
-#          FALSE TRUE
-# Astro        0    0
-# Inhib.1      0    0
-# Inhib.2      0    0
-# Inhib.3      0    0
-# Inhib.4      0    0
-# Micro        0    0
-# MSN.D1.1   127    5
-# MSN.D1.2   292    9
-# MSN.D1.3   480  239   # however these ARE a little bit more enriched in this group
-# MSN.D1.4  3351  402
-# MSN.D2.1   294    6
-# MSN.D2.2  3473  158
-# Oligo        0    0
-# OPC          0    0     
+    #               FALSE TRUE
+    # MSN.D1_A       3360  567
+    # MSN.D1_B        210   29
+    # MSN.D1_C        271   12
+    # MSN.D1_D        581  137
+    # MSN.D1_E        361  277
+    # MSN.D1_F         84    2
+    # MSN.D2_A       4085  177
+    # MSN.D2_B        278    7
+    # MSN.D2_C        308    6
+    # MSN.D2_D         58    0
+t(round(apply(table(sce.nac$cellType, sce.nac$bothD1D2)[11:20, ],1,prop.table),3))
+    #          FALSE  TRUE
+    # MSN.D1_A 0.856 0.144
+    # MSN.D1_B 0.879 0.121
+    # MSN.D1_C 0.958 0.042
+    # MSN.D1_D 0.809 0.191
+    # MSN.D1_E 0.566 0.434
+    # MSN.D1_F 0.977 0.023
+    # MSN.D2_A 0.958 0.042
+    # MSN.D2_B 0.975 0.025
+    # MSN.D2_C 0.981 0.019
+    # MSN.D2_D 1.000 0.000
 
-table(sce.nac$MSN.broad, sce.nac$bothD1D2)
-#      FALSE TRUE
-# TRUE  8017  819
 
 
+## MNT 20Jul2021: Tabulating all regionally-defined clusters per donor ===
+load("rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda", verbose=T)
+    # sce.allRegions, etc. (already have the 'drop.' clusters removed)
 
-## MNT 23Sep2020: Tabulating all regionally-defined clusters per donor ===
-# -> first make 'sce.n14', above
-sce.n14 <- sce.n14[ ,-grep("Ambig.lowNtrxts", sce.n14$cellType.RS.sub)]
-sce.n14$cellType.RS.sub <- droplevels(sce.n14$cellType.RS.sub)
-
-RSsubs.donorTab <- as.data.frame.matrix(table(sce.n14$cellType.RS.sub, sce.n14$donor))
+RS.donorTab <- as.data.frame.matrix(table(sce.allRegions$cellType, sce.allRegions$donor))
 # Trick some reordering by region
-RSsubs.donorTab$Region <- ss(rownames(RSsubs.donorTab),"_",2)
-RSsubs.donorTab$CellType <- paste0(RSsubs.donorTab$Region, "_", ss(rownames(RSsubs.donorTab),"_",1))
+RS.donorTab$Region <- ss(rownames(RS.donorTab),"_",1)
+RS.donorTab$CellType <- paste0(ss(rownames(RS.donorTab),"_",2), "_", ss(rownames(RS.donorTab),"_",3))
+RS.donorTab$CellType <- gsub("_NA","",RS.donorTab$CellType)
 
-# Now basically re-order alphabetically
-RSsubs.donorTab <- RSsubs.donorTab[order(RSsubs.donorTab$CellType), ]
-# And most sampled donor to least
-RSsubs.donorTab <- RSsubs.donorTab[ ,c(1,4,5,2,3, 7,6)]
+
+# Reorder from most sampled donor to least
+RS.donorTab <- RS.donorTab[ ,c("br5161","br5212","br5400","br5701",
+                               "br5276","br5207","br5287","br5182",
+                               "CellType","Region")]
 
 # Write into table
-write.table(RSsubs.donorTab, file="tables/suppTable_68-RSsubclusters_donorStratified_MNT.tsv",
+write.table(RS.donorTab, file="tables/revision/suppTable_107-RS-classes_donorStratified_MNT2021.tsv",
             sep="\t", quote=F, row.names=F,col.names=T)
 
 
-    ## For reference - how the N's have changed after dropping 'ambig.lowNtrxts'
-        table(sce.n14$region)
-            #  amy dlpfc   hpc   nac  sacc
-            # 6632  5399 10444 13241  7047
-        
-        table(sce.n14$region)
-            #  amy dlpfc   hpc   nac  sacc
-            # 6582  5231 10343 13148  7004
-        
-        # % Kept?
-        round(table(sce.n14$region) / table(sce.n14$region),3)
-            #   amy dlpfc   hpc   nac  sacc
-            # 0.992 0.969 0.990 0.993 0.994
 
-## Similarly for pan-brain clustering/annotation ===
 
-# As for downstream analyses, remove the clusters that don't pursue:
-#     'Ambig.hiVCAN' & 'Excit.4' & those .RS-annot'd as 'Ambig.lowNtrxts'
-sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType.RS != "Ambig.lowNtrxts"] # 445
-sce.all.n12$cellType.RS <- droplevels(sce.all.n12$cellType.RS)
-
-sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Ambig.hiVCAN"] # 32 nuclei
-sce.all.n12 <- sce.all.n12[ ,sce.all.n12$cellType != "Excit.4"]  # 33 nuclei
-sce.all.n12$cellType <- droplevels(sce.all.n12$cellType)
-
-cellType.rgnTab <- as.data.frame.matrix(table(sce.all.n12$cellType, sce.all.n12$region))
-
-# Write into table
-cellType.rgnTab <- cbind(rownames(cellType.rgnTab), cellType.rgnTab)
-colnames(cellType.rgnTab)[1] <- "cellType.panBrain"
-write.table(cellType.rgnTab, file="tables/suppTable_17panBrain-subclusters_regionStratified_MNT.tsv",
-            sep="\t", quote=F, row.names=F,col.names=T)
-  
 ### RNAscope misc checks for NAc ===============================
 
 load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
@@ -774,18 +743,18 @@ dev.off()
   # (for supplement: AMY, HIPPO, DLPFC, sACC)
 library(pheatmap)
 
-load("rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda", verbose=T)
-    # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
+load("rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda", verbose=T)
+    # sce.allRegions, chosen.hvgs.union, ref.sampleInfo, Readme
+    #cell_colors.amy, cell_colors.dlpfc, cell_colors.hpc, cell_colors.sacc, cell_colors.nac
 
 
 # First drop all "Ambig.lowNtrxts" & '_nac' because already have
-sce.rest <- sce.all.n12[ ,-grep("Ambig.lowNtrxts", sce.all.n12$cellType.RS.sub)]
-sce.rest <- sce.rest[ ,-grep("_nac", sce.rest$cellType.RS.sub)]
-sce.rest$cellType.RS.sub <- droplevels(sce.rest$cellType.RS.sub)
+sce.allRegions <- sce.allRegions[ ,-grep("nac_", sce.allRegions$cellType)]
+sce.allRegions$cellType <- droplevels(sce.allRegions$cellType)
 
-table(sce.rest$cellType.RS.sub)
+table(sce.allRegions$cellType)
 
-        RSsubs.donorTab <- as.data.frame.matrix(table(sce.n14$cellType.RS.sub, sce.n14$donor))
+        RSsubs.donorTab <- as.data.frame.matrix(table(sce.n14$cellType, sce.n14$donor))
         # Trick some reordering by region
         RSsubs.donorTab$Region <- ss(rownames(RSsubs.donorTab),"_",2)
         RSsubs.donorTab$CellType <- paste0(RSsubs.donorTab$Region, "_", ss(rownames(RSsubs.donorTab),"_",1))
@@ -794,10 +763,10 @@ table(sce.rest$cellType.RS.sub)
         RSsubs.donorTab <- RSsubs.donorTab[order(RSsubs.donorTab$CellType), ]
 
 
-cell.idx <- splitit(sce.rest$cellType.RS.sub)
+cell.idx <- splitit(sce.allRegions$cellType)
 regionCell.idx <- list()
 
-for(i in c("_amy","_hpc","_dlpfc","_sacc")){
+for(i in c("amy_","hpc_","dlpfc_","sacc_")){
   regionCell.idx[[i]] <- lapply(grep(i, names(cell.idx)), function(x){
       y <- cell.idx[[x]]
       y
@@ -807,37 +776,48 @@ for(i in c("_amy","_hpc","_dlpfc","_sacc")){
 }
 
 
-dat <- as.matrix(assay(sce.rest, "logcounts"))
+dat <- as.matrix(assay(sce.allRegions, "logcounts"))
 
 
 # Print AMY first
-pdf('pdfs/pubFigures/heatmap-geneExprs_AMY_cellType.split_mean-broadMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
-genes <- c('SNAP25','SLC17A6','SLC17A7','GAD1','GAD2','AQP4','GFAP','C3','CD74','MBP','PDGFRA','VCAN','CLDN5','FLT1','SKAP1','TRAC')
-current_dat <- do.call(cbind, lapply(regionCell.idx[["_amy"]], function(ii) rowMeans(dat[genes, ii])))
+pdf('pdfs/revision/pubFigures/heatmap_AMY-cellTypes_mean-broadCellMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
+genes <- c('SNAP25','SLC17A6','SLC17A7','SLC17A8','GAD1','GAD2','AQP4','GFAP','CLDN5','FLT1',
+           'CD163','SIGLEC1','C3','CD74','COL1A2','PDGFRB','MBP','PDGFRA','VCAN','SKAP1','CD247')
+current_dat <- do.call(cbind, lapply(regionCell.idx[["amy_"]], function(ii) rowMeans(dat[genes, ii])))
 
-neuron.pos <- grep("\\.", names(regionCell.idx[["_amy"]]))
-current_dat <- current_dat[ ,c(neuron.pos, setdiff(1:length(names(regionCell.idx[["_amy"]])),
+neuron.pos <- c(grep("Excit", names(regionCell.idx[["amy_"]])),
+                grep("Inhib", names(regionCell.idx[["amy_"]])),
+                grep("Neu", names(regionCell.idx[["amy_"]])))
+current_dat <- current_dat[ ,c(neuron.pos, setdiff(1:length(names(regionCell.idx[["amy_"]])),
                                                    neuron.pos))
                             ]
 pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
-         fontsize_row = 17.5, fontsize_col = 17.5)
+         fontsize_row = 15.5, fontsize_col = 15.5)
+grid::grid.text(label="log2-\nExprs", x=0.96, y=0.6, gp=grid::gpar(fontsize=10))
 dev.off()
 
 
-# Print rest
-pdf('pdfs/pubFigures/heatmap-geneExprs_HIPPO-DLPFC-sACC_cellType.split_mean-broadMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
-genes <- c('SNAP25','SLC17A6','SLC17A7','GAD1','GAD2','AQP4','GFAP','C3','CD74','MBP','PDGFRA','VCAN','CLDN5','FLT1','SKAP1','TRAC')
+## Print rest
+# First call sACC's 'Neu_FAT2.CDH15' 'Neu_ambig'
+names(regionCell.idx[["sacc_"]])[names(regionCell.idx[["sacc_"]])=="sacc_Neu_FAT2.CDH15"] <- "sacc_Neu_ambig"
 
-for(i in c("_hpc","_dlpfc","_sacc")){
+pdf('pdfs/revision/pubFigures/heatmap_HPC-DLPFC-sACC-cellTypes_mean-broadCellMarkers_MNT.pdf', useDingbats=TRUE, height=6, width=6)
+genes <- c('SNAP25','SLC17A6','SLC17A7','SLC17A8','GAD1','GAD2','AQP4','GFAP','CLDN5','FLT1',
+           'CD163','SIGLEC1','C3','CD74','COL1A2','PDGFRB','MBP','PDGFRA','VCAN','SKAP1','CD247')
+
+for(i in c("hpc_","dlpfc_","sacc_")){
 current_dat <- do.call(cbind, lapply(regionCell.idx[[i]], function(ii) rowMeans(dat[genes, ii])))
-neuron.pos <- grep("\\.", names(regionCell.idx[[i]]))
+neuron.pos <- c(grep("Excit", names(regionCell.idx[[i]])),
+                grep("Inhib", names(regionCell.idx[[i]])),
+                grep("Neu", names(regionCell.idx[[i]])))
 current_dat <- current_dat[ ,c(neuron.pos, setdiff(1:length(names(regionCell.idx[[i]])),
                                                    neuron.pos))
                             ]
 pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
-         fontsize_row = 17.5, fontsize_col = 17.5)
+         fontsize_row = 14.5, fontsize_col = 14.5)
+grid::grid.text(label="log2-\nExprs", x=0.96, y=0.6, gp=grid::gpar(fontsize=10))
 }
 dev.off()
 
@@ -934,7 +914,7 @@ rowData(sce.amy.tsne.optb) <- rowdat.sce
 keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate","protocol","prelimCluster")
 
 ## Adapted from Leo's `create_small_sce`:
-    create_small_sce <- function(sce_original, cell_var = "cellType.final") {
+    create_small_sce <- function(sce_original, cell_var = "cellType") {
 
           sce_original <- sce_original[, tolower(colData(sce_original)[[cell_var]]) != tolower("ambig.lowNtrxts")]
           colData(sce_original)[[cell_var]] <- factor(colData(sce_original)[[cell_var]])
