@@ -191,91 +191,92 @@ path <- '/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_G
 #     # Save this along with the sn-level SCE
 #     save(sce.mathys, sce.mathys.PB, file="rdas/referenceDatasets/SCE_mathys-PFC-BA10_MNT.rda")
 
-load(here("rdas/referenceDatasets/SCE_mathys-PFC-BA10_MNT.rda"), verbose = TRUE)
-# sce.mathys
-# sce.mathys.PB
+# load(here("rdas/referenceDatasets/SCE_mathys-PFC-BA10_MNT.rda"), verbose = TRUE)
+# # sce.mathys
+# # sce.mathys.PB
+# 
+# dim(sce.mathys.PB)
+# # [1] 17923   362
+# # Drop genes with all 0's
+# sce.mathys.PB <- sce.mathys.PB[!rowSums(assay(sce.mathys.PB, "counts"))==0, ]
+# dim(sce.mathys.PB)
+# ## keeps 17923 genes
+# 
+# # Model unwanted effects
+# #mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + Dx + age_death + msex))
+# #mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + Dx + msex))
+# #mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + msex))
+# mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID))
+# mod <- mod[ ,-1]
+#     # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
+#         # get this when remove 'age_death' && 'Dx'... howEVER, looks like it runs fine only
+#         #     modeling on 'individualID'
+# 
+# # Factorize
+# sce.mathys.PB$broad.cell.type <- factor(sce.mathys.PB$broad.cell.type)
+# 
+# markers.mathysPFC.t.1vAll <- list()
+# for(i in levels(sce.mathys.PB$broad.cell.type)){
+#   # Make temporary contrast
+#   sce.mathys.PB$contrast <- ifelse(sce.mathys.PB$broad.cell.type==i, 1, 0)
+#   # Test cluster vs. all
+#   markers.mathysPFC.t.1vAll[[i]] <- findMarkers(sce.mathys.PB, groups=sce.mathys.PB$contrast,
+#                                                assay.type="logcounts", design=mod, test="t",
+#                                                direction="up", pval.type="all", full.stats=T)
+# }
+# 
+# ## Then, temp set of stats to get the standardized logFC
+#     temp.1vAll <- list()
+#     for(i in levels(sce.mathys.PB$broad.cell.type)){
+#       # Make temporary contrast
+#       sce.mathys.PB$contrast <- ifelse(sce.mathys.PB$broad.cell.type==i, 1, 0)
+#       # Test cluster vs. all
+#       temp.1vAll[[i]] <- findMarkers(sce.mathys.PB, groups=sce.mathys.PB$contrast,
+#                                      assay.type="logcounts", design=mod, test="t",
+#                                      std.lfc=TRUE,
+#                                      direction="up", pval.type="all", full.stats=T)
+#     }
+# 
+#     ## For some reason all the results are in the second List entry (first is always empty)
+# 
+# # Replace that empty slot with the entry with the actual stats
+# markers.mathysPFC.t.1vAll <- lapply(markers.mathysPFC.t.1vAll, function(x){ x[[2]] })
+# # Same for that with std.lfc
+# temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
+# 
+# # Now just pull from the 'stats.0' DataFrame column
+# markers.mathysPFC.t.1vAll <- lapply(markers.mathysPFC.t.1vAll, function(x){ x$stats.0 })
+# temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
+# 
+# # Re-name std.lfc column and add to the first result
+# for(i in names(temp.1vAll)){
+#   colnames(temp.1vAll[[i]])[1] <- "std.logFC"
+#   markers.mathysPFC.t.1vAll[[i]] <- cbind(markers.mathysPFC.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
+#   # Oh the colname is kept weird
+#   colnames(markers.mathysPFC.t.1vAll[[i]])[4] <- "std.logFC"
+#   # Then re-organize
+#   markers.mathysPFC.t.1vAll[[i]] <- markers.mathysPFC.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
+# }
+# 
+# sapply(markers.mathysPFC.t.1vAll, function(x){table(x$log.FDR < log10(0.000001))})
+#     #        Ast   End    Ex    In   Mic   Oli   Opc   Per
+#     # FALSE 14752 17760  7872 10544 16217 12414 15770 17732
+#     # TRUE   3171   163 10051  7379  1706  5509  2153   191
+# 
+# sapply(markers.mathysPFC.t.1vAll, function(x){head(rownames(x), n=20)})
+#     # ok looks pretty good!
+# 
+# ## Let's save this along with the previous pairwise results
+# save(markers.mathysPFC.t.1vAll, file="rdas/referenceDatasets/zs-mathys_markers-stats_given-clusters_PB-findMarkers-SN-LEVEL_Aug2020.rda")
 
-dim(sce.mathys.PB)
-# [1] 17923   362
-# Drop genes with all 0's
-sce.mathys.PB <- sce.mathys.PB[!rowSums(assay(sce.mathys.PB, "counts"))==0, ]
-dim(sce.mathys.PB)
-## keeps 28128 genes
 
-# Model unwanted effects
-#mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + Dx + age_death + msex))
-#mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + Dx + msex))
-#mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID + msex))
-mod <- with(colData(sce.mathys.PB), model.matrix(~ individualID))
-mod <- mod[ ,-1]
-    # Error in .ranksafe_qr(full.design) : design matrix is not of full rank
-        # get this when remove 'age_death' && 'Dx'... howEVER, looks like it runs fine only
-        #     modeling on 'individualID'
-
-# Factorize
-sce.mathys.PB$broad.cell.type <- factor(sce.mathys.PB$broad.cell.type)
-
-markers.mathysPFC.t.1vAll <- list()
-for(i in levels(sce.mathys.PB$broad.cell.type)){
-  # Make temporary contrast
-  sce.mathys.PB$contrast <- ifelse(sce.mathys.PB$broad.cell.type==i, 1, 0)
-  # Test cluster vs. all
-  markers.mathysPFC.t.1vAll[[i]] <- findMarkers(sce.mathys.PB, groups=sce.mathys.PB$contrast,
-                                               assay.type="logcounts", design=mod, test="t",
-                                               direction="up", pval.type="all", full.stats=T)
-}
-
-## Then, temp set of stats to get the standardized logFC
-    temp.1vAll <- list()
-    for(i in levels(sce.mathys.PB$broad.cell.type)){
-      # Make temporary contrast
-      sce.mathys.PB$contrast <- ifelse(sce.mathys.PB$broad.cell.type==i, 1, 0)
-      # Test cluster vs. all
-      temp.1vAll[[i]] <- findMarkers(sce.mathys.PB, groups=sce.mathys.PB$contrast,
-                                     assay.type="logcounts", design=mod, test="t",
-                                     std.lfc=TRUE,
-                                     direction="up", pval.type="all", full.stats=T)
-    }
-
-    ## For some reason all the results are in the second List entry (first is always empty)
-
-# Replace that empty slot with the entry with the actul stats
-markers.mathysPFC.t.1vAll <- lapply(markers.mathysPFC.t.1vAll, function(x){ x[[2]] })
-# Same for that with std.lfc
-temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
-
-# Now just pull from the 'stats.0' DataFrame column
-markers.mathysPFC.t.1vAll <- lapply(markers.mathysPFC.t.1vAll, function(x){ x$stats.0 })
-temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
-
-# Re-name std.lfc column and add to the first result
-for(i in names(temp.1vAll)){
-  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
-  markers.mathysPFC.t.1vAll[[i]] <- cbind(markers.mathysPFC.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
-  # Oh the colname is kept weird
-  colnames(markers.mathysPFC.t.1vAll[[i]])[4] <- "std.logFC"
-  # Then re-organize
-  markers.mathysPFC.t.1vAll[[i]] <- markers.mathysPFC.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
-}
-
-sapply(markers.mathysPFC.t.1vAll, function(x){table(x$log.FDR < log10(0.000001))})
-    #        Ast   End    Ex    In   Mic   Oli   Opc   Per
-    # FALSE 14752 17760  7872 10544 16217 12414 15770 17732
-    # TRUE   3171   163 10051  7379  1706  5509  2153   191
-
-sapply(markers.mathysPFC.t.1vAll, function(x){head(rownames(x), n=20)})
-    # ok looks pretty good!
-
-## Let's save this along with the previous pairwise results
-save(markers.mathysPFC.t.1vAll, file="rdas/referenceDatasets/zs-mathys_markers-stats_given-clusters_PB-findMarkers-SN-LEVEL_Aug2020.rda")
-# load("rdas/referenceDatasets/zs-mathys_markers-stats_given-clusters_PB-findMarkers-SN-LEVEL_Aug2020.rda", verbose = TRUE)
-
-
+## START HERE ##
 ### Comparison to Velmeshev, et al (PFC & ACC) ========
 ## Load within-PFC statistics
 load("/dcl01/ajaffe/data/lab/singleCell/velmeshev2019/analysis_MNT/markers-stats_velmeshev-et-al_ASD-cortex-withinRegion_findMarkers-SN-LEVEL_MNTAug2020.rda",
      verbose=T)
-    # markers.asdVelm.t.pfc, markers.asdVelm.t.acc
+# markers.asdVelm.t.pfc
+# markers.asdVelm.t.acc
     #rm(markers.asdVelm.t.acc)
 
 # And corresponding SCE (to generate t.stat's)
@@ -284,11 +285,12 @@ load("/dcl01/ajaffe/data/lab/singleCell/velmeshev2019/analysis_MNT/SCE_asd-velme
 
 sce.asd.pfc <- sce.asd[ ,sce.asd$region=="PFC"]
 sce.asd.acc <- sce.asd[ ,sce.asd$region=="ACC"]
+rm(sce.asd)
 
 # Need to convert Symbol in sce.dlpfc > EnsemblID, and also use n nuclei for t.stat
 # load("rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
 load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda", verbose=T)
-    # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
+    # sce.dlpfc, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
 
 ## Load LIBD DLPFC stats (don't need the pw result)
 load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda", verbose=T)
@@ -298,23 +300,22 @@ load("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda",
 # markers.wilcox.block
 
 for(i in names(markers.t.1vAll)){
-  rownames(markers.t.1vAll[[i]]) <- rowData(sce.dlpfc.st)$ID[match(rownames(markers.t.1vAll[[i]]),
-                                                                         rownames(sce.dlpfc.st))]
+  rownames(markers.t.1vAll[[i]]) <- rowData(sce.dlpfc)$gene_id[match(rownames(markers.t.1vAll[[i]]),
+                                                                         rownames(sce.dlpfc))]
 }
+
 
 ## Calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
 #      and fix row order to the first entry "Astro"
 fixTo <- rownames(markers.t.1vAll[["Astro"]])
 for(s in names(markers.t.1vAll)){
-  markers.t.1vAll[[s]]$t.stat <- markers.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.dlpfc.st))
+  markers.t.1vAll[[s]]$t.stat <- markers.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.dlpfc))
   markers.t.1vAll[[s]] <- markers.t.1vAll[[s]][fixTo, ]
 }
 
 # Pull out the t's
 ts.dlpfc <- sapply(markers.t.1vAll, function(x){x$t.stat})
 rownames(ts.dlpfc) <- fixTo
-
-
 
 ## Then for Velmeshev et al. - fix row order to the first entry "AST-FB"
 fixTo <- rownames(markers.asdVelm.t.pfc[["AST-FB"]])
@@ -351,7 +352,7 @@ round(cor_t_dlpfc, 3)
 theSeq.all = seq(-.95, .95, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-pfc_with_LIBD-10x-DLPFC_July2021.pdf")
+pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-pfc_with_LIBD-10x-DLPFC_LAH2021.pdf")
 pheatmap(cor_t_dlpfc,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
@@ -361,9 +362,6 @@ pheatmap(cor_t_dlpfc,
          legend_breaks=c(seq(-0.95,0.95,by=0.475)),
          main="Correlation of cluster-specific t's between LIBD DLPFC to \n PFC from (Velmeshev et al. Science 2019)")
 dev.off()
-
-
-
 
 ### What if compared between both the .acc set of stats vs the .pfc?? =============
 
@@ -395,7 +393,7 @@ ts.velmeshev.full <- cbind(ts.velmeshev.pfc, ts.velmeshev.acc)
 
 cor_t_dlpfc.asd <- cor(ts.dlpfc, ts.velmeshev.full)
 range(cor_t_dlpfc.asd)
-
+# [1] -0.6452800  0.9271258
 
 ## Heatmap
 # Add some cluster info for add'l heatmap annotations
@@ -407,7 +405,7 @@ rownames(regionInfo) <- colnames(ts.velmeshev.full)
 theSeq.all = seq(-.95, .95, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-bothRegions_with_LIBD-10x-DLPFC_July2021.pdf", width=10)
+pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-bothRegions_with_LIBD-10x-DLPFC_LAH2021.pdf", width=10)
 pheatmap(cor_t_dlpfc.asd,
          color=my.col.all,
          annotation_col=regionInfo,
