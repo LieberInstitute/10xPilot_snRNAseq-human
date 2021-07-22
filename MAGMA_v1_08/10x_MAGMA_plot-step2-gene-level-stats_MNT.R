@@ -373,7 +373,39 @@ dev.off()
 
 
 
-### MSN.D1_E for 'CigDay'
+### MSN.D1_E for 'CigDay' - further exploration
+# Btw:
+sapply(geneStats, function(x){x[x$Symbol.uniq=="CRHR2", ]})
+    #             AgeSmk            CigDay            DrnkWk           
+    # GENE        "ENSG00000106113" "ENSG00000106113" "ENSG00000106113"
+    # CHR         7                 7                 7                
+    # START       30681559          30681559          30681559         
+    # STOP        30774745          30774745          30774745         
+    # NSNPS       398               399               398              
+    # NPARAM      82                82                81               
+    # N           253645            252217            523841           
+    # ZSTAT       0.27964           0.22276           1.0015           
+    # P           0.38988           0.41186           0.15829          
+    # Symbol.uniq "CRHR2"           "CRHR2"           "CRHR2"          
+    #             SmkCes            SmkInit          
+    # GENE        "ENSG00000106113" "ENSG00000106113"
+    # CHR         7                 7                
+    # START       30681559          30681559         
+    # STOP        30774745          30774745         
+    # NSNPS       401               399              
+    # NPARAM      80                81               
+    # N           303053            616062           
+    # ZSTAT       -0.94715          -0.64746         
+    # P           0.82822           0.74133          
+    # Symbol.uniq "CRHR2"           "CRHR2"
+
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+
+# Clean up
+sce.nac <- sce.nac[ ,-grep("drop.",sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
+
+# Markers (above)
 D1_E.markers.enriched <- markerList.nac[["MSN.D1_E"]]
 
 table(D1_E.markers.enriched %in% liu.pascal.list[["CigDay"]]$Gene.Symbol &
@@ -390,6 +422,121 @@ plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-cont
 
     ## Not including genes in the PASCAL subsets looked better for MSN.D1_C
      #    -> Might look better here too
+
+
+# A list:
+topMAGMAgenes <- sapply(geneStats, function(x){x$Symbol.uniq[x$ZSTAT >= qnorm(1e-5, lower.tail=F)]})
+
+signifMarkers.nac <- lapply(topMAGMAgenes, function(x){
+  sapply(markerList.nac, function(y){
+    intersect(y, x)
+    }
+    )
+  }
+)
+sapply(signifMarkers.nac, lengths)
+    #               AgeSmk CigDay DrnkWk SmkCes SmkInit
+    # Astro_A            0      3      2      2      13
+    # Astro_B            0      4     11      2      38
+    # Inhib_A            1     13     14      2      29
+    # Inhib_B            0      3      2      0      14
+    # Inhib_C            1      5      7      0      24
+    # Inhib_D            1      9      8      1      22
+    # Inhib_E            0      2      4      0      10
+    # Macrophage         1      0      3      0       3
+    # Micro              1      1      8      0      15
+    # Micro_resting      1      0      2      0       3
+    # MSN.D1_A           1      8     23      4      53
+    # MSN.D1_B           1      2      3      1      20
+    # MSN.D1_C           1      4      5      0      20
+    # MSN.D1_D           2      8     14      3      39
+    # MSN.D1_E           3      4      5      1      27
+    # MSN.D1_F           0      2      3      1      11
+    # MSN.D2_A           1      7     22      3      46
+    # MSN.D2_B           1      5     10      2      27
+    # MSN.D2_C           3      5     10      1      25
+    # MSN.D2_D           0      2      1      0       7
+    # Oligo_A            1      7      5      2      22
+    # Oligo_B            1      2      4      0      10
+    # OPC                2      4      8      1      33
+    # OPC_COP            0      1      0      1       4
+
+signifMarkers.nac[["CigDay"]][["MSN.D1_E"]]
+
+# Read in 'CigDay' results for 'MSN.D1_E'
+D1_E.CigDay <- read.table("MAGMA_v1_08/Results_rev/nac_CigDay.gsa.sets.genes.out",
+                          nrows=986, skip=6, header=T)
+colnames(D1_E.CigDay)
+table(D1_E.CigDay$ZSTAT >= qnorm(0.05/length(markerList.nac[["MSN.D1_E"]]), lower.tail=F))
+genes <- D1_E.CigDay[D1_E.CigDay$ZSTAT >= qnorm(0.05/length(markerList.nac[["MSN.D1_E"]]), lower.tail=F), ]$GENE
+geneStats[["CigDay"]][geneStats[["CigDay"]]$GENE %in% genes, ]
+
+printThese <- geneStats[["CigDay"]][geneStats[["CigDay"]]$GENE %in% genes, ]$Symbol.uniq
+
+
+## Print these
+pdf("pdfs/revision/pubFigures/zforRef_MSN.D1_E-input-markers_CigDay-topBonfZscores_MNT2021.pdf", height=5 ,width=10)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="",
+                     features=printThese, ncol=3, scales="free_y", point_alpha=0.4) +
+  scale_color_manual(values = cell_colors.nac) +
+  ggtitle("MSN.D1_E markers with high 'CigDay' z-scores")
+dev.off()
+    # They seem to be quite enriched / somewhat selectively expressed in this class
+
+
+
+# Less strict: qnorm(0.05/length(markerList.nac[["MSN.D1_E"]])*10, lower.tail=F) (3.30)
+#              (still > 95% quantile ~ 1.65)
+genes <- D1_E.CigDay[D1_E.CigDay$ZSTAT >= qnorm(0.05/length(markerList.nac[["MSN.D1_E"]])*10, lower.tail=F), ]$GENE
+printThese <- geneStats[["CigDay"]][geneStats[["CigDay"]]$GENE %in% genes, ]$Symbol.uniq
+printThese
+    # 19 genes/markers
+dat <- as.matrix(assay(sce.nac, "logcounts"))
+cell.idx <- splitit(sce.nac$cellType)
+
+pdf('pdfs/revision/pubFigures/zforRef_MSN.D1_E-input-markers_heatmap_CigDay-topZscores_MNT2021.pdf',
+    useDingbats=TRUE, height=6, width=10)
+# Do by medians:
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[printThese, ii])))
+    # For some reason rownames aren't kept:
+    rownames(current_dat) <- printThese
+pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 3.5, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 15, fontsize_col=14)
+grid::grid.text(label="log2-\nExprs", x=0.975, y=0.60, gp=grid::gpar(fontsize=10))
+dev.off()
+
+
+table(geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT >= 3.3] %in% markerList.nac[["MSN.D1_E"]])
+    # 31 / 483
+
+sapply(markerList.nac, function(x){
+  table(geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT >= 
+                                            qnorm(0.05/length(x), lower.tail=F)] %in% x)["TRUE"]
+})
+    #  Astro_A.TRUE       Astro_B.TRUE       Inhib_A.TRUE       Inhib_B.TRUE 
+    #             5                 14                 27                  5 
+    #  Inhib_C.TRUE       Inhib_D.TRUE       Inhib_E.TRUE    Macrophage.TRUE 
+    #            16                 23                  6                  4 
+    #    Micro.TRUE Micro_resting.TRUE      MSN.D1_A.TRUE      MSN.D1_B.TRUE 
+    #            10                  1                 23                 10 
+    # MSN.D1_C.TRUE      MSN.D1_D.TRUE      MSN.D1_E.TRUE      MSN.D1_F.TRUE 
+    #             8                 23                 15                  4 
+    # MSN.D2_A.TRUE      MSN.D2_B.TRUE      MSN.D2_C.TRUE      MSN.D2_D.TRUE 
+    #            20                 13                 17                  4 
+    #  Oligo_A.TRUE       Oligo_B.TRUE           OPC.TRUE       OPC_COP.TRUE 
+    #            14                  6                 12                  4
+
+round(sapply(markerList.nac, function(x){
+  table(geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT >= 
+                                            qnorm(0.05/length(x), lower.tail=F)] %in% x)["TRUE"]
+}) / lengths(markerList.nac) * 100, 3)
+
+sapply(markerList.nac, function(x){
+  intersect(geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT >= 
+                                            qnorm(0.05/length(x), lower.tail=F)],
+            x)
+})
 
 
 ### AMY cell classes markers' enrichment ===================================
