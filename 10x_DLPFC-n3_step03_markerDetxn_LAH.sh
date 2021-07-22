@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -l bluejay,mem_free=150G,h_vmem=150G,h_fsize=100G
+#$ -l mem_free=150G,h_vmem=150G,h_fsize=100G
 #$ -N DLPFC-n3_step03_markerDetxn_LAH
 #$ -o logs/DLPFC-n3_step03_markerDetxn_LAH.txt
 #$ -e logs/DLPFC-n3_step03_markerDetxn_LAH.txt
