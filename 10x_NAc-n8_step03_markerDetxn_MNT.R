@@ -351,102 +351,93 @@ write.csv(top40genes, file="tables/revision/top40genesLists_NAc-n8_cellType_SN-L
 
 
 
-# ## Make marker array for Supp figure (MNT suggested panel A) ===========
-# load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-#     #sce.nac, chosen.hvgs.nac, pc.choice.nac, clusterRefTab.nac, ref.sampleInfo
-# 
-# load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-#     # markers.nac.t.pw, markers.nac.t.1vAll
-# 
-# # First make interneuron subset
-# sce.nac.int <- sce.nac[ ,grep("Inhib.", sce.nac$cellType)]
-# sce.nac.int$cellType <- droplevels(sce.nac.int$cellType)
-# 
-# 
-# # Take top four for 4 inhib. interneuron pops
-# topToPrint <- as.data.frame(sapply(markers.nac.t.1vAll, function(x) {head(rownames(x),n=4)}))
-# topToPrint <- topToPrint[grep("Inhib.", names(topToPrint))]
-# 
-# # Manual assignment, bc 'Inhib.2' is mostly driven by noise (but 0 median)
-# topToPrint["Inhib.2"] <- c("KCNJ6", "SDK1", "LRFN2","NR2F1-AS1")
-# 
-# table(unlist(topToPrint) %in% rownames(sce.nac.int)) # good
-# 
-# # Print
-# pdf("pdfs/pubFigures/suppFig_NAc_interneuron-marker-array_MNTSep2020.pdf", height=8, width=5.5)
-# print(
-#   plotExpression(sce.nac.int, exprs_values = "logcounts", features=c(t(topToPrint)),
-#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.6, point_size=1.5, ncol=4,
-#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-#                                               geom = "crossbar", width = 0.3,
-#                                               colour=rep(tableau10medium[1:4], length(unlist(topToPrint)))) +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +  
-#     ggtitle(label="Inhib.1          Inhib.2           Inhib.3          Inhib.4") + xlab("") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 13),
-#           axis.title.y = element_text(angle = 90, size = 16),
-#           plot.title = element_text(size = 15),
-#           panel.grid.major=element_line(colour="grey95", size=0.8),
-#           panel.grid.minor=element_line(colour="grey95", size=0.4))
-# )
-# dev.off()
-# 
-# 
-# ## For MNT version panel B
-# pdf("pdfs/pubFigures/suppFig_NAc_interneuron-experiment-panelB_MNTSep2020.pdf", height=3.2, width=4.5)
-# print(
-#   plotExpression(sce.nac.int, exprs_values = "logcounts", features=c("GAD1", "KIT", "PTHLH", "PVALB"),
-#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.7, point_size=1.2, ncol=2,
-#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-#                                               geom = "crossbar", width = 0.3,
-#                                               colour=rep(tableau10medium[1:4], 4)) +
-#     xlab("") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
-#           axis.title.y = element_text(angle = 90, size = 10),
-#           panel.grid.major=element_line(colour="grey95", size=0.8),
-#           panel.grid.minor=element_line(colour="grey95", size=0.4))
-# )
-# dev.off()
-# 
-# 
-# ## Supp Fig 5: Other markers pointed out in text ===
-# genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
-# 
-# # First drop "ambig.lowNtrxts" (93 nuclei)
-# sce.nac <- sce.nac[ ,sce.nac$cellType != "ambig.lowNtrxts"]
-# sce.nac$cellType <- droplevels(sce.nac$cellType)
-# 
-# pdf("pdfs/pubFigures/suppFig_NAc_other-MSN-markers_MNTSep2020.pdf", height=4.5, width=6.5)
-# print(
-#   plotExpression(sce.nac, exprs_values = "logcounts", features=genes2print,
-#                  x="cellType.final", colour_by="cellType.final", point_alpha=0.5, point_size=1.0, ncol=2,
-#                  add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-#                                               geom = "crossbar", width = 0.3,
-#                                               colour=rep(tableau20[1:14], length(genes2print))) +
-#     xlab("") +
-#     theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9.5),
-#           axis.title.y = element_text(angle = 90, size = 10),
-#           panel.grid.major=element_line(colour="grey95", size=0.8),
-#           panel.grid.minor=element_line(colour="grey95", size=0.4))
-# )
-# dev.off()
-# 
-# 
-# 
-# ## Top markers for D1.4 / D2.2 often co-expressed ===
-# load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
-#     # markers.nac.t.pw, markers.nac.t.1vAll
-# 
-# cell.idx <- splitit(sce.nac$cellType)
-# dat <- as.matrix(assay(sce.nac, "logcounts"))
-# genes <- head(rownames(markers.nac.t.1vAll[["MSN.D1.4"]]), n=40)
-# 
-# pdf('pdfs/pubFigures/suppFigure_heatmap-Exprs_NAc-n5_top40-D1.4markers-1vAlltest_MNTSep2020.pdf',
-#     useDingbats=TRUE, height=6, width=10)
-# current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
-# pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 5, length.out = 101),
-#          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
-#          fontsize_row = 20, fontsize_col=15)
-# dev.off()
+## Make marker array for Supp figure (MNT suggested panel A) ===========
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
+
+load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac
+
+# Clean up
+sce.nac <- sce.nac[ ,-grep("drop.",sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
+
+# First make interneuron subset
+sce.nac.int <- sce.nac[ ,grep("Inhib_", sce.nac$cellType)]
+sce.nac.int$cellType <- droplevels(sce.nac.int$cellType)
+
+# Take top four for 4 inhib. interneuron pops
+# Rm the 'Micro_resting' for now, bc there are no pairwise markers for that cell type
+markers.nac.t.pw[["Micro_resting"]] <- NULL
+topToPrint <- as.data.frame(sapply(markers.nac.t.pw, function(x) {
+  head(rownames(x)[x$FDR < 0.05 & x$non0median==TRUE], n=4)}))
+topToPrint <- topToPrint[grep("Inhib_", names(topToPrint))]
+
+table(unlist(topToPrint) %in% rownames(sce.nac.int)) # good
+
+topToPrint
+
+# Print
+pdf("pdfs/revision/pubFigures/suppFig_NAc_interneuron-marker-array_MNT2021.pdf", height=8, width=6.5)
+print(
+  plotExpressionCustom(sce.nac.int, features=c(t(topToPrint)), features_name="",
+                 anno_name="cellType", point_alpha=0.6, point_size=1.2, ncol=5, scales="free_y") +
+    scale_color_manual(values = cell_colors.nac) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 12), plot.title = element_text(size = 25)) +
+    ggtitle(label="Inhib_A       Inhib_B         Inhib_C        Inhib_D        Inhib_E") + xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 11),
+          axis.title.y = element_text(angle = 90, size = 16),
+          plot.title = element_text(size = 15),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+
+## Supp Fig 5: Other markers pointed out in text ===
+genes2print <- c("DRD1", "DRD2", "CASZ1", "GPR6", "EBF1", "GRM8")
+
+pdf("pdfs/revision/pubFigures/suppFig_NAc_other-MSN-markers_MNT2021.pdf", height=4, width=7.5)
+print(
+  plotExpressionCustom(sce.nac, features=genes2print, features_name="",
+                       anno_name="cellType", point_alpha=0.3, point_size=1, ncol=2, scales="free_y") +
+    scale_color_manual(values = cell_colors.nac) +
+    xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 9),
+          axis.title.y = element_text(angle = 90, size = 10),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+
+
+## Top markers for D1_A / D2_A often co-expressed ===
+load("rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+    # markers.nac.t.pw, markers.nac.t.1vAll
+
+cell.idx <- splitit(sce.nac$cellType)
+dat <- as.matrix(assay(sce.nac, "logcounts"))
+markerList.t.1vAll <- lapply(markers.nac.t.1vAll, function(x){
+  rownames(x[[2]])[ x[[2]]$log.FDR < log(0.05) & x[[2]]$non0median==TRUE ]
+  }
+)
+genes <- unique(c(head(markerList.t.1vAll[["MSN.D1_A"]], n=20),
+                head(markerList.t.1vAll[["MSN.D2_A"]], n=20)))
+
+#pdf('pdfs/revision/pubFigures/suppFigure_heatmap-Exprs_NAc-n8_D1or2_A-markers-1vAlltest_MNT2021.pdf',
+pdf('pdfs/revision/pubFigures/suppFigure_heatmap-medians-Exprs_NAc-n8_D1or2_A-markers-1vAlltest_MNT2021.pdf',
+    useDingbats=TRUE, height=6, width=10)
+#current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+    # or medians:
+    current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
+    # For some reason rownames aren't kept:
+    rownames(current_dat) <- genes
+pheatmap(t(current_dat), cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
+         color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100),
+         fontsize_row = 15, fontsize_col=14)
+grid::grid.text(label="log2-\nExprs", x=0.975, y=0.60, gp=grid::gpar(fontsize=10))
+dev.off()
 
 
 
