@@ -58,12 +58,12 @@ medianNon0 <- lapply(cellSubtype.idx, function(x){
 })
 
 sapply(medianNon0, table)
-#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural
-# FALSE 28052   23023   24201   22110   23293   22397   23313   25080   25774   24528   23874   25636   24170 28439 28287
-# TRUE   1258    6287    5109    7200    6017    6913    5997    4230    3536    4782    5436    3674    5140   871  1023
-#       Oligo   OPC Tcell
-# FALSE 27985 27262 28735
-# TRUE   1325  2048   575
+#      Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B
+# FALSE 28052   23023   24201   22110   23293   22397   23313   25080   25774
+# TRUE   1258    6287    5109    7200    6017    6913    5997    4230    3536
+#       Inhib_C Inhib_D Inhib_E Inhib_F Macrophage Micro Mural Oligo   OPC Tcell
+# FALSE   24528   23874   25636   24170      28283 28439 28287 27985 27262 28655
+# TRUE     4782    5436    3674    5140       1027   871  1023  1325  2048   655
 
 ## Traditional t-test with design as in PB'd/limma approach ===
 mod <- with(colData(sce.dlpfc), model.matrix(~ donor))
@@ -76,12 +76,12 @@ markers.t.pw <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
                                       direction="up", pval.type="all", full.stats=T)
 
 sapply(markers.t.pw, function(x){table(x$FDR<0.05)})
-#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F Micro Mural
-# FALSE 28997   29273   29233   29272   29204   29278   29254   29252   29304   29300   29237   29104   29152 28860 28819
-# TRUE    313      37      77      38     106      32      56      58       6      10      73     206     158   450   491
-#       Oligo   OPC Tcell
-# FALSE 29085 29139 28882
-# TRUE    225   171   428
+#       Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B
+# FALSE 29033   29275   29234   29273   29206   29282   29256   29255   29304
+# TRUE    277      35      76      37     104      28      54      55       6
+#       Inhib_C Inhib_D Inhib_E Inhib_F Macrophage Micro Mural Oligo   OPC Tcell
+# FALSE   29300   29239   29110   29153      28968 29016 28858 29108 29150 28897
+# TRUE       10      71     200     157        342   294   452   202   160   413
 
 
 ## WMW: Blocking on donor (this test doesn't take 'design=' argument) ===
@@ -94,13 +94,13 @@ sapply(markers.wilcox.block, function(x){table(x$FDR<0.05)})
       # Actually some decent results but many subclusters with 0 hits
 # $Micro
 # FALSE  TRUE 
-# 29268    42 
+# 29296    14
 # $Oligo
 # FALSE  TRUE 
-# 29224    86 
+# 29252    58  
 # $OPC
 # FALSE  TRUE 
-# 29293    17
+# 29294    16 
 
 ## Binomial ===
 markers.binom.block <- findMarkers(sce.dlpfc, groups=sce.dlpfc$cellType,
@@ -202,9 +202,6 @@ for(i in names(temp.1vAll)){
 }
 
 
-
-
-
 ## Let's save this along with the previous pairwise results
 save(markers.t.1vAll, markers.t.1vAll.db, markers.t.pw, markers.wilcox.block,
      file="rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda")
@@ -216,9 +213,10 @@ markerList.t.1vAll <- lapply(markers.t.1vAll, function(x){
  }
 )
 genes.top40.t <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
+lapply(genes.top40.t, length)
 
 for(i in names(genes.top40.t)){
-  png(here("pdfs/revision/DLPFC", paste0("DLPFC_t-sn-level_1vALL_top40markers-",i,"_logExprs_Apr2020.png")), height=1900, width=1200)
+  png(here("pdfs/revision/DLPFC", paste0("DLPFC_t-sn-level_1vALL_top40markers-",i,"_logExprs_LAH2021.png")), height=1900, width=1200)
   print(
       plotExpressionCustom(sce = sce.dlpfc,
                            features = genes.top40.t[[i]], 
@@ -247,10 +245,10 @@ sapply(names(markerList.t.pw), function(c){
   length(intersect(markerList.t.pw[[c]],
                    markerList.t.1vAll[[c]]))
 })
-# Astro Excit_A Excit_B Excit_C Excit_D Excit_E Excit_F Inhib_A Inhib_B Inhib_C Inhib_D Inhib_E Inhib_F   Micro   Mural 
-# 313      37      77      38     106      32      56      58       6      10      73     206     158     450     491 
-# Oligo     OPC   Tcell 
-# 225     171     428 
+# Astro    Excit_A    Excit_B    Excit_C    Excit_D    Excit_E    Excit_F    Inhib_A    Inhib_B    Inhib_C 
+# 277         35         76         37        104         28         54         55          6         10 
+# Inhib_D    Inhib_E    Inhib_F Macrophage      Micro      Mural      Oligo        OPC      Tcell 
+# 71        200        157        342        294        452        202        160        413 
     # Of top 40's:
     sapply(names(markerList.t.pw), function(c){
       length(intersect(lapply(markerList.t.pw, function(l){head(l,n=40)})[[c]],
@@ -273,12 +271,15 @@ names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
 pad <- rep("",40 - min(sapply(markerList.t.pw, length)))
 markerList.t.pw <- sapply(markerList.t.pw, function(x) c(x, pad))
 
+names(markerList.t.pw) <- paste0(names(markerList.t.pw), "_pw")
+names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll), "_1vAll")
+
 top40genes <- cbind(sapply(markerList.t.pw, function(x) head(x, n=40)),
                     sapply(markerList.t.1vAll, function(y) head(y, n=40)))
 top40genes <- top40genes[ ,sort(colnames(top40genes))]
 
 ## fix this
-write.csv(top40genes, file=here("tables/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_May2020.csv"),
+write.csv(top40genes, file=here("tables/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_LAH2020.csv"),
           row.names=FALSE)
 
 sgejobs::job_single('DLPFC-n3_step03_markerDetxn_LAH', create_shell = TRUE, queue= 'bluejay', memory = '150G', command = "Rscript 10x_DLPFC-n3_step03_markerDetxn_LAH.R")
