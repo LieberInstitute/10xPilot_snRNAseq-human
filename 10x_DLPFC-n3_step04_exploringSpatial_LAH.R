@@ -31,11 +31,7 @@ load(here("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rd
 # annotationTab.dlpfc
 # cell_colors
 
-########################
-### broad clusters #####      - well actually 'prelim' clusters
-########################
-
-## get pseudobulk
+#### get pseudobulk ####
 sce.dlpfc$PseudoSample = paste0(sce.dlpfc$donor, ":", sce.dlpfc$cellType)
 table(sce.dlpfc$PseudoSample)
 length(unique(sce.dlpfc$PseudoSample))
@@ -63,17 +59,7 @@ sce_pseudobulk <-
     rowData = rowData(sce.dlpfc)
   ))
     
-    # Check not treating LSFs weird:
-    # sce_raw <-
-    #   SingleCellExperiment(
-    #     list(counts = umiComb),
-    #     colData = phenoComb,
-    #     rowData = rowData(sce.dlpfc)
-    #   )   # of mean(librarySizeFactors(sce_raw)) == 1, so this is ok
-
-#save(sce_pseudobulk, file = "rda/dlpfc_snRNAseq_pseudobulked.Rdata")
-
-## extract expression
+#### extract expression ####
 mat <- assays(sce_pseudobulk)$logcounts
 
 ## Build a group model
@@ -88,8 +74,7 @@ mod <- with(colData(sce_pseudobulk),
 corfit <- duplicateCorrelation(mat, mod,
                                block = sce_pseudobulk$donor)
 corfit$consensus.correlation
-        # 0.02392859
-# [1] 0.09367473
+# [1] 0.08889248
 
 #save(corfit, file = "rda/dlpfc_snRNAseq_pseudobulked_dupCor.Rdata")
 
@@ -116,6 +101,7 @@ eb0_list_cell <- lapply(cell_idx, function(x) {
      #2: Zero sample variances detected, have been offset away from zero
 
     ## LAH Coefficents not estimabale: res
+    ## for each cell type: "1: Zero sample variances detected, have been offset away from zero"
 
 #save(eb0_list_cell, file = "rda/dlpfc_snRNAseq_pseudobulked_specific_Ts.Rdata")
 
@@ -139,30 +125,28 @@ data.frame(
   'Pval10-8sig' = colSums(pvals0_contrasts_cell < 1e-8 &
                             t0_contrasts_cell > 0)
 )
-#         FDRsig Pval10.6sig Pval10.8sig
-# Astro     1296         306         189
-# Excit_A    254          56          39
-# Excit_B    288          47          28
-# Excit_C    191          27          14
-# Excit_D     44          12           6
-# Excit_E     47           4           2
-# Excit_F    694          87          23
-# Inhib_A    210          49          24
-# Inhib_B    138          36          17
-# Inhib_C    105          17           8
-# Inhib_D    150          27          19
-# Inhib_E      3           0           0
-# Inhib_F      2           2           2
-# Micro      967         403         272
-# Mural       54           7           6
-# Oligo    20155        2767        1357
-# OPC        502         111          66
-# Tcell       89          13          10
+#            FDRsig Pval10.6sig Pval10.8sig
+# Astro        1388         337         211
+# Excit_A       279          61          40
+# Excit_B       321          51          31
+# Excit_C       207          30          15
+# Excit_D        49          12           7
+# Excit_E        50           4           2
+# Excit_F       837          98          33
+# Inhib_A       230          52          27
+# Inhib_B       154          40          19
+# Inhib_C       110          19          11
+# Inhib_D       152          32          20
+# Inhib_E         0           0           0 * 
+# Inhib_F         3           2           2
+# Macrophage     20           2           1
+# Micro        1017         423         290
+# Mural          23           8           7
+# Oligo       20487        3031        1549
+# OPC           586         126          73
+# Tcell          63          13           9
 
-############################
-### correlate to layer?? ###
-############################
-
+#### correlate to layer?? ####
 ## load modeling outputs
 load("/dcl02/lieber/ajaffe/SpatialTranscriptomics/HumanPilot/Analysis/Layer_Guesses/rda/eb_contrasts.Rdata", verbose=T)
     # eb_contrasts
@@ -309,7 +293,7 @@ print(
 
 
 #### Compare with findMarkers ####
-load(here("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAHMay2021.rda"), verbose = TRUE)
+load(here("rdas/revision/markers-stats_DLPFC-n3_findMarkers-SN-LEVEL_LAH2021.rda"), verbose = TRUE)
 
 ## fix
 logFC_fm <- sapply(markers.t.1vAll, function(x) {
@@ -333,7 +317,7 @@ signif(cor_t_cells, 2)
 t0_contrasts2 <- t0_contrasts[common_genes2,]
 cor_t_fm = cor(t0_fm_cell, t0_contrasts2)
 signif(cor_t_fm, 2)
-
+s
 layer_specific_indices2 <- mapply(function(t) {
   oo = order(t, decreasing = TRUE)[1:100]},
   as.data.frame(t0_contrasts2))
@@ -392,7 +376,7 @@ for(i in 3:length(cor_fm)){
       ylab = "",
       xlab = "",
       scales = list(x = list(rot = 90, cex = 0.9), y = list(cex = 1.5)),
-      main = list(titles[[i]],side=1,line=0.5)
+      main = list(paste0(titles[[i]],"\nAdjusted Color Range"),side=1,line=0.5),
     )
   )
 }
