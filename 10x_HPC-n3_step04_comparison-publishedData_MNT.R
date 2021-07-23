@@ -1,8 +1,8 @@
 ### MNT 10x snRNA-seq workflow: step 04
 ###   **Region-specific analyses**
-###     - (3x) HPC samples from: Br5161 & Br5212 & Br5287
+###     - (3x) HPC samples
 ###     - Setup and comparison to Habib, et al (DroNc-seq paper)
-### test.edit MNT 21Jul2020 new MacBook Pro
+### Updated for revision MNT 2021
 #####################################################################
 
 library(SingleCellExperiment)
@@ -203,137 +203,6 @@ rm(sce.habib)
 
 
 
-### Work with HPC for now (have other, better DLPFC datasets) ==============================
-
-# Determine HVGs
-geneVar.hpc <- modelGeneVar(sce.habib.hpc)
-chosen.hvgs.hpc <- geneVar.hpc$bio > 0
-sum(chosen.hvgs.hpc)
-
-# Run PCA, taking top 100 (instead of default 50 PCs)
-set.seed(109)
-sce.habib.hpc <- runPCA(sce.habib.hpc, subset_row=chosen.hvgs.hpc, ncomponents=200,
-                  BSPARAM=BiocSingular::RandomParam())
-
-sum(attr(reducedDim(sce.habib.hpc, "PCA"), "percentVar"))
-    # [1] 31.26207 with 200 PCs - let's just go with this;; (22.37983 with 100 PCs)
-
-
-## t-SNE
-set.seed(109)
-sce.habib.hpc <- runTSNE(sce.habib.hpc, dimred="PCA")
-  
-    # How does this look?
-    plotTSNE(sce.habib.hpc, colour_by="TissueID") # looks like fireworks...
-    plotReducedDim(sce.habib.hpc, dimred="PCA", ncomponents=3, colour_by="TissueID", point_alpha=0.5)
-        # Some veeeeery strong donor effects, or at least bias...
-
-
-### Clustering: Two-step === === === ===
-### Step 1: Perform graph-based clustering in this optimal PC space
-#         - take k=20 NN to build graph
-snn.gr <- buildSNNGraph(sce.habib.hpc, k=20, use.dimred="PCA")
-clusters.k20 <- igraph::cluster_walktrap(snn.gr)$membership
-table(clusters.k20)
-    ##   1    2    3    4    5    6    7    8    9   10
-     # 837 2368   77   37   42    6  608 1754   66  132
-
-# Assign as 'prelimCluster'
-sce.habib.hpc$prelimCluster <- factor(clusters.k20)
-
-# Is sample driving this 'high-res' clustering at this level?
-table(sce.habib.hpc$prelimCluster, sce.habib.hpc$TissueID)  
-    # not bad
-
-# Visualize this
-plotTSNE(sce.habib.hpc, colour_by="prelimCluster")  # Actually pretty good.  Let's keep this
-
-
-    ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts with most robust normalization
-    #         (as determined in: 'side-Rscript_testingStep2_HC-normalizn-approaches_wAmygData_MNTJan2020.R')
-        ## *** UNNEEDED - proceed with 'prelimCluster'
-
-# Save this for now
-save(sce.habib.hpc, file="rdas/zSCE_habib_HPC-only_MNT.rda")
-
-
-## Print marker genes for annotation
-markers.mathys.custom = list(
-  'neurons' = c('SYT1', 'SNAP25', 'GRIN1'),
-  'excitatory_neuron' = c('CAMK2A', 'NRGN','SLC17A7', 'SLC17A6', 'SLC17A8'),
-  'inhibitory_neuron' = c('GAD1', 'GAD2', 'SLC32A1'),
-  'oligodendrocyte' = c('MBP', 'MOBP', 'PLP1'),
-  'oligodendrocyte_precursor' = c('PDGFRA', 'VCAN', 'CSPG4'),
-  'microglia' = c('CD74', 'CSF1R', 'C3'),
-  'astrocytes' = c('GFAP', 'TNC', 'AQP4', 'SLC1A2'),
-  'endothelial' = c('CLDN5', 'FLT1', 'VTN'),
-  # Added MNT 20Mar2020
-  'Tcell' = c('TRAC','SKAP1','CCL5')
-)
-
-pdf("pdfs/exploration/Habib_DroNc-seq/HIPPO-MNTclusters_marker-logExprs_Jul2020.pdf", height=6, width=8)
-for(i in 1:length(markers.mathys.custom)){
-  print(
-    plotExpression(sce.habib.hpc, exprs_values = "logcounts", features=c(markers.mathys.custom[[i]]),
-#                   x="prelimCluster", colour_by="prelimCluster", point_alpha=0.5, point_size=.7,
-                   x="cellType.mnt", colour_by="cellType.mnt", point_alpha=0.5, point_size=.7,
-                   add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium, length(markers.mathys.custom[[i]]))) +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +  
-        ggtitle(label=paste0(names(markers.mathys.custom)[i], " markers"))
-  )
-}
-dev.off()
-
-
-## Add quick annotations - some of them don't seem to be any broad cell type...
-annotationTab.hpc <- data.frame(cluster=c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-                                cellType=c("Glia.mixed", "Neuron.mixed", "Endo.1", "Unknown.small", "Endo.2",
-                                           "Endo.small", "Astro.1", "Oligo", "Astro.2", "Unknown")
-                                )
-
-sce.habib.hpc$cellType.mnt <- annotationTab.hpc$cellType[match(sce.habib.hpc$prelimCluster,
-                                                     annotationTab.hpc$cluster)]
-sce.habib.hpc$cellType.mnt <- factor(sce.habib.hpc$cellType.mnt)
-
-# Save this
-save(sce.habib.hpc, chosen.hvgs.hpc, annotationTab.hpc, file="rdas/zSCE_habib_HPC-only_MNT.rda")
-
-sce.habib.hpc$ClusterName.habib <- sce.habib.hpc$ClusterName
-
-# Plot some reducedDims
-pdf("pdfs/exploration/Habib_DroNc-seq/HIPPO-reducedDims-with-MNTclusters_Jul2020.pdf")
-plotReducedDim(sce.habib.hpc, dimred="PCA", ncomponents=4, colour_by="TissueID", point_alpha=0.5)
-plotReducedDim(sce.habib.hpc, dimred="PCA", ncomponents=4, colour_by="cellType.mnt", point_alpha=0.5)
-plotTSNE(sce.habib.hpc, colour_by="TissueID", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.habib.hpc, colour_by="cellType.mnt", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.habib.hpc, colour_by="ClusterName.habib", point_size=3.5, point_alpha=0.5)
-plotTSNE(sce.habib.hpc, colour_by="NumTx", point_size=3.5, point_alpha=0.5)
-dev.off()
-
-
-# Btw
-    table(sce.habib.hpc$cellType.mnt, sce.habib.hpc$TissueID)
-        #                SM-4RGJU SM-4W9GN SM-DG7EP SM-DG7EQ
-        # Astro.1             62       40      244      262
-        # Astro.2              0        0       53       13
-        # Endo.1              12        3       17       45
-        # Endo.2               9        3       10       20
-        # Endo.small           2        1        3        0
-        # Glia.mixed         125       45      351      316
-        # Neuron.mixed       323      235     1047      763
-        # Oligo              190       59      678      827
-        # Unknown             62       70        0        0
-        # Unknown.small       21       16        0        0
-    
-    round(prop.table(table(sce.habib.hpc$cellType.mnt)), 3)
-        #    Astro.1       Astro.2        Endo.1        Endo.2    Endo.small
-        #      0.103         0.011         0.013         0.007         0.001
-        # Glia.mixed  Neuron.mixed         Oligo       Unknown Unknown.small
-        #      0.141         0.400         0.296         0.022         0.006
-
-
 
 ## Define markers for these clusters and t's to compare LIBD HPC to ========================
     
@@ -397,158 +266,15 @@ apply(varExpl.splitDonor, 2, quantile)
 
 
 
-### Modeling for subcluster-specific genes - cluster-vs-all test, only === === ===
-  # (only doing this iteration because this yields t-statistics to compare to human)
-
-table(rowSums(assay(sce.habib.hpc, "counts"))==0)  # 3962 TRUE
-
-# Drop genes with all 0's
-sce.habib.hpc <- sce.habib.hpc[!rowSums(assay(sce.habib.hpc, "counts"))==0, ]
-
-# Model unwanted effects
-mod <- with(colData(sce.habib.hpc), model.matrix(~ SampleID))
-mod <- mod[ ,-1]
-
-markers.habibHPC.t.1vAll <- list()
-for(i in levels(sce.habib.hpc$cellType.mnt)){
-  # Make temporary contrast
-  sce.habib.hpc$contrast <- ifelse(sce.habib.hpc$cellType.mnt==i, 1, 0)
-  # Test cluster vs. all
-  markers.habibHPC.t.1vAll[[i]] <- findMarkers(sce.habib.hpc, groups=sce.habib.hpc$contrast,
-                                            assay.type="logcounts", design=mod, test="t",
-                                            direction="up", pval.type="all", full.stats=T)
-}
-
-## Then, temp set of stats to get the standardized logFC
-    temp.1vAll <- list()
-    for(i in levels(sce.habib.hpc$cellType.mnt)){
-      # Make temporary contrast
-      sce.habib.hpc$contrast <- ifelse(sce.habib.hpc$cellType.mnt==i, 1, 0)
-      # Test cluster vs. all
-      temp.1vAll[[i]] <- findMarkers(sce.habib.hpc, groups=sce.habib.hpc$contrast,
-                                     assay.type="logcounts", design=mod, test="t",
-                                     std.lfc=TRUE,
-                                     direction="up", pval.type="all", full.stats=T)
-    }
-
-## For some reason all the results are in the second List entry (first is always empty)
-
-# Replace that empty slot with the entry with the actul stats
-markers.habibHPC.t.1vAll <- lapply(markers.habibHPC.t.1vAll, function(x){ x[[2]] })
-# Same for that with std.lfc
-temp.1vAll <- lapply(temp.1vAll, function(x){ x[[2]] })
-
-# Now just pull from the 'stats.0' DataFrame column
-markers.habibHPC.t.1vAll <- lapply(markers.habibHPC.t.1vAll, function(x){ x$stats.0 })
-temp.1vAll <- lapply(temp.1vAll, function(x){ x$stats.0 })
-
-# Re-name std.lfc column and add to the first result
-for(i in names(temp.1vAll)){
-  colnames(temp.1vAll[[i]])[1] <- "std.logFC"
-  markers.habibHPC.t.1vAll[[i]] <- cbind(markers.habibHPC.t.1vAll[[i]], temp.1vAll[[i]]$std.logFC)
-  # Oh the colname is kept weird
-  colnames(markers.habibHPC.t.1vAll[[i]])[4] <- "std.logFC"
-  # Then re-organize
-  markers.habibHPC.t.1vAll[[i]] <- markers.habibHPC.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
-}
-
-
-## Let's save this along with the previous pairwise results
-save(markers.habibHPC.t.1vAll, file="rdas/zs-habib_markers-stats_MNTclusters_findMarkers-SN-LEVEL_Jul2020.rda")
-
-
-
-sapply(markers.habibHPC.t.1vAll, function(x){table(x$log.FDR < log10(0.000001))})
-    #      Astro.1 Astro.2 Endo.1 Endo.2 Endo.small Glia.mixed Neuron.mixed Oligo
-    # FALSE   26844   26957  26485  27242      27699      27325        23849 27006
-    # TRUE     1305    1192   1664    907        450        824         4300  1143
-    #       Unknown Unknown.small
-    # FALSE   26413         27070
-    # TRUE     1736          1079
-
-
-## Print those top 40 into table so can compare to human markers
-markerList.t.habibHPC.1vAll <- lapply(markers.habibHPC.t.1vAll, function(x){
-  rownames(x)[x[ ,"log.FDR"] < log10(0.000001)]
-  }
-)
-
-top40genes <- sapply(markerList.t.habibHPC.1vAll, function(x) head(x, n=40))
-
-write.csv(top40genes,"tables/forRef_top40genesLists_habib-HIPPO_MNTclusters_SN-LEVEL-tests_Jul2020.csv")
-
-
-## Print top 20 marker genes to better help ID these ============
-# Print these to pngs
-markerList.t.habibHPC.1vAll <- lapply(markers.habibHPC.t.1vAll, function(x){
-  rownames(x)[x[ ,"log.FDR"] < log10(0.000001)]
-  }
-)
-top20genes <- lapply(markerList.t.habibHPC.1vAll, function(x) head(x, n=20))
-
-# Print
-for(i in names(top20genes)){
-  png(paste0("pdfs/exploration/Habib_DroNc-seq/HIPPO-MNTcluster-markers_t-sn-level_1vALL_top20markers-",
-             i,"_logExprs_Jul2020.png"), height=900, width=1200)
-  print(
-    plotExpression(sce.habib.hpc, exprs_values = "logcounts", features=top20genes[[i]],
-                   x="cellType.mnt", colour_by="cellType.mnt", point_alpha=0.5, point_size=.7, ncol=5,
-                   add_legend=F) + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
-                                                geom = "crossbar", width = 0.3,
-                                                colour=rep(tableau10medium, 20)) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(size = 25)) +  
-      ggtitle(label=paste0(i, " (MNT cluster ID) top 20 markers"))
-  )
-  dev.off()
-}
-
-
-cellType.idx <- splitit(sce.habib.hpc$cellType.mnt)
-sapply(cellType.idx, function(x){quantile(sce.habib.hpc[ ,x]$NumTx)})
-    #      Astro.1 Astro.2 Endo.1  Endo.2 Endo.small Glia.mixed Neuron.mixed  Oligo
-    # 0%     236.0  249.00    520  269.00     324.00        225       226.00  233.0
-    # 25%    343.0  388.00    784  355.25     355.50        299       654.00  308.0
-    # 50%    443.5  617.00   1105  569.50     402.50        369       887.50  380.5
-    # 75%    646.0  948.75   1604  949.00     526.75        512      1312.25  523.0
-    # 100%  5025.0 3359.00   9441 2019.00    1012.00       8092      8902.00 4283.0
-    #      Unknown Unknown.small
-    # 0%     556.0           592
-    # 25%    774.0           855
-    # 50%   1108.0          1065
-    # 75%   1534.5          1766
-    # 100%  4004.0          4515    - so relatively, these two are quite trxnally active...
-    #                                 However, ~all their top markers are ribosomal pt's and,
-    #                                 randomly, XIST ('Unknown')
-    #                               - HOWEVER, they are all male...:
-    
-    # From Supplementary Table 6:
-        # SM-4RGJU	1	Tissue:Fresh Frozen Tissue	7.3	60	Male	White	Brain - Hippocampus
-        # SM-4W9GN	2	Tissue:Fresh Frozen Tissue	6.8	53	Male	White	Brain - Hippocampus
-        # SM-DG7EP	3	Tissue:Fresh Frozen Tissue	7.1	59	Male	White	Brain - Hippocampus
-        # SM-DG7EQ	4	Tissue:Fresh Frozen Tissue	6.9	65	Male	White	Brain - Hippocampus
-    
-    sapply(markers.habibHPC.t.1vAll, function(x) which(rownames(x)=="XIST"))
-        # Astro.1       Astro.2        Endo.1        Endo.2    Endo.small
-        #   26436          5629         26169         18614         27868
-        # Glia.mixed  Neuron.mixed         Oligo       Unknown Unknown.small
-        #      26538         27914         26231            14            57
-    
-    sapply(markers.habibHPC.t.1vAll, function(x) which(rownames(x)=="TSIX"))
-        # Astro.1       Astro.2        Endo.1        Endo.2    Endo.small
-        #   25146         22792         24966         25231         24531
-        # Glia.mixed  Neuron.mixed         Oligo       Unknown Unknown.small
-        #       7655         24818         14326           337          3573
-    
-
 ### Comparison to LIBD HPC ==========
 # Bring in human stats; create t's
-load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block
-    rm(markers.hpc.t.design, markers.hpc.wilcox.block)
+load("rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.hpc.t.pw, markers.hpc.t.1vAll, medianNon0.hpc
+    rm(markers.hpc.t.pw, medianNon0.hpc)
 
 # Need to add t's with N nuclei used in constrasts
-load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+load("rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc
     rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo)
 
 # First drop "Ambig.lowNtrxts" (50 nuclei)
@@ -568,71 +294,6 @@ for(s in names(markers.hpc.t.1vAll)){
 ts.hpc <- sapply(markers.hpc.t.1vAll, function(x){x$t.stat})
 rownames(ts.hpc) <- fixTo
 
-
-
-## Then for Habib et al. - fix row order to the first entry "Astro.1"
-fixTo <- rownames(markers.habibHPC.t.1vAll[["Astro.1"]])
-
-for(s in names(markers.habibHPC.t.1vAll)){
-  markers.habibHPC.t.1vAll[[s]]$t.stat <- markers.habibHPC.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.habib.hpc))
-  markers.habibHPC.t.1vAll[[s]] <- markers.habibHPC.t.1vAll[[s]][fixTo, ]
-}
-
-# Pull out the t's
-ts.habib.hpc <- sapply(markers.habibHPC.t.1vAll, function(x){x$t.stat})
-rownames(ts.habib.hpc) <- fixTo
-
-
-## Take intersecting between two and subset/reorder
-sharedGenes <- intersect(rownames(ts.habib.hpc), rownames(ts.hpc))
-length(sharedGenes) #16,850
-
-ts.habib.hpc <- ts.habib.hpc[sharedGenes, ]
-ts.hpc <- ts.hpc[sharedGenes, ]
-
-
-cor_t_hpc <- cor(ts.hpc, ts.habib.hpc)
-rownames(cor_t_hpc) = paste0(rownames(cor_t_hpc),"_","libd")
-colnames(cor_t_hpc) = paste0(colnames(cor_t_hpc),"_","habib")
-range(cor_t_hpc)
-
-
-## Heatmap
-theSeq.all = seq(-.80, .80, by = 0.01)
-my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
-
-pdf("pdfs/exploration/Habib_DroNc-seq/overlap_MNTclusters-to-LIBD-10x-pilot-splitClusters_Jul2020.pdf")
-pheatmap(cor_t_hpc,
-         color=my.col.all,
-         cluster_cols=F, cluster_rows=F,
-         breaks=theSeq.all,
-         fontsize=11, fontsize_row=14, fontsize_col=14,
-         display_numbers=T, number_format="%.2f", fontsize_number=6.5,
-         main="Correlation of cluster-specific t's to MNT-redefined \n clusters of (Habib et al. Nat. Methods 2017)")
-dev.off()
-
-
-
-head(rownames(markers.habibHPC.t.1vAll[["Unknown"]]),n=100)
-# "HIST1H4C" "TXN"      "RPL39"    "MIF"      "SLIRP"    "RPS15A"
-# "RPL27"    "RPS29"    "H2AFZ"    "SNRPE"    "RPS13"    "RPL23A"
-# "RPS18"    "XIST"     "SNRPG"    "RPL34"    "RPL26"    "PTTG1"
-# "COX6C"    "UQCR10"   "RPS7"     "COX7B"    "RPS27A"   "USMG5"
-# "TOP2A"    "RPS3"     "HSPE1"    "ROMO1"    "NUSAP1"   "RPL32"
-# "RPS14"    "ATP5J2"   "RPS3A"    "CKS2"     "RPL38"    "RPL35"
-# "RPA3"     "HIST1H1E" "SNRPD2"   "SNRPD1"   "RPL35A"   "RPL26L1"
-# "RPS19"    "RPS6"     "RPL27A"   "RPS21"    "RPL41"    "RPL37A"
-# "RPS15"    "RPS4X"    "COX7A2"   "NDUFA1"   "ATP5E"    "COX7C"
-#  "RPL31"    "RPL12"    "RPS23"    "ATPIF1"   "RPS12"    "NDUFA4"
-# "ATP5I"    "RPL10A"   "UQCRQ"    "RPL24"    "RPLP1"    "C1QBP"
-# "RPL10"    "SF3B14"   "SEC61G"   "RPL18A"   "SNHG5"    "RPS28"
-# "MID1"     "RPS25"    "NPM1"     "NDUFC2"   "RPL15"    "RPL37"
-# "DLGAP5"   "TMEM258"  "NDUFB6"   "RPL36AL"  "RPL23"    "ATP5J"
-# "RPS16"    "RPS20"    "SHFM1"    "C7orf55"  "ATP5EP2"  "RPL29"
-# "RPL36"    "SLC25A5"  "SEC61B"   "COX17"    "SNRPF"    "UBL5"
-# "CENPW"    "POLR2L"   "RPL19"    "RPL30"
-    ## Gene Ontology gives no direction for these, either...
-     # (as per http://bioinformatics.sdstate.edu/go/)
 
 
 ### Compare MNT annotations to Habib annotations ============
