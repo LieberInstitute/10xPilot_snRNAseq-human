@@ -17,6 +17,8 @@ library(lattice)
 library(RColorBrewer)
 library(pheatmap)
 
+source("plotExpressionCustom.R")
+
 ### Palette taken from `scater`
 tableau10medium = c("#729ECE", "#FF9E4A", "#67BF5C", "#ED665D",
                     "#AD8BC9", "#A8786E", "#ED97CA", "#A2A2A2",
@@ -343,23 +345,63 @@ sapply(markers.astro.t.pw, function(x){table(x$FDR<0.05)})
     # FALSE       33260        33432        33532
     # TRUE          278          106            6
 
-markerList.astro <- lapply(markers.astro.t.pw, function(x){
-  rownames(x)[x$FDR < 0.05]
+# non-0-median - run them all
+#amy_astro_B <- which(sce.astro$cellType == "amy_Astro_B")
+astro.idx <- splitit(sce.astro$cellType)
+medianNon0.astro <- lapply(astro.idx, function(x){
+  apply(as.matrix(assay(sce.astro, "logcounts")), 1, function(y){
+    median(y[x]) > 0
   })
+})
+# non0median.amy.As_B <- apply(as.matrix(assay(sce.astro, "logcounts")), 1, function(y){
+#   median(y[amy_astro_B]) > 0
+# })
+#table(non0median.amy.As_B)  # 146
 
-# non-0-median
-amy_astro_B <- which(sce.astro$cellType == "amy_Astro_B")
-non0median.amy.As_B <- apply(as.matrix(assay(sce.astro, "logcounts")), 1, function(y){
-  median(y[amy_astro_B]) > 0
+sapply(medianNon0.astro, table)
+    #       amy_Astro_A amy_Astro_B dlpfc_Astro hpc_Astro_A hpc_Astro_B nac_Astro_A
+    # FALSE       31172       33392       32280       31669       32205       32155
+    # TRUE         2366        *146        1258        1869        1333        1383
+    #       nac_Astro_B sacc_Astro_A sacc_Astro_B
+    # FALSE       31122        31761        32827
+    # TRUE         2416         1777          711
+
+    sapply(astro.idx, function(x){quantile(sce.astro$sum[x])})
+        #      amy_Astro_A amy_Astro_B dlpfc_Astro hpc_Astro_A hpc_Astro_B nac_Astro_A
+        # 0%        1182.0       188.0      884.00      1940.0        1127       798.0
+        # 25%       7471.5       850.5     4008.75      5631.5        3609      4049.5
+        # 50%      11275.0     *1156.0     5737.00      7996.5        5767      6524.0
+        # 75%      16469.5      1842.5     7953.00     11802.5        8420      9175.5
+        # 100%     35728.0      7739.0    26618.00     30085.0       20088     17601.0
+        #      nac_Astro_B sacc_Astro_A sacc_Astro_B
+        # 0%        635.00        174.0       102.00
+        # 25%      7457.75       5781.0      1977.25
+        # 50%     10811.50       7575.0      3872.50
+        # 75%     15545.00      10077.5      6176.25
+        # 100%    37265.00      23974.0     14206.00
+
+
+# Add respective 'non0median' column to the stats for each set of markers
+for(i in names(markers.astro.t.pw)){
+  markers.astro.t.pw[[i]] <- cbind(markers.astro.t.pw[[i]],
+                                 medianNon0.astro[[i]][match(rownames(markers.astro.t.pw[[i]]),
+                                                           names(medianNon0.astro[[i]]))])
+  colnames(markers.astro.t.pw[[i]])[12] <- "non0median"
+}
+
+sapply(markers.astro.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
+    # amy_Astro_A.TRUE  amy_Astro_B.TRUE  dlpfc_Astro.TRUE  hpc_Astro_A.TRUE 
+    #               14                 4                 3                 3 
+    # hpc_Astro_B.TRUE  nac_Astro_A.TRUE  nac_Astro_B.TRUE sacc_Astro_A.TRUE 
+    #               72                11               202                75 
+    #  sacc_Astro_B.NA 
+    #               NA 
+
+markerList.astro <- lapply(markers.astro.t.pw, function(x){
+  rownames(x)[x$FDR < 0.05 & x$non0median==TRUE]
 })
 
-table(non0median.amy.As_B)  # 146
-markers.amy.As_B <- markers.astro.t.pw[["amy_Astro_B"]]
-markers.amy.As_B <- cbind(markers.amy.As_B, non0median.amy.As_B[match(rownames(markers.amy.As_B),
-                                                                      names(non0median.amy.As_B))])
-colnames(markers.amy.As_B)[12] <- "non0median"
-table(markers.amy.As_B$FDR < 0.05 & markers.amy.As_B$non0median==TRUE)  # just 4
-rownames(markers.amy.As_B)[markers.amy.As_B$FDR < 0.05 & markers.amy.As_B$non0median==TRUE]
+markerList.astro[["amy_Astro_B"]]
     # [1] "DST"     "COL19A1" "MACF1"   "RBFOX1"
 
 # Check out these
@@ -396,6 +438,51 @@ sapply(splitit(sce.astro$region), function(x){table(droplevels(sce.astro$cellTyp
     # sacc_Astro_B   0 160   0
 
 
+## Make Astro class marker array from pw tests like with the NAc interneurons ===
+markers.astro.t.pw.full <- markers.astro.t.pw
+markers.astro.t.pw[["sacc_Astro_B"]] <- NULL
+topToPrint <- as.data.frame(sapply(markers.astro.t.pw, function(x) {
+  head(rownames(x)[x$FDR < 0.05 & x$non0median==TRUE], n=3)}))
+
+table(unlist(topToPrint) %in% rownames(sce.astro)) # good
+
+topToPrint
+
+# Print
+pdf("pdfs/revision/pubFigures/suppFig_across-regions_astros-marker-array_MNT2021.pdf", height=4, width=10)
+print(
+  plotExpressionCustom(sce.astro.hold, features=c(t(topToPrint)), features_name="",
+                       anno_name="cellType", point_alpha=0.3, point_size=0.7, ncol=8, scales="free_y") +
+    ggtitle(label="amy_Astro_A   amy_Astro_B   dlpfc_Astro      hpc_Astro_A    hpc_Astro_B    nac_Astro_A    nac_Astro_B    sacc_Astro_A") + xlab("") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+          axis.title.y = element_text(angle = 90, size = 12),
+          axis.text.y = element_text(size = 9),
+          plot.title = element_text(size = 12),
+          panel.grid.major=element_line(colour="grey95", size=0.8),
+          panel.grid.minor=element_line(colour="grey95", size=0.4))
+)
+dev.off()
+
+# Plot the $sum densities
+coldat <- as.data.frame(colData(sce.astro))
+coldat$log10.sum <- log10(coldat$sum)
+
+pdf("pdfs/revision/pubFigures/suppFig_across-regions_astros-totalUMIs-density_MNT2021.pdf", height=3.5, width=7.5)
+ggplot(coldat, aes(x=log10.sum, color=cellType, fill=cellType)) +
+  geom_density(alpha=0.15,size=1.2) +
+  scale_color_manual(values=tableau10medium[1:9],
+                     labels=paste0(levels(sce.astro$cellType)," (",table(sce.astro$cellType),")")) +
+  labs(colour="Cell type") +
+  scale_fill_manual(values=tableau10medium[1:9]) + guides(fill=FALSE) +
+  xlab("log10(total.n.UMIs)") + ylab("Density") +
+  ggtitle("Distribution of total UMIs captured per astrocyte cell class") +
+  theme(axis.title.x = element_text(size = 14),
+        axis.text.x = element_text(hjust = 1, size = 11),
+        axis.title.y = element_text(angle = 90, size = 14),
+        axis.text.y = element_text(size = 11),
+        plot.title = element_text(size = 14))
+dev.off()
+
 
 ## AMY 'Inhib_B' vs DLPFC 'Inhib_A' - r=0.86 ===
 sce.dlpfc <- sce.allRegions[ ,sce.allRegions$region=="dlpfc"]
@@ -403,7 +490,8 @@ sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
 
 # Plot some AMY 'Inhib_B' markers (seen in Louise's DLPFC 'Inhib_A' lists)
 plotExpressionCustom(sce.dlpfc, anno_name="cellType", features_name="some AMY 'Inhib_B'",
-                     features=c("VIP", "CALB2", "CRH", "PTHLH"), ncol=2)
+                     features=c("VIP", "CALB2", "CRH", "PTHLH"), ncol=2) +
+  
 
 
 
