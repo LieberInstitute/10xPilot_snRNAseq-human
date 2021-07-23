@@ -484,6 +484,53 @@ ggplot(coldat, aes(x=log10.sum, color=cellType, fill=cellType)) +
 dev.off()
 
 
+## Do the same with 'Micro' to contrast to Astro:
+sce.micro <- sce.allRegions[ ,grep("Micro", sce.allRegions$cellType)]
+sce.micro$cellType <- droplevels(sce.micro$cellType)
+table(sce.micro$cellType, sce.micro$donor)
+    #                   br5161 br5207 br5212 br5276 br5287 br5400 br5701
+    # amy_Micro            411      0    304     14      0    117    355
+    # dlpfc_Micro          152    144     92      0      0      0      0
+    # hpc_Micro            487      0    481      0    193      0      0
+    # nac_Micro             66      0     59     33     34    222     15
+    # nac_Micro_resting      3      0     33     22      0      5      0
+    # sacc_Micro           232      0    243      3      0    292     14
+
+# Broad distribution:
+micro.idx <- splitit(sce.micro$cellType)
+sapply(micro.idx, function(x){quantile(sce.micro$sum[x])})
+    #      amy_Micro dlpfc_Micro hpc_Micro nac_Micro nac_Micro_resting sacc_Micro
+    # 0%         435      879.00       454      1504             105.0     113.00
+    # 25%       3952     3019.25      3580      4268             469.5    3198.50
+    # 50%       5381     3883.50      4661      5545             866.0    4378.00
+    # 75%       7055     4911.75      5966      6789            1327.5    5458.25
+    # 100%     20500    11137.00     12463     12537            5239.0   11896.00
+
+# Plot the $sum densities
+coldat <- as.data.frame(colData(sce.micro))
+coldat$log10.sum <- log10(coldat$sum)
+
+pdf("pdfs/revision/pubFigures/suppFig_across-regions_micro-totalUMIs-density_MNT2021.pdf", height=3.5, width=7.5)
+ggplot(coldat, aes(x=log10.sum, color=cellType, fill=cellType)) +
+  geom_density(alpha=0.15,size=1.2) +
+  scale_color_manual(values=tableau20[15:20],
+                     labels=paste0(levels(sce.micro$cellType)," (",table(sce.micro$cellType),")")) +
+  labs(colour="Cell type") +
+  scale_fill_manual(values=tableau20[15:20]) + guides(fill=FALSE) +
+  xlab("log10(total.n.UMIs)") + ylab("Density") +
+  ggtitle("Distribution of total UMIs captured per microglia cell class") +
+  theme(axis.title.x = element_text(size = 14),
+        axis.text.x = element_text(hjust = 1, size = 11),
+        axis.title.y = element_text(angle = 90, size = 14),
+        axis.text.y = element_text(size = 11),
+        plot.title = element_text(size = 14))
+dev.off()
+
+
+
+
+
+
 ## AMY 'Inhib_B' vs DLPFC 'Inhib_A' - r=0.86 ===
 sce.dlpfc <- sce.allRegions[ ,sce.allRegions$region=="dlpfc"]
 sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
