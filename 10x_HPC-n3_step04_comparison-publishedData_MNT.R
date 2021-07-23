@@ -266,36 +266,6 @@ apply(varExpl.splitDonor, 2, quantile)
 
 
 
-### Comparison to LIBD HPC ==========
-# Bring in human stats; create t's
-load("rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
-    # markers.hpc.t.pw, markers.hpc.t.1vAll, medianNon0.hpc
-    rm(markers.hpc.t.pw, medianNon0.hpc)
-
-# Need to add t's with N nuclei used in constrasts
-load("rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc
-    rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo)
-
-# First drop "Ambig.lowNtrxts" (50 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
-sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
-
-## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
-#      and fix row order to the first entry "Astro"
-fixTo <- rownames(markers.hpc.t.1vAll[["Astro"]])
-
-for(s in names(markers.hpc.t.1vAll)){
-  markers.hpc.t.1vAll[[s]]$t.stat <- markers.hpc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.hpc))
-  markers.hpc.t.1vAll[[s]] <- markers.hpc.t.1vAll[[s]][fixTo, ]
-}
-
-# Pull out the t's
-ts.hpc <- sapply(markers.hpc.t.1vAll, function(x){x$t.stat})
-rownames(ts.hpc) <- fixTo
-
-
-
 ### Compare MNT annotations to Habib annotations ============
 table(sce.habib.hpc$ClusterName, sce.habib.hpc$cellType.mnt)
     #              Astro.1 Astro.2 Endo.1 Endo.2 Endo.small Glia.mixed Neuron.mixed
@@ -426,37 +396,91 @@ top40genes <- sapply(markerList.t.habibHPC.1vAll, function(x) head(x, n=40))
 write.csv(top40genes,"tables/forRef_top40genesLists_habib-HIPPO_reportedClusters_SN-LEVEL-tests_Jul2020.csv")
 
 
-### Comparison to LIBD HPC (again) ==========
+
+### Comparison to LIBD HPC ==============================
 # Bring in human stats; create t's
-load("rdas/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNTMay2020.rda", verbose=T)
-    # markers.hpc.t.1vAll, markers.hpc.t.design, markers.hpc.wilcox.block
-    rm(markers.hpc.t.design, markers.hpc.wilcox.block)
+load("rdas/revision/markers-stats_HPC-n3_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.hpc.t.pw, markers.hpc.t.1vAll, medianNon0.hpc
+    rm(markers.hpc.t.pw, medianNon0.hpc)
 
 # Need to add t's with N nuclei used in constrasts
-load("rdas/regionSpecific_HPC-n3_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo
+load("rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+    # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc
     rm(chosen.hvgs.hpc, pc.choice.hpc, clusterRefTab.hpc, ref.sampleInfo)
 
-# First drop "Ambig.lowNtrxts" (50 nuclei)
-sce.hpc <- sce.hpc[ ,sce.hpc$cellType.split != "Ambig.lowNtrxts"]
-sce.hpc$cellType.split <- droplevels(sce.hpc$cellType.split)
+sce.hpc
+    # class: SingleCellExperiment 
+    # dim: 33538 10268 
+    # metadata(2): merge.info pca.info
+    # assays(2): counts logcounts
+    # rownames(33538): MIR1302-2HG FAM138A ... AC213203.1 FAM231C
+    # rowData names(6): gene_id gene_version ... gene_biotype Symbol.uniq
+    # colnames(10268): AAACCCATCTGTCAGA-1 AAACCCATCTGTCGCT-1 ...
+    #   TTTGGTTGTGGTCCGT-1 TTTGTTGCAGAAACCG-1
+    # colData names(20): Sample Barcode ... collapsedCluster cellType
+    # reducedDimNames(4): PCA_corrected PCA_opt TSNE UMAP
+    # altExpNames(0):
+
+table(sce.hpc$cellType)
+    # Astro_A       Astro_B  drop.doublet drop.lowNTx_A drop.lowNTx_B 
+    #     936           234             5           105            19 
+    # Excit_A       Excit_B       Excit_C       Excit_D       Excit_E 
+    #      87           421             6            35             6 
+    # Excit_F       Excit_G       Excit_H       Inhib_A       Inhib_B 
+    #      29             6            33           300            30 
+    # Inhib_C       Inhib_D         Micro         Mural         Oligo 
+    #       5            31          1161            43          5912 
+    #     OPC       OPC_COP         Tcell 
+    #     823            15            26 
+
+# First drop flagged "drop." clusters
+sce.hpc <- sce.hpc[ ,-grep("drop.", sce.hpc$cellType)]
+sce.hpc$cellType <- droplevels(sce.hpc$cellType)
 
 ## As above, calculate and add t-statistic (= std.logFC * sqrt(N)) from contrasts
 #      and fix row order to the first entry "Astro"
-fixTo <- rownames(markers.hpc.t.1vAll[["Astro"]])
+markers.hpc.enriched <- lapply(markers.hpc.t.1vAll, function(x){x[[2]]})
 
-for(s in names(markers.hpc.t.1vAll)){
-  markers.hpc.t.1vAll[[s]]$t.stat <- markers.hpc.t.1vAll[[s]]$std.logFC * sqrt(ncol(sce.hpc))
-  markers.hpc.t.1vAll[[s]] <- markers.hpc.t.1vAll[[s]][fixTo, ]
+fixTo <- rownames(markers.hpc.enriched[["Astro_A"]])
+
+for(s in names(markers.hpc.enriched)){
+  markers.hpc.enriched[[s]]$t.stat <- markers.hpc.enriched[[s]]$std.logFC * sqrt(ncol(sce.hpc))
+  markers.hpc.enriched[[s]] <- markers.hpc.enriched[[s]][fixTo, ]
 }
 
 # Pull out the t's
-ts.hpc <- sapply(markers.hpc.t.1vAll, function(x){x$t.stat})
+ts.hpc <- sapply(markers.hpc.enriched, function(x){x$t.stat})
 rownames(ts.hpc) <- fixTo
 
 
 
-## Then for Habib et al. - fix row order to the first entry "Astro.1"
+## Then for Habib et al. - fix row order to the first entry "Astro.1" ======
+load("rdas/zs-habib_markers-stats_reportedClusters_findMarkers-SN-LEVEL_Jul2020.rda", verbose=T)
+    # markers.habibHPC.t.1vAll.pub
+names(markers.habibHPC.t.1vAll.pub)
+
+load("rdas/zSCE_habib-dlpfc-hippo_MNT.rda", verbose=T)
+    # sce.habib, sce.habib.hpc, sce.habib.dlpfc
+    rm(sce.habib, sce.habib.dlpfc)
+
+sce.habib.hpc
+    # class: SingleCellExperiment 
+    # dim: 32111 5927 
+    # metadata(0):
+    # assays(2): counts logcounts
+    # rownames(32111): A1BG A1BG-AS1 ... ZZEF1 ZZZ3
+    # rowData names(0):
+    # colnames(5927): hHP1_AACACTATCTAC hHP1_CTACGCATCCAT ...
+    #   HP3-B-united_GGTAATAAGTTG HP3-B-united_GCCCCAAAGGAT
+    # colData names(13): CellID NumGenes ... DonorID sizeFactor
+    # reducedDimNames(1): TSNE.given
+    # altExpNames(0):
+    
+# Drop 'Unclassified', as above
+sce.habib.hpc$ClusterName <- factor(sce.habib.hpc$ClusterName)
+sce.habib.hpc <- sce.habib.hpc[ ,!sce.habib.hpc$ClusterName == "Unclassified"]
+sce.habib.hpc$ClusterName <- droplevels(sce.habib.hpc$ClusterName)
+
 fixTo <- rownames(markers.habibHPC.t.1vAll.pub[["ASC1"]])
 
 for(s in names(markers.habibHPC.t.1vAll.pub)){
@@ -471,7 +495,7 @@ rownames(ts.habib.hpc) <- fixTo
 
 ## Take intersecting between two and subset/reorder
 sharedGenes <- intersect(rownames(ts.habib.hpc), rownames(ts.hpc))
-length(sharedGenes) #16,850
+length(sharedGenes) #16,854
 
 ts.habib.hpc <- ts.habib.hpc[sharedGenes, ]
 ts.hpc <- ts.hpc[sharedGenes, ]
@@ -481,13 +505,13 @@ cor_t_hpc <- cor(ts.hpc, ts.habib.hpc)
 rownames(cor_t_hpc) = paste0(rownames(cor_t_hpc),"_","libd")
 colnames(cor_t_hpc) = paste0(colnames(cor_t_hpc),"_","habib")
 range(cor_t_hpc)
-    # [1] -0.5068500  0.7739983
+    # [1] -0.5096868  0.7770631
 
 ## Heatmap
 theSeq.all = seq(-.80, .80, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-pdf("pdfs/exploration/Habib_DroNc-seq/overlap_reportedClusters-to-LIBD-10x-pilot-splitClusters_Jul2020.pdf")
+pdf("pdfs/revision/pubFigures/overlap_reportedClusters-to-LIBD-HPC_allExpressedGenes_MNT2021.pdf")
 pheatmap(cor_t_hpc,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
@@ -499,6 +523,60 @@ pheatmap(cor_t_hpc,
 dev.off()
 
 
-
+### Session info for 23Jul2021 =======================================
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
+# 
+# other attached packages:
+#   [1] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
+# [4] readxl_1.3.1                readr_1.4.0                 jaffelab_0.99.30           
+# [7] rafalib_1.0.0               DropletUtils_1.10.3         batchelor_1.6.3            
+# [10] scran_1.18.7                scater_1.18.6               ggplot2_3.3.3              
+# [13] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0 Biobase_2.50.0             
+# [16] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [19] S4Vectors_0.28.1            BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
+# [22] matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] viridis_0.6.0             edgeR_3.32.1              BiocSingular_1.6.0       
+# [4] splines_4.0.4             viridisLite_0.4.0         DelayedMatrixStats_1.12.3
+# [7] scuttle_1.0.4             R.utils_2.10.1            assertthat_0.2.1         
+# [10] statmod_1.4.35            dqrng_0.3.0               cellranger_1.1.0         
+# [13] GenomeInfoDbData_1.2.4    vipor_0.4.5               pillar_1.6.0             
+# [16] glue_1.4.2                limma_3.46.0              beachmat_2.6.4           
+# [19] XVector_0.30.0            colorspace_2.0-0          Matrix_1.3-4             
+# [22] R.oo_1.24.0               pkgconfig_2.0.3           zlibbioc_1.36.0          
+# [25] purrr_0.3.4               scales_1.1.1              HDF5Array_1.18.1         
+# [28] ResidualMatrix_1.0.0      BiocParallel_1.24.1       googledrive_1.0.1        
+# [31] tibble_3.1.1              generics_0.1.0            ellipsis_0.3.2           
+# [34] withr_2.4.2               magrittr_2.0.1            crayon_1.4.1             
+# [37] R.methodsS3_1.8.1         fansi_0.4.2               segmented_1.3-4          
+# [40] bluster_1.0.0             beeswarm_0.4.0            tools_4.0.4              
+# [43] hms_1.0.0                 lifecycle_1.0.0           Rhdf5lib_1.12.1          
+# [46] munsell_0.5.0             locfit_1.5-9.4            DelayedArray_0.16.3      
+# [49] irlba_2.3.3               compiler_4.0.4            rsvd_1.0.5               
+# [52] rlang_0.4.11              rhdf5_2.34.0              grid_4.0.4               
+# [55] RCurl_1.98-1.3            rhdf5filters_1.2.0        BiocNeighbors_1.8.2      
+# [58] igraph_1.2.6              bitops_1.0-7              gtable_0.3.0             
+# [61] DBI_1.1.1                 R6_2.5.0                  gridExtra_2.3            
+# [64] dplyr_1.0.5               utf8_1.2.1                ggbeeswarm_0.6.0         
+# [67] Rcpp_1.0.6                vctrs_0.3.8               tidyselect_1.1.1         
+# [70] sparseMatrixStats_1.2.1
 
 
