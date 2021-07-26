@@ -760,22 +760,32 @@ dev.off()
 
 ## Heatmap version ===
 # Take more overlapping, from above exploration
-genes2print <- c("Npffr2", "Tll1", "Grm8", "Foxp2", "Sv2c", "Olfm3")
+genes2print <- c("Npffr2", "Tll1", "Foxp2","Kcnh5","Grm8", "Otof","Sv2c",
+                 "Rasgrp1","Olfm3","Vstm2a")
 
-pdf("pdfs/pubFigures/suppFig_AMY-vs-MeA_topInhib.5markers_heatmap_MNTSep2020.pdf", width=5, height=5)
-dat <- assay(sce.amy, "logcounts")
-cell.idx <- splitit(sce.amy$cellType.split)
+sce.amy.neu <- sce.amy[ ,c(grep("Excit_", sce.amy$cellType), grep("Inhib_", sce.amy$cellType))]
+sce.amy.neu$cellType <- droplevels(sce.amy.neu$cellType)
+
+pdf("pdfs/revision/pubFigures/suppFig_AMY-vs-MeA_topInhib_C-or-N.8markers_heatmap_MNT2021.pdf", width=5, height=5)
+par(mar=c(5,5,4,2)+.1)
+# Human
+dat <- assay(sce.amy.neu, "logcounts")
+cell.idx <- splitit(sce.amy.neu$cellType)
 current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[toupper(genes2print), ii])))
-pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4.0, length.out = 101),
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 3.0, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
-         fontsize_row = 18, fontsize_col=16)
-
-dat <- assay(sce.mm.sub, "logcounts")
-cell.idx <- splitit(sce.mm.sub$subCluster)
+         fontsize_row = 16, fontsize_col=15, fontsize=10,
+         main="           Human AMY neuronal class expression of top\ncoexpressed 'Inhib_C' or 'N.8' markers")
+grid::grid.text(label="log2-\nExprs", x=0.95, y=0.40, gp=grid::gpar(fontsize=10))
+# Mouse
+dat <- assay(sce.amy.mm.sub, "logcounts")
+cell.idx <- splitit(sce.amy.mm.sub$subCluster)
 current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes2print, ii])))
-pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 1, length.out = 101),
+pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 1.1, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "BuGn"))(100),
-         fontsize_row = 16, fontsize_col=16)
+         fontsize_row = 16, fontsize_col=15, fontsize=10,
+         main="        Mouse MeA neuronal cluster expression of top\ncoexpressed 'Inhib_C' or 'N.8' markers")
+grid::grid.text(label="log2-\nExprs", x=0.95, y=0.40, gp=grid::gpar(fontsize=10))
 dev.off()
 
 
