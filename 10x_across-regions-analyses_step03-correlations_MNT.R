@@ -16,6 +16,7 @@ library(limma)
 library(lattice)
 library(RColorBrewer)
 library(pheatmap)
+library(gridExtra)
 
 source("plotExpressionCustom.R")
 
@@ -539,6 +540,102 @@ sce.dlpfc$cellType <- droplevels(sce.dlpfc$cellType)
 plotExpressionCustom(sce.dlpfc, anno_name="cellType", features_name="some AMY 'Inhib_B'",
                      features=c("VIP", "CALB2", "CRH", "PTHLH"), ncol=2) +
   
+
+
+### NAc 'excit' MSNs vs others?? =============================
+  # 'MSN.D1_A', 'MSN.D1_D', 'MSN.D2_A', 'MSN.D2_B' vs the rest
+load("rdas/revision/")
+
+sce.test <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.test$cellType <- droplevels(sce.test$cellType)
+
+sce.test$contrast <- 0
+# Make the 'excit' ones 1
+msn.excit.idx <- c(grep("MSN.D1_A", sce.test$cellType),
+                   grep("MSN.D1_D",sce.test$cellType),
+                   grep("MSN.D2_A",sce.test$cellType),
+                   grep("MSN.D2_B",sce.test$cellType))
+sce.test$contrast[msn.excit.idx] <- 1
+# And the others -1
+msn.rest.idx <- setdiff(grep("MSN", sce.test$cellType), msn.excit.idx)
+sce.test$contrast[msn.rest.idx] <- -1
+  
+table(sce.test$cellType, sce.test$contrast) # good
+
+# Do the PC components correlate with this contrast?
+apply(reducedDim(sce.test, "PCA_opt"), 2, function(x){cor(x, sce.test$contrast)})
+    # [1]  0.5451128939  0.3584196778 -0.1526565503  0.4616036003  0.0412478196 -0.5014262238
+    # [7]  0.2344336760  0.4066390607 -0.5440848773 -0.0247296291  0.1251926241 -0.2562537482
+    # [13]  0.2353769426 -0.2995765135  0.1100234036 -0.0645767070  0.3322698995  0.0861300085
+    # [19]  0.1999916772 -0.1836870541  0.0628782010 -0.0735522902 -0.1502806994  0.1031656553
+    # [ etc. ]
+which(abs(apply(reducedDim(sce.test, "PCA_opt"), 2, function(x){cor(x, sce.test$contrast)})) >= 0.4)
+    #[1] 1 4 6 8 9
+
+sce.test$cellType.con <- as.character(sce.test$cellType)
+sce.test$cellType.con[msn.excit.idx] <- "MSN.excit"
+sce.test$cellType.con[msn.rest.idx] <- "MSN.inhib"
+sce.test$cellType.con <- factor(sce.test$cellType.con)
+
+coldat <- cbind(reducedDim(sce.test, "PCA_opt"), colData(sce.test))
+colnames(coldat) <- gsub("V", "PC", colnames(coldat))
+coldat <- as.data.frame(coldat)
+coldat$cellType.MSNs <- as.character(coldat$cellType)
+coldat$cellType.MSNs[grep("MSN", coldat$cellType.MSNs)] <- "MSN.broad"
+coldat$cellType.MSNs <- factor(coldat$cellType.MSNs)
+
+# Trick soome cell class colors - use blue & red
+cell_colors.nac.hold <- cell_colors.nac
+cell_colors.nac <- cell_colors.nac[names(cell_colors.nac) %in% levels(sce.test$cellType.con)]
+cell_colors.nac["MSN.excit"] <- cell_colors.nac.hold["MSN.D1_A"]
+cell_colors.nac["MSN.inhib"] <- cell_colors.nac.hold["drop.doublet_B"]
+cell_colors.nac["MSN.broad"] <- cell_colors.nac.hold["drop.doublet_C"]
+
+## Plot top 10 ===
+lay <- rbind(c(1,1),
+             c(2,2))
+
+coldat$MSNsize <- ifelse(coldat$cellType.MSNs=="MSN.broad",0.5,0.15)
+
+pdf("pdfs/revision/regionSpecific_top10PCs_cellClass_MSNsGrouped-or-split_MNT2021.pdf")
+for(i in 1:10){
+  # All MSNs combined:
+  grouped <- ggplot(coldat, aes_string(x=colnames(coldat)[i], color="cellType.MSNs", fill="cellType.MSNs")) +
+                geom_density(alpha=0.15,size=0.8) +
+                scale_color_manual(values=cell_colors.nac) +
+                labs(colour="Cell type") +
+                scale_fill_manual(values=cell_colors.nac) + guides(fill=FALSE) +
+                xlab(paste0("PC", i)) + ylab("Density") +
+                ggtitle(paste0("Principal component ",i," by cell class; all MSNs grouped")) +
+                theme(axis.title.x = element_text(size = 13),
+                      axis.text.x = element_text(hjust = 1, size = 11),
+                      axis.title.y = element_text(angle = 90, size = 14),
+                      axis.text.y = element_text(size = 11),
+                      plot.title = element_text(size = 12),
+                      legend.text = element_text(size = 9),
+                      legend.key.size = unit(0.4, "cm"))
+  # Separated into 'Excit' & 'Inhib'
+ separated <- ggplot(coldat, aes_string(x=colnames(coldat)[i], color="cellType.con", fill="cellType.con")) +
+                geom_density(alpha=0.15,size=0.8) +
+                scale_color_manual(values=cell_colors.nac) +
+                labs(colour="Cell type") +
+                scale_fill_manual(values=cell_colors.nac) + guides(fill=FALSE, size=FALSE) +
+                xlab(paste0("PC", i)) + ylab("Density") +
+                ggtitle(paste0("Principal component ",i," by cell class; MSNs separated by signature")) +
+                theme(axis.title.x = element_text(size = 13),
+                      axis.text.x = element_text(hjust = 1, size = 11),
+                      axis.title.y = element_text(angle = 90, size = 14),
+                      axis.text.y = element_text(size = 11),
+                      plot.title = element_text(size = 12),
+                      legend.text = element_text(size = 9),
+                      legend.key.size = unit(0.4, "cm"))
+ # Plot both per page:
+ grid.arrange(grobs=list(grouped,
+                         separated),
+              layout_matrix=lay)
+}
+dev.off()
+
 
 
 
