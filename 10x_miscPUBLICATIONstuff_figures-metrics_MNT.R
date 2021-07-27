@@ -626,6 +626,28 @@ write.table(RS.donorTab, file="tables/revision/suppTable_107-RS-classes_donorStr
             sep="\t", quote=F, row.names=F,col.names=T)
 
 
+### Prelim cluster-level tabulation ===
+clusterRefTab <- list()
+region.idx <- splitit(sce.allRegions$region)
+
+for(i in names(region.idx)){
+  clusterRefTab[[i]] <- as.matrix(table(droplevels(sce.allRegions$cellType[region.idx[[i]]]),
+                                            droplevels(sce.allRegions$prelimCluster[region.idx[[i]]]))
+                                  )
+}
+sapply(clusterRefTab, dim)
+    #      amy dlpfc hpc nac sacc
+    # [1,]  19    19  20  24   25
+    # [2,]  57   107  45  24   65
+    57 + 107 + 45 + 24 + 65 # 298 total [sub]clusters
+
+for(i in names(clusterRefTab)){
+  write.csv(clusterRefTab[[i]],
+            file=paste0("tables/revision/suppTable_",i,"_cellClasses-by-prelimCluster_MNT2021.tsv"))
+}
+
+
+
 
 
 ### RNAscope misc checks for NAc ===============================
