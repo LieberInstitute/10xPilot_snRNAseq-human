@@ -847,8 +847,8 @@ dev.off()
 
 
 ## Supplementary Table 1 === ===
-sheet1 <- as.data.frame(readxl::read_excel("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10xpilot_Subject_Info.xlsx", sheet=1))
-sheet2 <- as.data.frame(readxl::read_excel("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10xpilot_Subject_Info.xlsx", sheet=2))
+sheet2 <- read.csv("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10x-snRNA-seq_Pilot_Subject_Info_rev2021.csv",
+                   header=T, sep=",")
 sheet2 <- sheet2[ ,c("brnum", "sex", "race", "agedeath", "primarydx", "pmi")]
 colnames(sheet2) <- c("BrNum", "Sex", "Race", "AgeDeath", "PrimaryDx", "PMI")
 
@@ -864,53 +864,61 @@ write.table(suppTab1, row.names=F, col.names=T, sep="\t", quote=F,
 
 
 
+### Donor proportion across clusters ===========
+library(reshape2)
+load("rdas/revision/all-n24-samples_across-regions-analyses_MNT2021.rda", verbose=T)
+    # sce.allRegions, chosen.hvgs.union, ref.sampleInfo, cell_colors.amy, cell_colors.dlpfc, cell_colors.hpc, cell_colors.sacc, cell_colors.nac
 
-## Brief exploration of AnJa's LDSC (ignore for first submission) ==========
-dat.ldsc <- read.table("LDSC/suppTable_ldsc.tsv", sep="\t")
-colnames(dat.ldsc) <- dat.ldsc[1, ]
-dat.ldsc <- dat.ldsc[-1, ]
+donor.cols <- tableau10medium[1:8]
+names(donor.cols) <- paste0("donor", c("A","B","C","D","E","F","G","H"))
+# or
+names(donor.cols) <- paste0("donor", 1:8)
 
-for(i in colnames(dat.ldsc)[3:11]){
-  dat.ldsc[ ,i] <- signif(as.numeric(dat.ldsc[ ,i],2))
+# Add those new 'de-identified' donor IDs
+donorRef <- data.frame(donor=unique(sce.allRegions$donor),
+                       pub.donorID=paste0("donor", 1:8))
+sce.allRegions$pub.donorID <- donorRef$pub.donorID[match(sce.allRegions$donor, donorRef$donor)]
+
+
+## Do by region
+region.idx <- splitit(sce.allRegions$region)
+region.names <- c("AMY", "DLPFC", "HPC", "NAc", "sACC")
+names(region.names) <- names(region.idx)
+
+pdf("pdfs/revision/pubFigures/suppFig_cellClass-donorDistrib_MNT2021.pdf", height=3)
+for(i in names(region.idx)){
+  sce.i <- sce.allRegions[ ,region.idx[[i]]]
+  sce.i$cellType <- droplevels(sce.i$cellType)
+  coldat <- as.data.frame(colData(sce.i))
+  coldat$Donor <- coldat$pub.donorID
+  coldat$Donor[grep("NeuN", coldat$protocol)] <- paste0(coldat$Donor[grep("NeuN", coldat$protocol)],
+                                                        "_neun")
+  coldat$Donor <- as.factor(coldat$Donor)
+  
+  # Temp colors bc the same donors aren't always NeuN-enriched
+  cols.i <- donor.cols
+  names(cols.i) <- ifelse(paste0(names(cols.i),"_neun") %in% levels(coldat$Donor),
+                          paste0(names(cols.i),"_neun"),
+                          names(cols.i))
+  
+  customLabs <- paste0(levels(coldat$Donor)," (",table(coldat$Donor),")")
+  
+  print(
+    ggplot(coldat,aes(x=cellType, color=Donor, fill=Donor)) + geom_bar(position="fill") +
+      scale_color_manual(values = cols.i,
+                         labels=customLabs) +
+      scale_fill_manual(values = cols.i,
+                        labels=customLabs) +
+      theme(axis.text.x = element_text(angle=90, hjust = 1, size=8),
+            legend.text = element_text(size = 8),
+            legend.key.size = unit(0.4, "cm")) +
+      ylab("Proportion") +
+      xlab("") +
+      scale_x_discrete(labels=paste0(levels(sce.i$cellType)," (",table(sce.i$cellType),")")) +
+      ggtitle(paste0("Distribution of ",region.names[i]," cell classes by donor"))
+  )
 }
-
-unique(dat.ldsc$Trait)
-    # [1] "ADHD"                            "Alzheimers_disease"
-    # [3] "Anorexia_nervosa"                "Anxiety_disorder"
-    # [5] "Autism_spectrum_disorder"        "Bipolar_disorder"
-    # [7] "BMI"                             "Childhood_cognitive_performance"
-    # [9] "Cigarettes_per_day"              "College_attainment"
-    # [11] "Conscientiousness"               "Coronary_artery_disease"
-    # [13] "Crohns_disease"                  "Depressive_symptoms"
-    # [15] "Epilepsy"                        "Ever_smoked"
-    # [17] "Extraversion"                    "Focal_epilepsy"
-    # [19] "Generalized_epilepsy"            "Height"
-    # [21] "Intracarebral_hemorrhage"        "IQ"
-    # [23] "Ischemic_stroke"                 "Major_depressive_disorder"
-    # [25] "Neuroticism"                     "Openness"
-    # [27] "PTSD"                            "Schizophrenia"
-    # [29] "Subjective_well-being"           "Years_of_education"
-
-# Bonferroni-significant
-dat.ldsc[dat.ldsc$Trait=="Schizophrenia" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
-dat.ldsc[dat.ldsc$Trait=="Bipolar_disorder" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
-    # (a lot, but for AMY/NAc:)
-        # [1] "amy:Excit.1"          "amy:Excit.2"          "amy:Excit.3"          "amy:Inhib.1"
-        # [5] "amy:Inhib.2"          "amy:Inhib.3"          "amy:Inhib.5"          "amy:OPC"
-        # [30] "nac:MSN.D1.3"
-dat.ldsc[dat.ldsc$Trait=="Major_depressive_disorder" & dat.ldsc$Enrichment_p < .05/nrow(dat.ldsc), ]$Category
-    # [1] "amy:Inhib.1"      "amy:Inhib.2"      "dlpfc:Excit.L3:4" "dlpfc:Inhib.5"    "dlpfc:Inhib.6"
-    # [6] "hpc:Inhib.2"      "hpc:Inhib.3"      "hpc:Inhib.4"      "hpc:Inhib.5"      "sacc:Inhib.1"
-
-# None for PTSD, Depressive_symptoms, Autism_spectrum_disorder at Bonferroni
-dat.ldsc[dat.ldsc$Trait=="PTSD" & dat.ldsc$Enrichment_holm < .05, ]$Category
-    # still none
-dat.ldsc[dat.ldsc$Trait=="Autism_spectrum_disorder" & dat.ldsc$Enrichment_holm < .05, ]$Category
-    # [1] "hpc:OPC"      "sacc:Inhib.1"
-
-
-
-
+dev.off()
 
 
 ### For LeCo/iSEE ==========================
