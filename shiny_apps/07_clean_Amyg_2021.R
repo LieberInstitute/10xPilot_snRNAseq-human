@@ -27,6 +27,7 @@ explore_sce_original(sce.amy.tsne.optb)
 sce_small <- create_small_sce_2021(sce.amy.tsne.optb, cell_var = "cellType.split")
 # 561 MB
 # 298 MB
+dim(sce_small)
 colData(sce_small)
 rowData(sce_small)
 
@@ -35,8 +36,9 @@ rowData(sce_small)
 # iSEE(sce_small)
 
 save_sce_small(sce_small, "Amyg", prefix = "tran2021_")
+save_cell_colors(cell_colors.amyg, "Amyg")
 
-create_app(sce_small, "Amyg", prefix = "tran2021_")
+create_app(sce_small, "Amyg", cellmarkers = cellmarkers_fig_s7_2021, prefix = "tran2021_")
 
 withr::with_dir(here("shiny_apps", "tran2021_Amyg"), source("deploy.R"))
 

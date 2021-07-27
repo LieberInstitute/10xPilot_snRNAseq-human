@@ -3,7 +3,8 @@ library("SingleCellExperiment")
 library("iSEE")
 library("shiny")
 
-sce <- readRDS("sce_{{regionlower}}_small.rds")
+sce_small <- readRDS("sce_{{regionlower}}_small.rds")
+cell_colors <- readRDS("cell_colors_{{regionlower}}.rds")
 stopifnot(packageVersion("iSEE") >= "2.4.0")
 
 
@@ -104,4 +105,13 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ColumnSelectionDynamicSource = FALSE, RowSelectionRestrict = FALSE,
     ColumnSelectionRestrict = TRUE, SelectionHistory = list())
 
-iSEE(sce, appTitle = "M.N. Tran et al 2021, {{region}} region https://bit.ly/LIBD10xHuman", initial = initial)
+iSEE(
+    sce_small,
+    appTitle = "M.N. Tran et al 2021, {{region}} region https://bit.ly/LIBD10xHuman",
+    initial = initial,
+    colormap = ExperimentColorMap(colData = list(
+        cell_type = function(n) {
+            cell_colors
+        }
+    ))
+)

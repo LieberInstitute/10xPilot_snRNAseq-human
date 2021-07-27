@@ -27,6 +27,7 @@ explore_sce_original(sce.sacc)
 sce_small <- create_small_sce_2021(sce.sacc, cell_var = "cellType")
 # 675 MB
 # 353 MB
+dim(sce_small)
 colData(sce_small)
 rowData(sce_small)
 
@@ -35,8 +36,9 @@ rowData(sce_small)
 # iSEE(sce_small)
 
 save_sce_small(sce_small, "sACC", prefix = "tran2021_")
+save_cell_colors(cell_colors.sacc, "sACC")
 
-create_app(sce_small, "sACC", prefix = "tran2021_")
+create_app(sce_small, "sACC", cellmarkers = cellmarkers_fig_s7_2021, prefix = "tran2021_")
 
 withr::with_dir(here("shiny_apps", "tran2021_sACC"), source("deploy.R"))
 

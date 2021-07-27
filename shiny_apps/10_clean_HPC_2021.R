@@ -31,6 +31,7 @@ explore_sce_original(sce.hpc)
 sce_small <- create_small_sce_2021(sce.hpc, cell_var = "cellType.split")
 # 751 MB
 # 395 MB
+dim(sce_small)
 colData(sce_small)
 rowData(sce_small)
 
@@ -39,8 +40,9 @@ rowData(sce_small)
 # iSEE(sce_small)
 
 save_sce_small(sce_small, "HPC", prefix = "tran2021_")
+save_cell_colors(cell_colors.hpc, "HPC")
 
-create_app(sce_small, "HPC", prefix = "tran2021_")
+create_app(sce_small, "HPC", cellmarkers = cellmarkers_fig_s7_2021, prefix = "tran2021_")
 
 withr::with_dir(here("shiny_apps", "tran2021_HPC"), source("deploy.R"))
 

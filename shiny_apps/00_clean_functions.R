@@ -148,6 +148,15 @@ save_sce_small <- function(sce_small, region, prefix = "tran2020_") {
     saveRDS(sce_small, file = here("shiny_apps", region_dir, paste0("sce_", tolower(region), "_small.rds")))
 }
 
+save_cell_colors <- function(cell_colors, region, prefix = "tran2021_") {
+    region_dir <- paste0(prefix, region)
+    dir.create(here::here("shiny_apps", region_dir), showWarnings = FALSE)
+    saveRDS(cell_colors, file = here("shiny_apps", region_dir, paste0("cell_colors_", tolower(region), ".rds")))
+}
+
+cellmarkers_fig_s7_2021 <- paste0(c('SNAP25','SLC17A6','SLC17A7','SLC17A8','GAD1','GAD2','DRD1','DRD2','AQP4','GFAP','CLDN5','FLT1',
+           'CD163','SIGLEC1','C3','CD74','COL1A2','PDGFRB','MBP','PDGFRA','VCAN','SKAP1','CD247'), collapse = "\n")
+
 create_app <- function(sce_small, region, cellmarkers = "SNAP25\nMBP\nPCP4", prefix = "tran2020_") {
     library("whisker")
     library("usethis")

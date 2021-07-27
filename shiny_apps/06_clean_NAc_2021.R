@@ -65,8 +65,9 @@ rowData(sce_small)
 # iSEE(sce_small)
 
 save_sce_small(sce_small, "NAc", prefix = "tran2021_")
+save_cell_colors(cell_colors.nac, "NAc")
 
-create_app(sce_small, "NAc", prefix = "tran2021_")
+create_app(sce_small, "NAc", cellmarkers = cellmarkers_fig_s7_2021, prefix = "tran2021_")
 
 withr::with_dir(here("shiny_apps", "tran2021_NAc"), source("deploy.R"))
 
