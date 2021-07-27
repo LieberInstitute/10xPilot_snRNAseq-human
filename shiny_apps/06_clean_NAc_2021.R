@@ -58,7 +58,6 @@ sce_small <- create_small_sce_2021(sce.nac)
 dim(sce_small)
 # [1] 33538 19892
 colData(sce_small)
-sce_small$cellType <- NULL
 rowData(sce_small)
 
 
