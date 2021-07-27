@@ -605,11 +605,17 @@ t(round(apply(table(sce.nac$cellType, sce.nac$bothD1D2)[11:20, ],1,prop.table),3
 
 
 
-## MNT 20Jul2021: Tabulating all regionally-defined clusters per donor ===
-load("rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda", verbose=T)
-    # sce.allRegions, etc. (already have the 'drop.' clusters removed)
+## MNT 27Jul2021: Tabulating all regionally-defined clusters per donor ===
+ #                * keep the 'drop.' clusters for transparency - kept in supp fig.
+load("rdas/revision/all-n24-samples_across-regions-analyses_MNT2021.rda", verbose=T)
+    # sce.allRegions, chosen.hvgs.union, ref.sampleInfo, cell_colors.amy, cell_colors.dlpfc, cell_colors.hpc, cell_colors.sacc, cell_colors.nac
 
-RS.donorTab <- as.data.frame.matrix(table(sce.allRegions$cellType, sce.allRegions$donor))
+# Add those new 'de-identified' donor IDs
+donorRef <- data.frame(donor=unique(sce.allRegions$donor),
+                       pub.donorID=paste0("donor", 1:8))
+sce.allRegions$pub.donorID <- donorRef$pub.donorID[match(sce.allRegions$donor, donorRef$donor)]
+
+RS.donorTab <- as.data.frame.matrix(table(sce.allRegions$cellType, sce.allRegions$pub.donorID))
 # Trick some reordering by region
 RS.donorTab$Region <- ss(rownames(RS.donorTab),"_",1)
 RS.donorTab$CellType <- paste0(ss(rownames(RS.donorTab),"_",2), "_", ss(rownames(RS.donorTab),"_",3))
@@ -617,12 +623,13 @@ RS.donorTab$CellType <- gsub("_NA","",RS.donorTab$CellType)
 
 
 # Reorder from most sampled donor to least
-RS.donorTab <- RS.donorTab[ ,c("br5161","br5212","br5400","br5701",
-                               "br5276","br5207","br5287","br5182",
+RS.donorTab <- RS.donorTab[ ,c("donor1","donor2","donor4","donor8",
+                               "donor5","donor6","donor3","donor7",
                                "CellType","Region")]
 
 # Write into table
-write.table(RS.donorTab, file="tables/revision/suppTable_107-RS-classes_donorStratified_MNT2021.tsv",
+#write.table(RS.donorTab, file="tables/revision/suppTable_107-RS-classes_donorStratified_MNT2021.tsv",
+write.table(RS.donorTab, file="tables/revision/suppTable_107-RS-classes_12drops_donorStratified_MNT2021.tsv",
             sep="\t", quote=F, row.names=F,col.names=T)
 
 
@@ -1047,8 +1054,72 @@ plotTSNE(sce.amy.red, colour_by="cell_type")
 
 
 
-
-
-
+### Session info for 27Jul2021 ====================================================
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] parallel  stats4    stats     graphics  grDevices datasets  utils     methods  
+# [9] base     
+# 
+# other attached packages:
+#   [1] reshape2_1.4.4              dplyr_1.0.5                 plotly_4.9.3               
+# [4] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
+# [7] batchelor_1.6.3             scran_1.18.7                scater_1.18.6              
+# [10] ggplot2_3.3.3               EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1           
+# [13] AnnotationFilter_1.14.0     GenomicFeatures_1.42.3      AnnotationDbi_1.52.0       
+# [16] SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0 Biobase_2.50.0             
+# [19] GenomicRanges_1.42.0        GenomeInfoDb_1.26.7         IRanges_2.24.1             
+# [22] S4Vectors_0.28.1            BiocGenerics_0.36.1         MatrixGenerics_1.2.1       
+# [25] matrixStats_0.58.0         
+# 
+# loaded via a namespace (and not attached):
+#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
+# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
+# [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
+# [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
+# [16] sparseMatrixStats_1.2.1   cachem_1.0.4              jsonlite_1.7.2           
+# [19] Rsamtools_2.6.0           ResidualMatrix_1.0.0      dbplyr_2.1.1             
+# [22] R.oo_1.24.0               HDF5Array_1.18.1          compiler_4.0.4           
+# [25] httr_1.4.2                dqrng_0.3.0               assertthat_0.2.1         
+# [28] Matrix_1.3-4              fastmap_1.1.0             lazyeval_0.2.2           
+# [31] limma_3.46.0              BiocSingular_1.6.0        htmltools_0.5.1.1        
+# [34] prettyunits_1.1.1         tools_4.0.4               rsvd_1.0.5               
+# [37] igraph_1.2.6              gtable_0.3.0              glue_1.4.2               
+# [40] GenomeInfoDbData_1.2.4    rappdirs_0.3.3            Rcpp_1.0.6               
+# [43] vctrs_0.3.8               Biostrings_2.58.0         rhdf5filters_1.2.0       
+# [46] rtracklayer_1.50.0        DelayedMatrixStats_1.12.3 stringr_1.4.0            
+# [49] beachmat_2.6.4            lifecycle_1.0.0           irlba_2.3.3              
+# [52] statmod_1.4.35            XML_3.99-0.6              edgeR_3.32.1             
+# [55] zlibbioc_1.36.0           scales_1.1.1              hms_1.0.0                
+# [58] ProtGenerics_1.22.0       rhdf5_2.34.0              RColorBrewer_1.1-2       
+# [61] curl_4.3                  memoise_2.0.0             gridExtra_2.3            
+# [64] segmented_1.3-4           biomaRt_2.46.3            stringi_1.5.3            
+# [67] RSQLite_2.2.7             BiocParallel_1.24.1       rlang_0.4.11             
+# [70] pkgconfig_2.0.3           bitops_1.0-7              lattice_0.20-41          
+# [73] purrr_0.3.4               Rhdf5lib_1.12.1           htmlwidgets_1.5.3        
+# [76] labeling_0.4.2            GenomicAlignments_1.26.0  bit_4.0.4                
+# [79] tidyselect_1.1.1          plyr_1.8.6                magrittr_2.0.1           
+# [82] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+# [85] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+# [88] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+# [91] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
+# [94] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
+# [97] data.table_1.14.0         blob_1.2.1                digest_0.6.27            
+# [100] tidyr_1.1.3               R.utils_2.10.1            openssl_1.4.3            
+# [103] munsell_0.5.0             beeswarm_0.4.0            viridisLite_0.4.0        
+# [106] vipor_0.4.5               askpass_1.1  
 
 
