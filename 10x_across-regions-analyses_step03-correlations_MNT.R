@@ -544,7 +544,7 @@ plotExpressionCustom(sce.dlpfc, anno_name="cellType", features_name="some AMY 'I
 
 ### NAc 'excit' MSNs vs others?? =============================
   # 'MSN.D1_A', 'MSN.D1_D', 'MSN.D2_A', 'MSN.D2_B' vs the rest
-load("rdas/revision/")
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
 
 sce.test <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
 sce.test$cellType <- droplevels(sce.test$cellType)
@@ -584,7 +584,7 @@ coldat$cellType.MSNs <- as.character(coldat$cellType)
 coldat$cellType.MSNs[grep("MSN", coldat$cellType.MSNs)] <- "MSN.broad"
 coldat$cellType.MSNs <- factor(coldat$cellType.MSNs)
 
-# Trick soome cell class colors - use blue & red
+# Trick some cell class colors - use blue & red
 cell_colors.nac.hold <- cell_colors.nac
 cell_colors.nac <- cell_colors.nac[names(cell_colors.nac) %in% levels(sce.test$cellType.con)]
 cell_colors.nac["MSN.excit"] <- cell_colors.nac.hold["MSN.D1_A"]
@@ -636,6 +636,134 @@ for(i in 1:10){
 }
 dev.off()
 
+
+## Violin plot iteration =======
+pdf("pdfs/revision/regionSpecific_top10PCs_cellClass_MSNsGrouped-or-split_violins_MNT2021.pdf")
+for(i in 1:10){
+grouped <- ggplot(coldat, aes_string(x="cellType.MSNs",y=colnames(coldat)[i],
+                                     fill="cellType.MSNs",color="cellType.MSNs")) +
+              geom_violin(alpha=0.4,size=1.2) +
+              scale_color_manual(values=cell_colors.nac) +
+              labs(colour="Cell class") +
+              scale_fill_manual(values=cell_colors.nac) + guides(fill=FALSE) +
+              ylab(paste0("PC", i)) + xlab("") +
+              ggtitle(paste0("Principal component ",i," by cell class; all MSNs grouped")) +
+              theme(axis.title.x = element_text(size = 13),
+                    axis.text.x = element_text(angle=90, hjust = 1, size = 11),
+                    axis.title.y = element_text(angle = 90, size = 14),
+                    axis.text.y = element_text(size = 11),
+                    plot.title = element_text(size = 12),
+                    legend.text = element_text(size = 9),
+                    legend.key.size = unit(0.4, "cm"))
+# Separated into 'Excit' & 'Inhib'
+separated <- ggplot(coldat, aes_string(x="cellType.MSNs",y=colnames(coldat)[i],
+                                       fill="cellType.con",color="cellType.con")) +
+                geom_violin(alpha=0.4,size=1.2) +
+                scale_color_manual(values=cell_colors.nac) +
+                labs(colour="Cell class") +
+                scale_fill_manual(values=cell_colors.nac) + guides(fill=FALSE) +
+                ylab(paste0("PC", i)) + xlab("") +
+                ggtitle(paste0("Principal component ",i," by cell class; MSNs separated by signature")) +
+                theme(axis.title.x = element_text(size = 13),
+                      axis.text.x = element_text(angle=90, hjust = 1, size = 11),
+                      axis.title.y = element_text(angle = 90, size = 14),
+                      axis.text.y = element_text(size = 11),
+                      plot.title = element_text(size = 12),
+                      legend.text = element_text(size = 9),
+                      legend.key.size = unit(0.4, "cm"))
+# Plot both per page:
+grid.arrange(grobs=list(grouped,
+                        separated),
+             layout_matrix=lay)
+}
+dev.off()
+
+
+### 'Excitatory' MSNs [+ rest of excitatory 'branch'] vs the rest (or vs other MSNs at least) =========
+## From above:
+# Top 100 cluster genes space
+cor_t_neu_cluster <- pheatmap(cor_t_defined.neu,
+                              color=my.col.all,
+                              breaks=theSeq.all,
+                              fontsize_row=6.2, fontsize_col=6.2, cex=1,
+                              clustering_distance_rows="euclidean",
+                              clustering_distance_cols="euclidean",
+                              clustering_method="complete")
+
+rownames(cor_t_defined.neu[cor_t_neu_cluster$tree_row[["order"]],]) # This is the order we want
+    # [1] "MSN.D1_D_nac"  "MSN.D2_B_nac"  "Inhib_E_amy"   "MSN.D1_A_nac"  "MSN.D2_A_nac" 
+    # [6] "Excit_A_sacc"  "Excit_E_sacc"  "Excit_F_hpc"   "Excit_A_dlpfc" "Excit_D_dlpfc"
+    # [11] "Excit_F_sacc"  "Excit_C_sacc"  "Excit_E_dlpfc" "Excit_D_sacc"  "Excit_C_amy"  
+    # [16] "Excit_B_dlpfc" "Excit_C_dlpfc" "Excit_A_hpc"   "Excit_D_hpc"   "Excit_A_amy"  
+    # [21] "Excit_B_hpc"   "Excit_F_dlpfc" "Excit_B_sacc"  "Inhib_C_amy"   "Inhib_B_hpc"  
+    # [26] "Excit_C_hpc"   "Inhib_G_amy"   "Inhib_A_amy"   "Excit_E_hpc"  
+excit.classes <- rownames(cor_t_defined.neu[cor_t_neu_cluster$tree_row[["order"]],])[1:29]
+# Clean this up (needs to look like 'region_Class')
+excit.classes <- paste0(ss(excit.classes,"_",3),
+                        "_",
+                        ss(excit.classes,"_",1),
+                        "_",
+                        ss(excit.classes,"_",2))
+
+# Wanna test specifically this 'excitatory branch' vs the other MSNs
+sub.classes <- c(excit.classes, "nac_MSN.D1_B","nac_MSN.D1_C","nac_MSN.D1_E","nac_MSN.D1_F",
+                 "nac_MSN.D2_C","nac_MSN.D2_D")
+
+# Load and subset those for some contrasts
+load("rdas/revision/all-n24-samples_across-regions-analyses_forFigOnly_MNT2021.rda", verbose=T)
+
+sce.sub <- sce.allRegions[ ,sce.allRegions$cellType %in% sub.classes]
+sce.sub$cellType <- droplevels(sce.sub$cellType)
+table(sce.sub$cellType)
+# Re-create 'logcounts'
+sizeFactors(sce.sub) <- NULL
+assay(sce.sub, "logcounts") <- NULL
+sce.sub <- logNormCounts(sce.sub)
+
+# Make contrast
+sce.sub$excit.branch <- ifelse(sce.sub$cellType %in% excit.classes, 1, 0)
+
+# t-test: test 'excit' vs. rest of MSNs
+#         since binarizing, can use the '1vAll' approach to keep both contrasts
+mod <- with(colData(sce.sub), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.excit.branch <- findMarkers(sce.sub, groups=sce.sub$excit.branch,
+                                    assay.type="logcounts", design=mod, test="t",
+                                    std.lfc=TRUE,
+                                    direction="up", pval.type="all", full.stats=T)
+
+# Only one contrast, so take that column
+markers.excit.branch <- lapply(markers.excit.branch, function(x){ x[ ,4] })
+names(markers.excit.branch) <- c("Excit_depleted", "Excit_enriched")
+
+sapply(markers.excit.branch, function(x){table(x$log.FDR <= log(0.05))})
+    #       Excit_depleted Excit_enriched
+    # FALSE          28108          27182
+    # TRUE            5430           6356
+
+
+Readme <- "This test is comparing all 'excitatory branch' classes from the across-regions (including four MSN D1/D2 classes) analysis vs those remaining 'inhibitory' MSNs"
+save(markers.excit.branch, excit.classes, Readme,
+     file="rdas/revision/markers-stats_x-regions_excitBranch-vs-restOfMSNs_MNT2021.rda")
+
+head(rownames(markers.excit.branch[["Excit_enriched"]]), n=40)
+    # [1] "NRG3"       "RGS7"       "GRM5"       "ARAP2"      "RGS6"       "ZMAT4"     
+    # [7] "AK5"        "CSMD1"      "ARNT2"      "UTRN"       "KCNMA1"     "LDLRAD4"   
+    # [13] "GPC5"       "EPB41L2"    "LIMCH1"     "PRKCB"      "MAP3K5"     "COCH"      
+    # [19] "AC073050.1" "SLC35F3"    "SLC8A1"     "TJP1"       "ADAMTS19"   "FRMD5"     
+    # [25] "FMNL2"      "MAN1A1"     "EFNA5"      "HTR2C"      "XKR4"       "AC008574.1"
+    # [31] "LDB2"       "KIRREL3"    "ADK"        "SGCZ"       "ERC2"       "PDZD2"     
+    # [37] "HS6ST3"     "ABLIM1"     "PDE3B"      "DOCK4"    
+
+head(rownames(markers.excit.branch[["Excit_depleted"]]), n=40)
+    # [1] "ADARB2"     "ALK"        "LUZP2"      "CASZ1"      "KIRREL1"    "RXRG"      
+    # [7] "KCNT2"      "SORCS2"     "CACNG5"     "BACH2"      "PMEPA1"     "EPS8"      
+    # [13] "TACR1"      "SEMA5B"     "SEMA6D"     "DLX6-AS1"   "TSHZ1"      "GDNF-AS1"  
+    # [19] "CRHR2"      "GABRG3"     "SLC35F1"    "KIT"        "FOXP2"      "AC068722.1"
+    # [25] "TRHDE"      "PLCB1"      "ARHGAP18"   "PLCXD3"     "AL590867.1" "FHOD3"     
+    # [31] "FAM155A"    "MTSS1"      "AC022126.1" "PDLIM5"     "CPNE4"      "TLL1"      
+    # [37] "PCSK2"      "AL589740.1" "SPON1"      "LOXHD1"   
 
 
 
