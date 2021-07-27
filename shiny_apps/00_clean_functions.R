@@ -68,13 +68,13 @@ create_small_sce <- function(sce_original, cell_var = "cellType.final") {
     return(sce_small)
 }
 
-save_sce_small <- function(sce_small, region) {
-    region_dir <- paste0("tran2020_", region)
+save_sce_small <- function(sce_small, region, prefix = "tran2020_") {
+    region_dir <- paste0(prefix, region)
     dir.create(here::here("shiny_apps", region_dir), showWarnings = FALSE)
     saveRDS(sce_small, file = here("shiny_apps", region_dir, paste0("sce_", tolower(region), "_small.rds")))
 }
 
-create_app <- function(sce_small, region, cellmarkers = "SNAP25\nMBP\nPCP4") {
+create_app <- function(sce_small, region, cellmarkers = "SNAP25\nMBP\nPCP4", prefix = "tran2020_") {
     library("whisker")
     library("usethis")
     library("here")
@@ -85,7 +85,7 @@ create_app <- function(sce_small, region, cellmarkers = "SNAP25\nMBP\nPCP4") {
         cellone = colnames(sce_small)[1],
         cellmarkers = cellmarkers
     )
-    region_dir <- paste0("tran2020_", region)
+    region_dir <- paste0(prefix, region)
     new_template <- whisker::whisker.render(
         usethis:::read_utf8(here::here("shiny_apps", "templates", "app.R")),
         data
