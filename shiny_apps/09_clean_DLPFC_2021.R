@@ -8,7 +8,7 @@ library("usethis")
 library("withr")
 library("sessioninfo")
 
-load(here("rdas", "regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda"), verbose = TRUE)
+load(here("rdas", "revision", "regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda"), verbose = TRUE)
 
 source(here("shiny_apps", "00_clean_functions.R"))
 

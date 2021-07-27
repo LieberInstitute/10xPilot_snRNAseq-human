@@ -8,7 +8,7 @@ library("usethis")
 library("withr")
 library("sessioninfo")
 
-load(here("rdas", "ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda"), verbose = TRUE)
+load(here("rdas", "revision", "regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda"), verbose = TRUE)
 
 source(here("shiny_apps", "00_clean_functions.R"))
 

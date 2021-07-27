@@ -8,7 +8,7 @@ library("usethis")
 library("withr")
 library("sessioninfo")
 
-load(here("rdas", "ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda"), verbose = TRUE)
+load(here("rdas", "revision", "regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda"), verbose = TRUE)
 
 source(here("shiny_apps", "00_clean_functions.R"))
 
