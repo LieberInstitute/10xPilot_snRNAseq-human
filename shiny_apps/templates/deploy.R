@@ -4,4 +4,4 @@ rsconnect::setAccountInfo(name=deploy_info$name, token=deploy_info$token,
     secret=deploy_info$secret)
 options(repos = BiocManager::repositories())
 rsconnect::deployApp(appFiles = c('app.R', "sce_{{regionlower}}_small.rds"),
-    appName = 'tran2020_{{region}}', account = 'libd', server = 'shinyapps.io')
+    appName = 'tran2021_{{region}}', account = 'libd', server = 'shinyapps.io')

@@ -34,9 +34,9 @@ rowData(sce_small)
 ## Test and get the "initial" code
 # iSEE(sce_small)
 
-save_sce_small(sce_small, "Amyg")
+save_sce_small(sce_small, "Amyg", prefix = "tran2021_")
 
-create_app(sce_small, "Amyg")
+create_app(sce_small, "Amyg", prefix = "tran2021_")
 
 withr::with_dir(here("shiny_apps", "tran2020_Amyg"), source("deploy.R"))
 

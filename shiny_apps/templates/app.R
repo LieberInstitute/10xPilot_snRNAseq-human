@@ -96,4 +96,4 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
     ColumnSelectionType = "Active", ColumnSelectionSaved = 0L,
     SelectionHistory = list())
 
-iSEE(sce, appTitle = "M.N. Tran et al 2020, {{region}} region https://bit.ly/LIBD10xHuman", initial = initial)
+iSEE(sce, appTitle = "M.N. Tran et al 2021, {{region}} region https://bit.ly/LIBD10xHuman", initial = initial)
