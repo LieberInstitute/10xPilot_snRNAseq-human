@@ -1,7 +1,7 @@
 library("SingleCellExperiment")
 library("rafalib")
 library("iSEE")
-library("pryr")
+library("lobstr")
 library("here")
 library("whisker")
 library("usethis")
@@ -12,28 +12,53 @@ load(here("rdas", "revision", "regionSpecific_NAc-n8_cleaned-combined_MNT2021.rd
 
 source(here("shiny_apps", "00_clean_functions.R"))
 
-explore_sce_original(sce.all.tsne.15pcs)
+explore_sce_original(sce.nac)
 # [1] "Dimensions:"
-# [1] 33538 13148
+# [1] 33538 20571
 # [1] "Number of unique cell names:"
-# [1] 13131
+# [1] 20514
 # [1] "Repeated cell names:"
 #
-# AGAAATGCACTTCCTG-1 AGGACTTTCTAGCAAC-1 ATGAGTCTCGACATCA-1 CACGGGTGTGAGCAGT-1 CATTCATGTCCTACGG-1
-# 2                  2                  2                  2                  2
-# CCGTTCAGTCCATAGT-1 CTATAGGTCACTGCTC-1 CTCTCGACAGTTAAAG-1 GACCGTGGTTGTCTAG-1 GACTGATGTCCGATCG-1
-# 2                  2                  2                  2                  2
-# GATTTCTAGTGGCGAT-1 GCAGTTAAGTAAGACT-1 GGGTTATGTGCGAGTA-1 TAAGCACAGTCATGAA-1 TCGCAGGTCCGTTTCG-1
-# 2                  2                  2                  2                  2
-# TGATCAGGTAGGATAT-1 TGGGATTGTGATGAAT-1
-# 2                  2
+# AAAGAACAGCGAGTCA-1 AAAGGTAGTTTCGTTT-1 AAAGTCCCAGCCTACG-1 AAATGGATCCCGTAAA-1
+#                  2                  2                  2                  2
+# AACACACGTGTGACCC-1 AAGTCGTAGTGGCAGT-1 ACCAACATCGGTCATA-1 ACGATGTGTAGTAAGT-1
+#                  2                  2                  2                  2
+# ACTGCAACAACATCGT-1 AGAAATGCACTTCCTG-1 AGCATCAGTCAAGTTC-1 AGGACTTTCTAGCAAC-1
+#                  2                  2                  2                  2
+# AGGCCACGTCCAGCAC-1 ATCAGGTTCATTCCTA-1 ATGACCAGTTAAGGAT-1 ATGAGGGCAGCTTTGA-1
+#                  2                  2                  2                  2
+# ATGAGTCTCGACATCA-1 ATTACCTAGACTCGAG-1 ATTGGGTTCCGTATAG-1 CACGGGTGTGAGCAGT-1
+#                  2                  2                  2                  2
+# CACTGTCGTCCTTTGC-1 CAGATACGTTGGCCGT-1 CAGGGCTTCAGACCCG-1 CAGTTCCAGTCGTTAC-1
+#                  2                  2                  2                  2
+# CATTCATGTCCTACGG-1 CCCTCAAAGCAATTCC-1 CCGTTCAGTCCATAGT-1 CCTCTCCGTTCAAGTC-1
+#                  2                  2                  2                  2
+# CCTGCATAGTGCTAGG-1 CGTTGGGTCTGTGCAA-1 CTATAGGTCACTGCTC-1 CTCACTGTCGCGTGCA-1
+#                  2                  2                  2                  2
+# CTCTCGACAGTTAAAG-1 GACCGTGGTTGTCTAG-1 GACCTTCGTCTGTAAC-1 GACTGATGTCCGATCG-1
+#                  2                  2                  2                  2
+# GATTTCTAGTGGCGAT-1 GCAGTTAAGTAAGACT-1 GCGTGCAGTATATGGA-1 GGACGTCCAGGTGACA-1
+#                  2                  2                  2                  2
+# GGCTTGGCATCGTGGC-1 GGGTTATGTGCGAGTA-1 GGTGATTAGCTGACAG-1 GTTCCGTGTTGGAGAC-1
+#                  2                  2                  2                  2
+# TAAGCACAGTCATGAA-1 TCACAAGAGGCTTAGG-1 TCCTAATTCGATAACC-1 TCGCAGGTCCGTTTCG-1
+#                  2                  2                  2                  2
+# TGAACGTGTGTCCTAA-1 TGATCAGGTAGGATAT-1 TGCTCGTTCCGCGAGT-1 TGGAACTGTGGTTCTA-1
+#                  2                  2                  2                  2
+# TGGGAAGAGAAGGGAT-1 TGGGATTGTGATGAAT-1 TGTGTGACACTGTGAT-1 TTGACCCGTTCCGCTT-1
+#                  2                  2                  2                  2
+# TTGTGTTCAATCGCGC-1
+#                  2
 # [1] "Number of unique genes names:"
 # [1] 33538
 
-sce_small <- create_small_sce(sce.all.tsne.15pcs)
-# 1.55 GB
-# 801 MB
+sce_small <- create_small_sce_2021(sce.nac)
+# * 2.120966 B
+# * 1.093446 B
+dim(sce_small)
+# [1] 33538 19892
 colData(sce_small)
+sce_small$cellType <- NULL
 rowData(sce_small)
 
 
@@ -44,7 +69,7 @@ save_sce_small(sce_small, "NAc", prefix = "tran2021_")
 
 create_app(sce_small, "NAc", prefix = "tran2021_")
 
-withr::with_dir(here("shiny_apps", "tran2020_NAc"), source("deploy.R"))
+withr::with_dir(here("shiny_apps", "tran2021_NAc"), source("deploy.R"))
 
 ## Reproducibility information
 print('Reproducibility information:')

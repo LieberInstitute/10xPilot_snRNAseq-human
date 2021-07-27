@@ -1,7 +1,7 @@
 library("SingleCellExperiment")
 library("rafalib")
 library("iSEE")
-library("pryr")
+library("lobstr")
 library("here")
 library("whisker")
 library("usethis")
@@ -24,7 +24,7 @@ explore_sce_original(sce.amy.tsne.optb)
 # [1] "Number of unique genes names:"
 # [1] 33538
 
-sce_small <- create_small_sce(sce.amy.tsne.optb, cell_var = "cellType.split")
+sce_small <- create_small_sce_2021(sce.amy.tsne.optb, cell_var = "cellType.split")
 # 561 MB
 # 298 MB
 colData(sce_small)
@@ -38,7 +38,7 @@ save_sce_small(sce_small, "Amyg", prefix = "tran2021_")
 
 create_app(sce_small, "Amyg", prefix = "tran2021_")
 
-withr::with_dir(here("shiny_apps", "tran2020_Amyg"), source("deploy.R"))
+withr::with_dir(here("shiny_apps", "tran2021_Amyg"), source("deploy.R"))
 
 ## Reproducibility information
 print('Reproducibility information:')

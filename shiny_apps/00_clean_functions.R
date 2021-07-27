@@ -68,6 +68,80 @@ create_small_sce <- function(sce_original, cell_var = "cellType.final") {
     return(sce_small)
 }
 
+## Donor map info from Matt
+donor_map <- paste0("donor", seq_len(8))
+names(donor_map) <- c("br5161", "br5212", "br5287", "br5400", "br5276", "br5207", "br5182", "br5701")
+
+## 2021 data version
+create_small_sce_2021 <- function(sce_original) {
+    library("SingleCellExperiment")
+    library("rafalib")
+
+    ## Drop some nuclei to begin with
+    sce_original <- sce_original[ ,-grep("drop", sce_original$cellType)]
+    sce_original$cellType <- droplevels(sce_original$cellType)
+    stopifnot(all(unique(sce_original$donor) %in% names(donor_map)))
+    sce_original$donor <- unname(donor_map[sce_original$donor])
+
+    message(Sys.time(), " reducing the sce object")
+    sce_small <- sce_original
+    assays(sce_small) <- assays(sce_small)["logcounts"]
+    sce_small$donor <- factor(sce_small$donor)
+    sce_small$sex <- factor(sce_small$sex)
+    sce_small$processBatch <- factor(sce_small$processBatch)
+    sce_small$protocol <- factor(sce_small$protocol)
+    sce_small$sequencer <- factor(sce_small$sequencer)
+    sce_small$cell_type <- factor(sce_small$cellType)
+    colData(sce_small) <- colData(sce_small)[, !colnames(colData(sce_small)) %in% c("Sample", "prelimCluster", "collapsedCluster", "lessCollapsed", "cellType", "prelimCluster.split", "cellType.moreSplit", "cellType.split", "sampleID", "high.mito", "region")]
+
+
+    ## Make the rows more browsable
+    sce_small$Barcode <- make.names(sce_small$Barcode, unique = TRUE)
+    colnames(sce_small) <- paste0(sce_small$donor, '_', sce_small$Barcode)
+    metadata(sce_small) <- list()
+
+    ## Fix the "Symbol" and "ID" variables
+    colnames(rowData(sce_small))[colnames(rowData(sce_small)) == "gene_id"] <- "ID"
+    colnames(rowData(sce_small))[colnames(rowData(sce_small)) == "Symbol.uniq"] <- "Symbol"
+
+    ## Drop things we don't need
+    rowData(sce_small)$gene_version <- NULL
+    rowData(sce_small)$gene_name <- NULL
+    rowData(sce_small)$gene_source <- NULL
+
+    ## I guess that this one could be of use
+    rowData(sce_small)$gene_biotype <- factor(rowData(sce_small)$gene_biotype)
+
+    message(Sys.time(), " computing propNucleiExprs")
+
+    rowData(sce_small)$propNucleiExprs <- apply(
+        assay(sce_original, "counts"),
+        1,
+        function(x) {
+            mean(x != 0)
+        }
+    )
+    # The above, by cell type ===
+    cellType.idx <- splitit(sce_small$cell_type)
+    rowdat.sce <- rowData(sce_small)
+    for(i in names(cellType.idx)){
+        message(Sys.time(), " computing propNucleiExprs for ", i)
+        rowdat.sce[, paste0("propExprsIn.", i)] <- apply(
+            assay(sce_original, "counts")[, cellType.idx[[i]]],
+            1,
+            function(x){
+                mean(x != 0)
+            }
+        )
+    }
+    rowData(sce_small) <- rowdat.sce
+
+    print(c(lobstr::obj_size(sce_original), lobstr::obj_size(sce_small)) / 1024^3)
+
+    return(sce_small)
+}
+
+
 save_sce_small <- function(sce_small, region, prefix = "tran2020_") {
     region_dir <- paste0(prefix, region)
     dir.create(here::here("shiny_apps", region_dir), showWarnings = FALSE)

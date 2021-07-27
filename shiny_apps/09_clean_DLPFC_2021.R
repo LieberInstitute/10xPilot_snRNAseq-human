@@ -1,7 +1,7 @@
 library("SingleCellExperiment")
 library("rafalib")
 library("iSEE")
-library("pryr")
+library("lobstr")
 library("here")
 library("whisker")
 library("usethis")
@@ -23,7 +23,7 @@ explore_sce_original(sce.dlpfc.st)
 # [1] "Number of unique genes names:"
 # [1] 33538
 
-sce_small <- create_small_sce(sce.dlpfc.st, cell_var = "cellType.split")
+sce_small <- create_small_sce_2021(sce.dlpfc.st, cell_var = "cellType.split")
 # 405 MB
 # 220 MB
 colData(sce_small)
@@ -37,7 +37,7 @@ save_sce_small(sce_small, "DLPFC", prefix = "tran2021_")
 
 create_app(sce_small, "DLPFC", prefix = "tran2021_")
 
-withr::with_dir(here("shiny_apps", "tran2020_DLPFC"), source("deploy.R"))
+withr::with_dir(here("shiny_apps", "tran2021_DLPFC"), source("deploy.R"))
 
 ## Reproducibility information
 print('Reproducibility information:')
