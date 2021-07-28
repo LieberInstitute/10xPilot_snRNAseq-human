@@ -13,13 +13,24 @@ TODO
 
 We have provided 5 interactive websites that allow you to explore the data at single nucleus resolution for each of the brain regions. These interactive websites are powered by [`iSEE`](https://bioconductor.org/packages/iSEE) that allows you to add, hide, customize panels for visualizing the data. Please check the [`iSEE`](https://bioconductor.org/packages/iSEE) documentation for instructions on how to customize the panels. In particular, you might be interested in visualizing some of the marker genes from the lists provided below for the _region-specific analyses_.
 
+* https://libd.shinyapps.io/tran2021_Amyg/
+* https://libd.shinyapps.io/tran2021_DLPFC/
+* https://libd.shinyapps.io/tran2021_HPC/
+* https://libd.shinyapps.io/tran2021_NAc/
+* https://libd.shinyapps.io/tran2021_sACC/
+
+If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
+
+### Pre-print versions
+
+If you are interested in exploring the data from the pre-print version which had 3 donors instead of 8, please check the following links.
+
 * https://libd.shinyapps.io/tran2020_Amyg/
 * https://libd.shinyapps.io/tran2020_DLPFC/
 * https://libd.shinyapps.io/tran2020_HPC/
 * https://libd.shinyapps.io/tran2020_NAc/
 * https://libd.shinyapps.io/tran2020_sACC/
 
-If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
 
 
 ## Work with the data
