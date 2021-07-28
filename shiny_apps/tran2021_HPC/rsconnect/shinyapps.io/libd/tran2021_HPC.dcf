@@ -1,0 +1,11 @@
+name: tran2021_HPC
+title:
+username:
+account: libd
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4434365
+bundleId: 4866233
+url: https://libd.shinyapps.io/tran2021_HPC/
+when: 1627510629.31025
+lastSyncTime: 1627510629.31026
