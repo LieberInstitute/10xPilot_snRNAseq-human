@@ -5,7 +5,7 @@ account: libd
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4430590
-bundleId: 4862361
+bundleId: 4866041
 url: https://libd.shinyapps.io/tran2021_NAc/
-when: 1627431307.15339
-lastSyncTime: 1627431307.15345
+when: 1627506631.65506
+lastSyncTime: 1627506631.65507

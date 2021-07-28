@@ -68,8 +68,8 @@ VCAN
 SKAP1
 CD247", ClusterRows = FALSE,
     ClusterRowsDistance = "spearman", ClusterRowsMethod = "ward.D2",
-    DataBoxOpen = FALSE, VisualChoices = "Annotations", ColumnData = c("donor",
-    "cell_type"), RowData = character(0), CustomBounds = FALSE,
+    DataBoxOpen = FALSE, VisualChoices = "Annotations", ColumnData = c("cell_type",
+    "donor"), RowData = character(0), CustomBounds = FALSE,
     LowerBound = NA_real_, UpperBound = NA_real_, AssayCenterRows = FALSE,
     AssayScaleRows = FALSE, DivergentColormap = "purple < black < yellow",
     ShowDimNames = "Rows", LegendPosition = "Bottom", LegendDirection = "Horizontal",
