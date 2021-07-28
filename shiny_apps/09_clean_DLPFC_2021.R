@@ -49,4 +49,4 @@ proc.time()
 options(width = 120)
 session_info()
 
-## Same as 07_clean_Amyg_2021.R
+## Same as 07_clean_AMY_2021.R

@@ -3,8 +3,8 @@ library("SingleCellExperiment")
 library("iSEE")
 library("shiny")
 
-sce_small <- readRDS("sce_amyg_small.rds")
-cell_colors <- readRDS("cell_colors_amyg.rds")
+sce_small <- readRDS("sce_amy_small.rds")
+cell_colors <- readRDS("cell_colors_amy.rds")
 stopifnot(packageVersion("iSEE") >= "2.4.0")
 
 
@@ -129,7 +129,7 @@ initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", X
 
 iSEE(
     sce_small,
-    appTitle = "M.N. Tran et al 2021, Amyg region https://bit.ly/LIBD10xHuman",
+    appTitle = "M.N. Tran et al 2021, AMY region https://bit.ly/LIBD10xHuman",
     initial = initial,
     colormap = ExperimentColorMap(colData = list(
         donor = function(n) {
