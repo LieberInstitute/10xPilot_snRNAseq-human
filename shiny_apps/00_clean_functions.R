@@ -78,7 +78,7 @@ create_small_sce_2021 <- function(sce_original) {
     library("rafalib")
 
     ## Drop some nuclei to begin with
-    sce_original <- sce_original[ ,-grep("drop", sce_original$cellType)]
+    sce_original <- sce_original[ , !grepl("drop", sce_original$cellType)]
     sce_original$cellType <- droplevels(sce_original$cellType)
     stopifnot(all(unique(sce_original$donor) %in% names(donor_map)))
     sce_original$donor <- unname(donor_map[sce_original$donor])
