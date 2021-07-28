@@ -110,6 +110,11 @@ iSEE(
     appTitle = "M.N. Tran et al 2021, {{region}} region https://bit.ly/LIBD10xHuman",
     initial = initial,
     colormap = ExperimentColorMap(colData = list(
+        donor = function(n) {
+            cols <- RColorBrewer::brewer.pal(8, "Dark2")
+            names(cols) <- paste0("donor", seq_len(8))
+            return(cols)
+        },
         cell_type = function(n) {
             cell_colors[!grepl("drop", names(cell_colors))]
         }
