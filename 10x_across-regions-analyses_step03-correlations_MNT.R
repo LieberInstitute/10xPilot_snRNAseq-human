@@ -767,7 +767,110 @@ head(rownames(markers.excit.branch[["Excit_depleted"]]), n=40)
 
 
 
-# Session info for 18Jul2021 ==============
+
+## What about just a within-NAc MSNs contrast? =====================
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+    # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
+
+sce.test <- sce.nac[ ,grep("MSN.", sce.nac$cellType)]
+sce.test$cellType <- droplevels(sce.test$cellType)
+# For plotting:
+sce.hold <- sce.test
+
+# Split into 'MSN.excit' or 'MSN.inhib'
+msn.excit.idx <- c(grep("MSN.D1_A", sce.test$cellType),
+                   grep("MSN.D1_D",sce.test$cellType),
+                   grep("MSN.D2_A",sce.test$cellType),
+                   grep("MSN.D2_B",sce.test$cellType))
+sce.test$cellType.sig <- "MSN.inhib"
+sce.test$cellType.sig[msn.excit.idx] <- "MSN.excit"
+table(sce.test$cellType, sce.test$cellType.sig)
+    #           MSN.excit MSN.inhib
+    # MSN.D1_A      3927         0
+    # MSN.D1_B         0       239
+    # MSN.D1_C         0       283
+    # MSN.D1_D       718         0
+    # MSN.D1_E         0       638
+    # MSN.D1_F         0        86
+    # MSN.D2_A      4262         0
+    # MSN.D2_B       285         0
+    # MSN.D2_C         0       314
+    # MSN.D2_D         0        58
+
+# Re-create 'logcounts'
+sizeFactors(sce.test) <- NULL
+assay(sce.test, "logcounts") <- NULL
+sce.test <- logNormCounts(sce.test)
+
+mod <- with(colData(sce.test), model.matrix(~ donor))
+mod <- mod[ , -1, drop=F] # intercept otherwise automatically dropped by `findMarkers()`
+
+markers.excit.msns <- findMarkers(sce.test, groups=sce.test$cellType.sig,
+                                  assay.type="logcounts", design=mod, test="t",
+                                  std.lfc=TRUE,
+                                  direction="up", pval.type="all", full.stats=T)
+
+# Only one contrast, so take that column
+markers.excit.msns <- lapply(markers.excit.msns, function(x){ x[ ,4] })
+names(markers.excit.msns)
+    #[1] "MSN.excit" "MSN.inhib"
+
+Readme <- "This test is comparing the excitatory-signature (4) MSN classes vs those (6) more 'inhibitory' MSNs"
+save(markers.excit.msns, Readme,
+     file="rdas/revision/markers-stats_excitMSNs-vs-inhibMSNs_MNT2021.rda")
+lapply(markers.excit.msns, function(x){table(x$log.FDR<log(0.05))})
+    #       MSN.excit MSN.inhib
+    # FALSE     26937     28396
+    # TRUE       6601      5142
+
+head(rownames(markers.excit.msns[["MSN.excit"]]), n=40)
+    # [1] "HTR2C"      "SLC35F3"    "UTRN"       "RGS6"       "ARAP2"      "COCH"      
+    # [7] "RGS7"       "SGCZ"       "PDZD2"      "ZMAT4"      "GPC5"       "LDLRAD4"   
+    # [13] "MAP3K5"     "AC008574.1" "NRG3"       "EPB41L2"    "FOXO1"      "MAN1A1"    
+    # [19] "PLPPR1"     "ADK"        "HTR4"       "ARNT2"      "ADAMTS19"   "AC073050.1"
+    # [25] "SGK3"       "DCC"        "GRM5"       "AK5"        "TENM2"      "LRRC4C"    
+    # [31] "PRKCB"      "PSD3"       "CSMD1"      "KCTD8"      "CDH12"      "DIAPH2"    
+    # [37] "ANKS1B"     "MCTP1"      "SLC8A1"     "LINC01322"  
+
+head(rownames(markers.excit.msns[["MSN.inhib"]]), n=40)
+    # [1] "LUZP2"   "ADARB2"  "KIRREL1" "TRHDE"   "CPNE4"   "FAM155A" "ALK"     "CASZ1"  
+    # [9] "SEMA5B"  "KCNT2"   "CNTN5"   "RXFP1"   "FHOD3"   "ILDR2"   "EPS8"    "ZNF804B"
+    # [17] "DPP10"   "RXRG"    "CACNG5"  "CRHR2"   "SLIT1"   "GABRG3"  "SORCS2"  "BACH2"  
+    # [25] "SPECC1"  "FMN1"    "PLCXD3"  "SLC35F1" "PLCB1"   "DIRAS2"  "XYLT1"   "CAMK2D" 
+    # [33] "ADAM19"  "OPCML"   "TLL1"    "PPM1E"   "CACNA1C" "NRXN3"   "GRIN2A"  "KCNJ3"  
+
+
+# Re-order and plot top 6 per grouping
+sce.hold$cellType <- factor(sce.hold$cellType,
+                            levels=c("MSN.D1_A","MSN.D1_D","MSN.D2_A","MSN.D2_B",
+                                     "MSN.D1_B", "MSN.D1_C","MSN.D1_E",
+                                     "MSN.D1_F","MSN.D2_C", "MSN.D2_D"))
+
+pdf("pdfs/revision/pubFigures/suppFig_NAc_excit-vs-inhib-MSN-markers_MNT2021.pdf", height=4, width=6)
+plotExpressionCustom(sce.hold, anno_name="cellType", features=c(head(rownames(markers.excit.msns[["MSN.excit"]]), n=6)),
+                     features_name="Upregulated in 'excitatory'-signature MSN", ncol=3, scales="free_y") +
+  scale_color_manual(values=cell_colors.nac) + xlab("") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+        axis.title.y = element_text(angle = 90, size = 12),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 12),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+plotExpressionCustom(sce.hold, anno_name="cellType", features=c(head(rownames(markers.excit.msns[["MSN.inhib"]]), n=6)),
+                     features_name="Upregulated in 'inhibitory'-signature MSN", ncol=3, scales="free_y") +
+  scale_color_manual(values=cell_colors.nac) + xlab("") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+        axis.title.y = element_text(angle = 90, size = 12),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 12),
+        panel.grid.major=element_line(colour="grey95", size=0.8),
+        panel.grid.minor=element_line(colour="grey95", size=0.4))
+dev.off()
+
+
+
+# Session info for 28Jul2021 ==============
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -788,15 +891,16 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
-# [4] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
-# [7] DropletUtils_1.10.3         batchelor_1.6.3             scran_1.18.7               
-# [10] scater_1.18.6               ggplot2_3.3.3               org.Hs.eg.db_3.12.0        
-# [13] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
-# [16] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
-# [19] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
-# [22] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
-# [25] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
+#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0           gridExtra_2.3              
+# [4] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
+# [7] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
+# [10] DropletUtils_1.10.3         batchelor_1.6.3             scran_1.18.7               
+# [13] scater_1.18.6               ggplot2_3.3.3               org.Hs.eg.db_3.12.0        
+# [16] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [19] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
+# [22] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
+# [25] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
+# [28] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
 #   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
@@ -818,18 +922,18 @@ sessionInfo()
 # [49] irlba_2.3.3               statmod_1.4.35            XML_3.99-0.6             
 # [52] edgeR_3.32.1              zlibbioc_1.36.0           scales_1.1.1             
 # [55] hms_1.0.0                 ProtGenerics_1.22.0       rhdf5_2.34.0             
-# [58] curl_4.3                  memoise_2.0.0             gridExtra_2.3            
-# [61] segmented_1.3-4           biomaRt_2.46.3            stringi_1.5.3            
-# [64] RSQLite_2.2.7             BiocParallel_1.24.1       rlang_0.4.11             
-# [67] pkgconfig_2.0.3           bitops_1.0-7              purrr_0.3.4              
-# [70] Rhdf5lib_1.12.1           GenomicAlignments_1.26.0  bit_4.0.4                
-# [73] tidyselect_1.1.1          magrittr_2.0.1            R6_2.5.0                 
-# [76] generics_0.1.0            DelayedArray_0.16.3       DBI_1.1.1                
-# [79] pillar_1.6.0              withr_2.4.2               RCurl_1.98-1.3           
-# [82] tibble_3.1.1              crayon_1.4.1              utf8_1.2.1               
-# [85] BiocFileCache_1.14.0      viridis_0.6.0             progress_1.2.2           
-# [88] locfit_1.5-9.4            grid_4.0.4                blob_1.2.1               
-# [91] R.utils_2.10.1            openssl_1.4.3             munsell_0.5.0            
-# [94] beeswarm_0.4.0            viridisLite_0.4.0         vipor_0.4.5              
-# [97] askpass_1.1 
+# [58] curl_4.3                  memoise_2.0.0             segmented_1.3-4          
+# [61] biomaRt_2.46.3            stringi_1.5.3             RSQLite_2.2.7            
+# [64] BiocParallel_1.24.1       rlang_0.4.11              pkgconfig_2.0.3          
+# [67] bitops_1.0-7              purrr_0.3.4               Rhdf5lib_1.12.1          
+# [70] labeling_0.4.2            GenomicAlignments_1.26.0  cowplot_1.1.1            
+# [73] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
+# [76] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+# [79] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+# [82] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+# [85] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
+# [88] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
+# [91] blob_1.2.1                digest_0.6.27             R.utils_2.10.1           
+# [94] openssl_1.4.3             munsell_0.5.0             beeswarm_0.4.0           
+# [97] viridisLite_0.4.0         vipor_0.4.5               askpass_1.1   
 
