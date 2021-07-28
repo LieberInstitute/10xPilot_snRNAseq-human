@@ -20,7 +20,7 @@ initial[["ReducedDimensionPlot1"]] <- new("ReducedDimensionPlot", Type = "PCA_co
     ColorBySampleNameColor = "#FF0000", ShapeByColumnData = "donor",
     SizeByColumnData = "sum", FacetRowBy = "None", FacetColumnBy = "None",
     ColorBy = "Column data", ColorByDefaultColor = "#000000",
-    ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
+    ColorByFeatureName = "SNAP25", ColorByFeatureSource = "---",
     ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "{{cellone}}",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1,
@@ -64,7 +64,7 @@ initial[["ComplexHeatmapPlot1"]] <- new("ComplexHeatmapPlot", Assay = "logcounts
 # Settings for Row data table 1
 ################################################################################
 
-initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "MOBP", Search = "", SearchColumns = c("",
+initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "SNAP25", Search = "", SearchColumns = c("",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", ""), HiddenColumns = character(0),
     VersionInfo = list(iSEE = structure(list(c(2L, 4L, 0L)), class = c("package_version",
@@ -79,15 +79,15 @@ initial[["RowDataTable1"]] <- new("RowDataTable", Selected = "MOBP", Search = ""
 ################################################################################
 
 initial[["FeatureAssayPlot1"]] <- new("FeatureAssayPlot", Assay = "logcounts", XAxis = "Column data",
-    XAxisColumnData = "cell_type", XAxisFeatureName = "MOBP",
+    XAxisColumnData = "cell_type", XAxisFeatureName = "SNAP25",
     XAxisFeatureSource = "---", XAxisFeatureDynamicSource = FALSE,
-    YAxisFeatureName = "MOBP", YAxisFeatureSource = "RowDataTable1",
+    YAxisFeatureName = "SNAP25", YAxisFeatureSource = "RowDataTable1",
     YAxisFeatureDynamicSource = TRUE, FacetRowByColData = "Barcode",
     FacetColumnByColData = "Barcode", ColorByColumnData = "cell_type",
     ColorByFeatureNameAssay = "logcounts", ColorBySampleNameColor = "#FF0000",
     ShapeByColumnData = "donor", SizeByColumnData = "sum", FacetRowBy = "None",
     FacetColumnBy = "None", ColorBy = "Column data", ColorByDefaultColor = "#000000",
-    ColorByFeatureName = "MOBP", ColorByFeatureSource = "---",
+    ColorByFeatureName = "SNAP25", ColorByFeatureSource = "---",
     ColorByFeatureDynamicSource = FALSE, ColorBySampleName = "{{cellone}}",
     ColorBySampleSource = "---", ColorBySampleDynamicSource = FALSE,
     ShapeBy = "None", SizeBy = "None", SelectionAlpha = 0.1,
@@ -111,7 +111,7 @@ iSEE(
     initial = initial,
     colormap = ExperimentColorMap(colData = list(
         cell_type = function(n) {
-            cell_colors
+            cell_colors[!grepl("drop", names(cell_colors))]
         }
     ))
 )
