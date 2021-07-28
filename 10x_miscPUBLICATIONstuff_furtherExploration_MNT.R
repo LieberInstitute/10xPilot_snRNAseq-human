@@ -90,6 +90,89 @@ sapply(regrStats.sex, function(x){coef(summary(x))["propDat[i, ]", "Pr(>|z|)"]})
     #   --> don't think I want to include these additional predictors tho
 
 
+## By simpler `lm(prop ~ sex + region + Dx)` ===
+coldat.asd <- data.frame(sample=colnames(propDat))
+coldat.asd$sex <- sce.asd$sex[match(coldat.asd$sample, sce.asd$individual)]
+coldat.asd$region <- sce.asd$region[match(coldat.asd$sample, sce.asd$individual)]
+coldat.asd$Dx <- sce.asd$diagnosis[match(coldat.asd$sample, sce.asd$individual)]
+
+
+regrStats.sex.lm <- list()
+for(i in levels(sce.asd$cluster)){
+  #regrStats.sex.lm[[i]] <- lm(propDat[i, ] ~ sex.idx)
+  regrStats.sex.lm[[i]] <- lm(propDat[i, ] ~ sex + region + Dx, data=coldat.asd)
+}
+# Exploring some results
+t(sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),3)["sexM", ]}))
+    #                   Estimate Std. Error t value Pr(>|t|)
+    # AST-FB           -0.004110    0.00831 -0.4940    0.625
+    # AST-PP           -0.009340    0.02860 -0.3270    0.746
+    # Endothelial       0.005510    0.00625  0.8820    0.386
+    # IN-PV             0.009420    0.00693  1.3600    0.186
+    # IN-SST            0.009490    0.00751  1.2600    0.217
+    # IN-SV2C           0.000296    0.00350  0.0846    0.933
+    # IN-VIP           -0.001570    0.00995 -0.1580    0.876
+    # L2/3             -0.015300    0.02020 -0.7590    0.454
+    # L4               -0.004040    0.01970 -0.2050    0.839
+    # L5/6             -0.002470    0.00682 -0.3630    0.720
+    # L5/6-CC          -0.001750    0.00926 -0.1890    0.852
+    # Microglia         0.006170    0.01250  0.4920    0.626
+    # Neu-mat          -0.011100    0.02060 -0.5400    0.593
+    # Neu-NRGN-I       -0.004480    0.01510 -0.2970    0.769
+    # Neu-NRGN-II       0.004500    0.02890  0.1560    0.877
+    # Oligodendrocytes  0.020900    0.04410  0.4750    0.638
+    # OPC              -0.002140    0.01570 -0.1360    0.893
+
+
+## These two seem to recapitulate the comment on AST-PP associated with Dx:
+# (or other observations - see Fig. S1G and S1H)
+t(sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),3)["DxControl", ]}))
+    #                   Estimate Std. Error t value Pr(>|t|)
+    # AST-FB           -6.92e-04    0.00686 -0.1010   0.9200
+    # AST-PP           -5.62e-02    0.02360 -2.3800   0.0244
+    # Endothelial       8.03e-03    0.00516  1.5600   0.1310
+    # IN-PV             3.75e-03    0.00572  0.6550   0.5180
+    # IN-SST            9.61e-03    0.00620  1.5500   0.1330
+    # IN-SV2C          -4.19e-05    0.00289 -0.0145   0.9890
+    # IN-VIP           -5.13e-03    0.00822 -0.6240   0.5380
+    # L2/3             -2.54e-02    0.01670 -1.5200   0.1390
+    # L4               -4.98e-03    0.01630 -0.3060   0.7620
+    # L5/6             -4.22e-04    0.00563 -0.0749   0.9410
+    # L5/6-CC          -6.50e-03    0.00765 -0.8500   0.4030
+    # Microglia         6.13e-03    0.01030  0.5920   0.5590
+    # Neu-mat           1.08e-02    0.01700  0.6350   0.5310
+    # Neu-NRGN-I        5.29e-03    0.01250  0.4250   0.6740
+    # Neu-NRGN-II       1.67e-02    0.02390  0.6990   0.4910
+    # Oligodendrocytes  5.17e-02    0.03640  1.4200   0.1670
+    # OPC              -1.26e-02    0.01290 -0.9750   0.3380
+
+t(sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),3)["regionPFC", ]}))
+    #                  Estimate Std. Error t value Pr(>|t|)
+    # AST-FB           -0.01330    0.00703  -1.900  0.06860
+    # AST-PP            0.05150    0.02420   2.130  0.04250
+    # Endothelial      -0.01700    0.00529  -3.210  0.00337
+    # IN-PV            -0.00567    0.00587  -0.965  0.34300
+    # IN-SST            0.00214    0.00636   0.337  0.73900
+    # IN-SV2C          -0.00411    0.00297  -1.390  0.17700
+    # IN-VIP           -0.01350    0.00842  -1.600  0.12200
+    # L2/3             -0.01360    0.01710  -0.797  0.43200
+    # L4                0.01190    0.01670   0.711  0.48300
+    # L5/6             -0.00184    0.00577  -0.319  0.75200
+    # L5/6-CC          -0.01020    0.00784  -1.300  0.20400
+    # Microglia         0.02860    0.01060   2.700  0.01180
+    # Neu-mat          -0.01910    0.01740  -1.100  0.28300
+    # Neu-NRGN-I       -0.01590    0.01280  -1.250  0.22300
+    # Neu-NRGN-II      -0.02300    0.02450  -0.942  0.35500
+    # Oligodendrocytes  0.02340    0.03730   0.628  0.53500
+    # OPC               0.01970    0.01330   1.490  0.14800
+
+
+# Just print results for sex predictor:
+asd.lm.sex <- t(sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),3)["sexM", ]}))
+write.table(asd.lm.sex, file="tables/revision/suppForReviewers_Velmeshev-etal_clusterProp-lm-on-sex_MNT2021.tsv",
+            sep="\t", row.names=T, col.names=T)
+
+
 
 
 
@@ -135,40 +218,40 @@ sapply(regrStats.sex, function(x){signif(coef(summary(x)),6)["propDat[i, ]", "Pr
 ps.logisticReg <- sapply(regrStats.sex, function(x){signif(coef(summary(x)),6)["propDat[i, ]", "Pr(>|z|)"]})
 
 
-## By simpler `lm(prop ~ sex)` ===
-regrStats.sex.lm <- list()
+
+## By simpler `lm(prop ~ sex)` =============
+coldat.ad <- data.frame(sample=colnames(propDat))
+coldat.ad$sex <- sce.mathys$msex[match(coldat.ad$sample, sce.mathys$individualID)]
+coldat.ad$Dx <- sce.mathys$Dx[match(coldat.ad$sample, sce.mathys$individualID)]
+
+regrStats.sex.lm.ad <- list()
 for(i in sort(unique(sce.mathys$Subcluster))){
-  regrStats.sex.lm[[i]] <- lm(propDat[i, ] ~ sex.idx)
+  regrStats.sex.lm.ad[[i]] <- lm(propDat[i, ] ~ sex + Dx, data=coldat.ad)
 }
+
 # P-values for regression on cell type prop.
-sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),6)["sex.idx", "Pr(>|t|)"]})
-ps.lm <- sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),6)["sex.idx", "Pr(>|t|)"]})
+sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),6)["sex", "Pr(>|t|)"]})
+ps.lm.ad <- sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),6)["sex", "Pr(>|t|)"]})
     # All > 0.05 except 'Ex1': 0.0484782
 
-cor(ps.lm, ps.logisticReg)
-    # [1] 0.999268
+# Exploring some results
+t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["sex", ]}))
+table(t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["sex", ]}))[, "Pr(>|t|)"] <= 0.05)
+    # none
 
-## What if add 'age_death'? ===
-ageDeath.idx <- sce.mathys$age_death[match(ind.idx, sce.mathys$individualID)]
+# Dx effect
+t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["DxAD", ]}))
+which(t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["DxAD", ]}))[, "Pr(>|t|)"] <= 0.05)
+    # one, 'Ast2' (p-value = 0.027)
+ps.Dx.ad <- t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["DxAD", ]}))[ ,"Pr(>|t|)"]
+p.adjust(ps.Dx.ad, method="BH")
+    # none after FDR correction. Authors also do some interesting overrepresentation tests...
+    #     not sure how much to expect this recaps that, but since we're just testing for sex:
 
-regrStats.sex.lm <- list()
-for(i in sort(unique(sce.mathys$Subcluster))){
-  regrStats.sex.lm[[i]] <- lm(propDat[i, ] ~ sex.idx + ageDeath.idx)
-}
-# P-values for sex term, with 'age_death' included
-sapply(regrStats.sex.lm, function(x){signif(coef(summary(x)),6)["sex.idx", "Pr(>|t|)"]})
-    #      Ast0      Ast1      Ast2      Ast3      End1      End2       Ex0       Ex1 
-    # 0.8945570 0.7448440 0.7069090 0.8059920 0.4090890 0.5901650 0.5657990 0.0831644 
-    #      Ex11      Ex12      Ex14       Ex2       Ex3       Ex4       Ex5       Ex6 
-    # 0.5430500 0.5407110 0.3459960 0.5924880 0.2069800 0.0685688 0.2072260 0.5739530 
-    #       Ex7       Ex8       Ex9       In0       In1      In10      In11       In2 
-    # 0.5152840 0.1394130 0.7542460 0.3782150 0.0766577 0.1220210 0.6955990 0.1371930 
-    #       In3       In4       In5       In6       In7       In8       In9      Mic0 
-    # 0.1957020 0.3230890 0.0927227 0.9837080 0.3858550 0.6341780 0.9307060 0.7890800 
-    #      Mic1      Mic2      Mic3      Oli0      Oli1      Oli3      Oli4      Oli5 
-    # 0.9976360 0.5730220 0.2560560 0.4411790 0.1849180 0.1724730 0.6886770 0.8794820 
-    #      Opc0      Opc1      Opc2       Per 
-    # 0.9913400 0.1193400 0.5304300 0.6870260 
+# Print results for sex predictor:
+ad.lm.sex <- t(sapply(regrStats.sex.lm.ad, function(x){signif(coef(summary(x)),3)["sex", ]}))
+write.table(ad.lm.sex, file="tables/revision/suppForReviewers_Mathys-etal_clusterProp-lm-on-sex_MNT2021.tsv",
+            sep="\t", row.names=T, col.names=T)
 
 
 
