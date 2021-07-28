@@ -171,10 +171,14 @@ save(sce.nac, chosen.hvgs.nac, ref.sampleInfo, pc.choice.nac,
 #           ** That is, to pseudo-bulk (aka 'cluster-bulk') on raw counts, on all [non-zero] genes,
 #              normalize with `librarySizeFactors()`, log2-transform, then perform HC'ing
 
+# (load the above)
+sce.nac <- sce.nac[ ,-grep("drop.", sce.nac$cellType)]
+sce.nac$cellType <- droplevels(sce.nac$cellType)
 
 ## Preliminary cluster index for pseudo-bulking
-clusIndexes = splitit(sce.nac$prelimCluster)
-prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
+#clusIndexes = splitit(sce.nac$prelimCluster)
+clusIndexes = splitit(sce.nac$cellType)
+cluster.PBcounts <- sapply(clusIndexes, function(ii){
   rowSums(assays(sce.nac)$counts[ ,ii])
  }
 )
@@ -222,71 +226,56 @@ prelimCluster.PBcounts <- sapply(clusIndexes, function(ii){
         # 100% 73538.00 12537 36220.00 95998.00 80360.00 71127 69839 26000 42806.00
     
 ### MNT comment 25Jun: skip 'collapsing' of prelimClusters, since several dropped from above QC:
-# # Compute LSFs at this level
-# sizeFactors.PB.all  <- librarySizeFactors(prelimCluster.PBcounts)
-# 
-# # Normalize with these LSFs
-# geneExprs.temp <- t(apply(prelimCluster.PBcounts, 1, function(x) {log2(x/sizeFactors.PB.all + 1)}))
-# 
-# 
-# ## Perform hierarchical clustering
-# dist.clusCollapsed <- dist(t(geneExprs.temp))
-# tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
-# 
-# dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
-# 
-# # Just for observation
-# myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=8) prelim-kNN-cluster relationships",
-#           cex.main=1, cex.lab=0.8, cex=0.6)
-# 
-# sapply(clusIndexes, function(x) {quantile(sce.nac$sum[x])})
-#     # prelimCluster 13 is definitely a 'drop.lowNTx_'
-# 
-# clust.treeCut <- cutreeDynamic(tree.clusCollapsed, distM=as.matrix(dist.clusCollapsed),
-#                                minClusterSize=2, deepSplit=1, cutHeight=220)
-# 
-# table(clust.treeCut)
-# unname(clust.treeCut[order.dendrogram(dend)])
-# 
-#     ## Cut at 220, but manually merge others based on other 'cutHeight's
-#      #    (225, 300, 425--for glial)
-# 
-# ## Add new labels to those prelimClusters cut off
-# clust.treeCut[order.dendrogram(dend)][which(clust.treeCut[order.dendrogram(dend)]==0)] <-
-#   max(clust.treeCut)+c(1:3, 4,4,4, 5:6, 7:9, 10,10,10, 11,11,12,12,13,rep(14,4))
-# 
-# ## Define color pallet
+# Compute LSFs at this level
+sizeFactors.PB  <- librarySizeFactors(cluster.PBcounts)
+
+# Normalize with these LSFs
+geneExprs.temp <- t(apply(cluster.PBcounts, 1, function(x) {log2(x/sizeFactors.PB + 1)}))
+
+
+## Perform hierarchical clustering
+dist.clusCollapsed <- dist(t(geneExprs.temp))
+tree.clusCollapsed <- hclust(dist.clusCollapsed, "ward.D2")
+
+dend <- as.dendrogram(tree.clusCollapsed, hang=0.2)
+
+# Just for observation
+myplclust(tree.clusCollapsed, main="all NAc sample clusters (n=8) prelim-kNN-cluster relationships",
+          cex.main=1, cex.lab=0.8, cex=0.6)
+
+## Define color pallet
 # cluster_colors <- unique(c(tableau20, tableau10medium)[clust.treeCut[order.dendrogram(dend)]])
 # names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
 # labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
-# 
-# # Print for future reference
-# pdf("pdfs/revision/regionSpecific_NAc-n8_HC-prelimCluster-relationships_MNT2021.pdf")
-# par(cex=1.2, font=2)
-# plot(dend, main="All NAc (n=8) prelim-kNN-cluster relationships")
-# dev.off()
-# 
-# 
-# # Make reference for new cluster assignment
-# clusterRefTab.nac <- data.frame(origClust=order.dendrogram(dend),
-#                                 merged=clust.treeCut[order.dendrogram(dend)])
-# 
-# 
-# # Assign as 'collapsedCluster'
-# sce.nac$collapsedCluster <- factor(clusterRefTab.nac$merged[match(sce.nac$prelimCluster, clusterRefTab.nac$origClust)])
 
-# # Print some visualizations:    (just print after annotating)
-# pdf("pdfs/revision/regionSpecific_NAc-n8_reducedDims-with-collapsedClusters_MNT2021.pdf")
-# plotReducedDim(sce.nac, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
-# plotTSNE(sce.nac, colour_by="sampleID", point_alpha=0.5)
-# plotTSNE(sce.nac, colour_by="protocol", point_alpha=0.5)
-# plotTSNE(sce.nac, colour_by="prelimCluster", point_alpha=0.5)
-# plotTSNE(sce.nac, colour_by="sum", point_alpha=0.5)
-# plotTSNE(sce.nac, colour_by="doubletScore", point_alpha=0.5)
-# # And some more informative UMAPs
-# plotUMAP(sce.nac, colour_by="sampleID", point_alpha=0.5)
-# plotUMAP(sce.nac, colour_by="prelimCluster", point_alpha=0.5)
-# dev.off()
+# MNT 28Jul2021: from below, where the cellType colors are defined:
+# As with plotting top PCs:
+# Trick some cell class colors - use blue & red
+cell_colors.nac.hold <- cell_colors.nac
+cell_colors.nac <- cell_colors.nac[names(cell_colors.nac) %in% levels(sce.nac$cellType)]
+cell_colors.nac["MSN.excit"] <- cell_colors.nac.hold["MSN.D1_A"]
+cell_colors.nac["MSN.inhib"] <- cell_colors.nac.hold["drop.doublet_B"]
+cell_colors.nac["MSN.broad"] <- cell_colors.nac.hold["drop.doublet_C"]
+
+labels_colors(dend) <- cell_colors.nac[match(labels(dend), names(cell_colors.nac))]
+
+dend.rename <- dend
+labels(dend.rename)[labels(dend.rename) %in% c("MSN.D1_A","MSN.D1_D", "MSN.D2_A","MSN.D2_B")] <- "MSN.excit"
+labels(dend.rename)[labels(dend.rename) %in% c("MSN.D1_B","MSN.D1_C","MSN.D1_E",
+                                               "MSN.D1_F", "MSN.D2_C","MSN.D2_D")] <- "MSN.inhib"
+labels_colors(dend.rename) <- cell_colors.nac[match(labels(dend.rename), names(cell_colors.nac))]
+
+
+# Print for future reference
+pdf("pdfs/revision/regionSpecific_NAc-n8_finalClasses-HC-relationships_flaggedClustersDropped_MNT2021.pdf",height=5)
+par(cex=1.1, font=2, mai=c(1.5,.5,.5,.5))
+plot(dend, main="NAc cell class HC relationships",
+     ylab="Height", cex.lab=1.5, cex.main=1.5)
+colored_bars(colors=labels_colors(dend.rename),
+             y_shift=-450, rowLabels="")
+dev.off()
+
+
 
 ## Print marker genes for annotation
 markers.mathys.custom = list(
