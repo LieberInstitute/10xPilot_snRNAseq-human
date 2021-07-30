@@ -1,12 +1,52 @@
 # 10xPilot_snRNAseq-human
 
-## How to cite
-
-* https://doi.org/10.1101/2020.10.07.329839
 
 ## Study design
 
+This project, led by [Matthew N. Tran](https://twitter.com/mattntran) and [Kristen R. Maynard](https://twitter.com/kr_maynard), describes a single nuclei RNA sequencing (snRNA-seq) project with data extracted from eight postmortem human brain donors collected by the [Lieber Institute for Brain Development](https://twitter.com/LieberInstitute). Tran, Maynard and colleagues generated snRNA-seq data from five different brain regions:
+
+1. amygdala (AMY)
+1. dorsolateral prefrontal cortex (DLPFC)
+1. hippocampus (HPC)
+1. nucleus accumbens (NAc)
+1. subgenual anterior cingulate cortex (sACC)
+
+The research findings derived from this dataset are described in the publications listed below. This data is also publicly available and is intended to serve as a resource for furthering our understanding of the transcriptional activity in the human brain. The total dataset is composed of 70,615 high-quality nuclei and you can download both the raw data as well as the processed data. Furthermore, you can explore the data interactively.
+
+Finally, we have two versions of this resource. The initial version was shared on 2020 as a pre-print publication, while the peer-reviewed version was published in 2021. The pre-print version is limited as it contains data from three donors, while the peer-reviewed version was expanded to eight donors.
+
+## How to cite
+
+### Peer-reviewed
+
 TODO
+
+Here's the citation information on [BibTeX](https://en.wikipedia.org/wiki/BibTeX) format.
+
+```
+TODO
+```
+
+### Pre-print
+
+Matthew N. Tran, Kristen R. Maynard, Abby Spangler, Leonardo Collado-Torres, Vijay Sadashivaiah, Madhavi Tippani, Brianna K. Barry, Dana B. Hancock, Stephanie C. Hicks, Joel E. Kleinman, Thomas M. Hyde, Keri Martinowich, Andrew E. Jaffe. Single-nucleus transcriptome analysis reveals cell type-specific molecular signatures across reward circuitry in the human brain. _bioRxiv_ 2020.10.07.329839; doi: https://doi.org/10.1101/2020.10.07.329839.
+
+Here's the citation information on [BibTeX](https://en.wikipedia.org/wiki/BibTeX) format.
+
+```
+@article {Tran2020.10.07.329839,
+	author = {Tran, Matthew N. and Maynard, Kristen R. and Spangler, Abby and Collado-Torres, Leonardo and Sadashivaiah, Vijay and Tippani, Madhavi and Barry, Brianna K. and Hancock, Dana B. and Hicks, Stephanie C. and Kleinman, Joel E. and Hyde, Thomas M. and Martinowich, Keri and Jaffe, Andrew E.},
+	title = {Single-nucleus transcriptome analysis reveals cell type-specific molecular signatures across reward circuitry in the human brain},
+	elocation-id = {2020.10.07.329839},
+	year = {2020},
+	doi = {10.1101/2020.10.07.329839},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2020/10/08/2020.10.07.329839},
+	eprint = {https://www.biorxiv.org/content/early/2020/10/08/2020.10.07.329839.full.pdf},
+	journal = {bioRxiv}
+}
+
+```
 
 
 ## Explore the data interactively
@@ -64,47 +104,56 @@ If you are interested in the raw data, that is the [FASTQ](https://en.wikipedia.
 ### Region-specific analyses
 
 Here, nuclei are clustered and annotated within each brain region, separately, with markers defined at that level.
+
 -   **AMY**:
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_Amyg-n2_cellType.split_Nov2020.csv
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/Amyg
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_Amyg-n5_cellType_SN-LEVEL-tests_MNT2021.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/Amyg)
 
 -   **DLPFC**:
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_DLPFC-n2_cellType.split_SN-LEVEL-tests_May2020.csv
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/DLPFC
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_DLPFC-n3_cellType_SN-LEVEL-tests_LAH2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/DLPFC)
 
 -   **HPC**:
-    
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_HPC-n3_cellType.split_Nov2020.csv
-    
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/HPC
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_HPC-n3_cellType_SN-LEVEL-tests_MNT2021.csv)
+      * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/HPC)
 
 -   **NAc**:
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/NAc-n5-markers
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_NAc-n8_cellType_SN-LEVEL-tests_MNT2021.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/NAc)
 
 -   **sACC**:
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_sACC-n2_cellType.split_Nov2020.csv
-
-    https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/sACC
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_sACC-n5_cellType_SN-LEVEL-tests_MNT2021.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/sACC)
 
 
-### Pan-brain-level analysis
+#### Pre-print version
 
-Here, nuclei are clustered across all brain regions, together, and then annotated, with markers defined at _this_ level.
+-   **AMY**:
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_Amyg-n2_cellType.split_Nov2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/Amyg)
 
-   https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv
+-   **DLPFC**:
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_DLPFC-n2_cellType.split_SN-LEVEL-tests_May2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/DLPFC)
 
-   https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/panBrainMarkers
+-   **HPC**:
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_HPC-n3_cellType.split_Nov2020.csv)
+      * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/HPC)
+
+-   **NAc**:
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/NAc-n5-markers)
+
+-   **sACC**:
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_sACC-n2_cellType.split_Nov2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/sACC)
+
+-   **Across-region brain-level analysis**: Here, nuclei are clustered across all brain regions, together, and then annotated, with markers defined at _this_ level.
+  * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/panBrainMarkers)
 
 
 ## LIBD internal
 
-JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
-FASTQ files: `/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ`
+* JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
+* FASTQ files: `/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ`
