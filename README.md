@@ -77,6 +77,12 @@ If you are interested in exploring the data from the pre-print version which had
 
 ## Work with the data
 
+### Raw data
+
+If you are interested in the raw data, that is the [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) files, they are publicly available from the Globus endpoint `jhpce#tran2021` that is also listed at http://research.libd.org/globus/.
+
+### Processed data
+
 The corresponding [`SingleCellExperiment`](http://bioconductor.org/packages/SingleCellExperiment/) [R](https://cran.r-project.org/)/[Bioconductor](http://bioconductor.org/) objects (with `reducedDims`, annotations, etc.) for each of the five regions across eight donors are publicly hosted at:
 
 * [AMY](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
@@ -84,6 +90,18 @@ The corresponding [`SingleCellExperiment`](http://bioconductor.org/packages/Sing
 * [HPC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 * [NAc](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 * [sACC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
+
+### Pre-print version
+
+These files match the pre-print version that was composed of data derived from three donors.
+
+* [AMY](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_AMY_tran-etal.rda)
+* [DLPFC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_DLPFC_tran-etal.rda)
+* [HPC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_HPC_tran-etal.rda)
+* [NAc](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_NAc_tran-etal.rda)
+* [sACC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_sACC_tran-etal.rda)
+
+### R/Bioconductor background
 
 <a href="https://bioconductor.org/books/release/OSCA/data-infrastructure.html"><img src="https://raw.githubusercontent.com/Bioconductor/OSCABase/images/images/SingleCellExperiment.png"></a>
 
@@ -97,21 +115,6 @@ If you are new to R/Bioconductor as well `SingleCellExperiment` objects, you mig
   - [2020-10-09 Exploring expression data with iSEE](https://youtu.be/bK8D30MqXb8)
  
 For more LIBD rstats club videos, check the following [YouTube channel](https://www.youtube.com/c/LeonardoColladoTorres/playlists).
-
-### Pre-print version
-
-These files match the pre-print version that was composed of data derived from three donors.
-
-* [AMY](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_AMY_tran-etal.rda)
-* [DLPFC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_DLPFC_tran-etal.rda)
-* [HPC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_HPC_tran-etal.rda)
-* [NAc](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_NAc_tran-etal.rda)
-* [sACC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_sACC_tran-etal.rda)
-
-
-### Raw data
-
-If you are interested in the raw data, that is the [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) files, they are publicly available from the Globus endpoint `jhpce#tran2021` that is also listed at http://research.libd.org/globus/.
 
 
 ## Marker lists and expression plots, top 40
