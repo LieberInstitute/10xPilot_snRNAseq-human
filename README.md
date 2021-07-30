@@ -85,6 +85,8 @@ The corresponding [`SingleCellExperiment`](http://bioconductor.org/packages/Sing
 * [NAc](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 * [sACC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 
+<a href="https://bioconductor.org/books/release/OSCA/data-infrastructure.html"><img src="https://raw.githubusercontent.com/Bioconductor/OSCABase/images/images/SingleCellExperiment.png"></a>
+
 If you are new to R/Bioconductor as well `SingleCellExperiment` objects, you might be interested in the:
 
 * [Orchestrating Single Cell Analysis (OSCA) with Bioconductor](https://bioconductor.org/books/release/OSCA/) book
@@ -117,6 +119,9 @@ If you are interested in the raw data, that is the [FASTQ](https://en.wikipedia.
 ### Region-specific analyses
 
 Here, nuclei are clustered and annotated within each brain region, separately, with markers defined at that level.
+
+<a href="https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/pdfs/revision/DLPFC/DLPFC_t-sn-level_1vALL_top40markers-Excit_A_logExprs_LAH2021.png"><img src="pdfs/revision/DLPFC/DLPFC_t-sn-level_1vALL_top40markers-Excit_A_logExprs_LAH2021.png"></a>
+
 
 -   **AMY**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_Amyg-n5_cellType_SN-LEVEL-tests_MNT2021.csv)
@@ -161,7 +166,12 @@ Here, nuclei are clustered and annotated within each brain region, separately, w
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_sACC-n2_cellType.split_Nov2020.csv)
   * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/sACC)
 
--   **Across-region brain-level analysis**: Here, nuclei are clustered across all brain regions, together, and then annotated, with markers defined at _this_ level.
+
+### Across-region brain-level analysis
+
+Here, nuclei are clustered across all brain regions, together, and then annotated, with markers defined at _this_ level.
+
+- **Pre-print version**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv)
   * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/panBrainMarkers)
 
