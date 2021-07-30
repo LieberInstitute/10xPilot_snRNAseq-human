@@ -11,7 +11,7 @@ This project, led by [Matthew N. Tran](https://twitter.com/mattntran) and [Krist
 1. nucleus accumbens (NAc)
 1. subgenual anterior cingulate cortex (sACC)
 
-The research findings derived from this dataset are described in the publications listed below. This data is also publicly available and is intended to serve as a resource for furthering our understanding of the transcriptional activity in the human brain. The total dataset is composed of 70,615 high-quality nuclei and you can download both the raw data as well as the processed data. Furthermore, you can explore the data interactively.
+The research findings derived from this dataset are described in the [publications listed below](https://github.com/LieberInstitute/10xPilot_snRNAseq-human#how-to-cite). This data is also publicly available and is intended to serve as a resource for furthering our understanding of the transcriptional activity in the human brain. For example, the data from this study has been used by LIBD researchers for performing deconvolution of bulk RNA sequencing data. This resource is composed of **70,615 high-quality nuclei** and you can download both the [raw data as well as the processed data](https://github.com/LieberInstitute/10xPilot_snRNAseq-human#work-with-the-data). Furthermore, you can [explore interactively the data](https://github.com/LieberInstitute/10xPilot_snRNAseq-human#explore-the-data-interactively) on your browser, make your custom visualizations, and export them to PDF files.
 
 Finally, we have two versions of this resource. The initial version was shared on 2020 as a pre-print publication, while the peer-reviewed version was published in 2021. The pre-print version is limited as it contains data from three donors, while the peer-reviewed version was expanded to eight donors.
 
@@ -51,31 +51,31 @@ Here's the citation information on [BibTeX](https://en.wikipedia.org/wiki/BibTeX
 
 ## Explore the data interactively
 
-We have provided 5 interactive websites that allow you to explore the data at single nucleus resolution for each of the brain regions. These interactive websites are powered by [`iSEE`](https://bioconductor.org/packages/iSEE) that allows you to add, hide, customize panels for visualizing the data. Please check the [`iSEE`](https://bioconductor.org/packages/iSEE) documentation for instructions on how to customize the panels. In particular, you might be interested in visualizing some of the marker genes from the lists provided below for the _region-specific analyses_.
+We have provided 5 interactive websites that allow you to explore the data at single nucleus resolution for each of the brain regions. These interactive websites are powered by [`iSEE`](https://bioconductor.org/packages/iSEE) that allows you to add, hide, customize panels for visualizing the data. You can create any custom visualizations that you want and download both the code to make them as well as the figures you make. Please check the [`iSEE`](https://bioconductor.org/packages/iSEE) documentation for instructions on how to customize the panels. In particular, you might be interested in visualizing some of the marker genes from the lists provided below for the _region-specific analyses_.
 
-* https://libd.shinyapps.io/tran2021_AMY/
-* https://libd.shinyapps.io/tran2021_DLPFC/
-* https://libd.shinyapps.io/tran2021_HPC/
-* https://libd.shinyapps.io/tran2021_NAc/
-* https://libd.shinyapps.io/tran2021_sACC/
+* AMY: https://libd.shinyapps.io/tran2021_AMY/
+* DLPFC: https://libd.shinyapps.io/tran2021_DLPFC/
+* HPC: https://libd.shinyapps.io/tran2021_HPC/
+* NAc: https://libd.shinyapps.io/tran2021_NAc/
+* sACC: https://libd.shinyapps.io/tran2021_sACC/
 
 If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
 
 ### Pre-print version
 
-If you are interested in exploring the data from the pre-print version which had 3 donors instead of 8, please check the following links.
+If you are interested in exploring the data from the pre-print version which had three donors instead of eight, please check the following links.
 
-* https://libd.shinyapps.io/tran2020_Amyg/
-* https://libd.shinyapps.io/tran2020_DLPFC/
-* https://libd.shinyapps.io/tran2020_HPC/
-* https://libd.shinyapps.io/tran2020_NAc/
-* https://libd.shinyapps.io/tran2020_sACC/
+* AMY: https://libd.shinyapps.io/tran2020_Amyg/
+* DLPFC: https://libd.shinyapps.io/tran2020_DLPFC/
+* HPC: https://libd.shinyapps.io/tran2020_HPC/
+* NAc: https://libd.shinyapps.io/tran2020_NAc/
+* sACC: https://libd.shinyapps.io/tran2020_sACC/
 
 
 
 ## Work with the data
 
-The corresponding `SingleCellExperiment` objects (with `reducedDims`, annotations, etc.) for each of the five regions across eight donors are publicly hosted at:
+The corresponding [`SingleCellExperiment`](http://bioconductor.org/packages/SingleCellExperiment/) [R](https://cran.r-project.org/)/[Bioconductor](http://bioconductor.org/) objects (with `reducedDims`, annotations, etc.) for each of the five regions across eight donors are publicly hosted at:
 
 * [AMY](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 * [DLPFC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
@@ -83,9 +83,20 @@ The corresponding `SingleCellExperiment` objects (with `reducedDims`, annotation
 * [NAc](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 * [sACC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
 
+If you are new to R/Bioconductor as well `SingleCellExperiment` objects, you might be interested in the:
+
+* [Orchestrating Single Cell Analysis (OSCA) with Bioconductor](https://bioconductor.org/books/release/OSCA/) book
+* 2020 [WEHI scRNA-seq course](https://drive.google.com/drive/folders/1cn5d-Ey7-kkMiex8-74qxvxtCQT6o72h) taught by [Peter Hickey](https://twitter.com/PeteHaitch) with material adapted from OSCA
+* following [LIBD rstats club](https://docs.google.com/spreadsheets/d/1is8dZSd0FZ9Qi1Zvq1uRhm-P1McnJRd_zxdAfCRoMfA/edit?usp=sharing) recorded sessions:
+  - [2020-05-01 Bioconductor overview](https://youtu.be/c0Ch_sXiGDQ)
+  - [2020-05-15 Storing RNA-seq data with Bioconductor, intro to SummarizedExperiment & SingleCellExperiment](https://youtu.be/lqxtgpD-heM)
+  - [2020-10-09 Exploring expression data with iSEE](https://youtu.be/bK8D30MqXb8)
+ 
+For more LIBD rstats club videos, check the following [YouTube channel](https://www.youtube.com/c/LeonardoColladoTorres/playlists).
+
 ### Pre-print version
 
-These files match the pre-print version 1 that was composed of data from three donors.
+These files match the pre-print version that was composed of data derived from three donors.
 
 * [AMY](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_AMY_tran-etal.rda)
 * [DLPFC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_DLPFC_tran-etal.rda)
