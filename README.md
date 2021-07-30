@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/248090643.svg)](https://zenodo.org/badge/latestdoi/248090643)
+
 # 10xPilot_snRNAseq-human
 
 
