@@ -126,7 +126,7 @@ Here, nuclei are clustered and annotated within each brain region, separately, w
 
 -   **HPC**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_HPC-n3_cellType_SN-LEVEL-tests_MNT2021.csv)
-      * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/HPC)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/revision/HPC)
 
 -   **NAc**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/revision/top40genesLists_NAc-n8_cellType_SN-LEVEL-tests_MNT2021.csv)
@@ -149,7 +149,7 @@ Here, nuclei are clustered and annotated within each brain region, separately, w
 
 -   **HPC**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_HPC-n3_cellType.split_Nov2020.csv)
-      * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/HPC)
+  * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/HPC)
 
 -   **NAc**:
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists-REFINED_NAc-n5_cellType.final_Nov2020.csv)
