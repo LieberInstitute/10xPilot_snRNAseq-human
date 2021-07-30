@@ -59,6 +59,8 @@ We have provided 5 interactive websites that allow you to explore the data at si
 * NAc: https://libd.shinyapps.io/tran2021_NAc/
 * sACC: https://libd.shinyapps.io/tran2021_sACC/
 
+<a href="https://libd.shinyapps.io/tran2021_AMY/"><img src="https://raw.githubusercontent.com/LieberInstitute/10xPilot_snRNAseq-human/master/screenshot_tran2021_AMY.png"></a>
+
 If you want to make these websites on your own computer, check the [`shiny_apps`](shiny_apps/) directory.
 
 ### Pre-print version
