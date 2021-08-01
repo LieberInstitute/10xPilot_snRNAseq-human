@@ -7,6 +7,11 @@ sce_small <- readRDS("sce_hpc_small.rds")
 cell_colors <- readRDS("cell_colors_hpc.rds")
 stopifnot(packageVersion("iSEE") >= "2.4.0")
 
+## Related to https://github.com/iSEE/iSEE/issues/568
+colData(sce_small) <- cbind(
+    colData(sce_small)[, !colnames(colData(sce_small)) %in% c("donor", "cell_type")],
+    colData(sce_small)[, c("cell_type", "donor")]
+)
 
 initial <- list()
 
