@@ -201,6 +201,25 @@ for(i in names(temp.1vAll)){
   markers.t.1vAll[[i]] <- markers.t.1vAll[[i]][ ,c("logFC","std.logFC","log.p.value","log.FDR")]
 }
 
+## MNT add: Add in non-0-median for filtering ===
+## PW results:
+for(i in names(markers.t.pw)){
+  markers.t.pw[[i]] <- cbind(markers.t.pw[[i]],
+                                 medianNon0.dlpfc[[i]][match(rownames(markers.t.pw[[i]]),
+                                                           names(medianNon0.dlpfc[[i]]))])
+  colnames(markers.t.pw[[i]])[22] <- "non0median"
+}
+sapply(markers.t.pw, function(x){table(x$FDR<0.05 & x$non0median == TRUE)["TRUE"]})
+
+## 1vAll:
+for(i in names(markers.t.1vAll)){
+  markers.t.1vAll[[i]] <- cbind(markers.t.1vAll[[i]],
+                                 medianNon0.dlpfc[[i]][match(rownames(markers.t.1vAll[[i]]),
+                                                           names(medianNon0.dlpfc[[i]]))])
+  colnames(markers.t.1vAll[[i]])[5] <- "non0median"
+}
+sapply(markers.t.1vAll, function(x){table(x$log.FDR<log(0.05) & x$non0median == TRUE)["TRUE"]})
+    # Then can re-save back into that .rda
 
 ## Let's save this along with the previous pairwise results
 save(markers.t.1vAll, markers.t.1vAll.db, markers.t.pw, markers.wilcox.block,
@@ -266,6 +285,31 @@ sapply(names(markerList.t.pw), function(c){
 names(markerList.t.pw) <- paste0(names(markerList.t.pw),"_pw")
 names(markerList.t.1vAll) <- paste0(names(markerList.t.1vAll),"_1vAll")
 
+## MNT: export marker lists with the non-0-median restriction applied:
+    markerList.t.pw <- lapply(markers.t.pw, function(x){
+      rownames(x)[x$FDR < 0.05 & x$non0median == TRUE]
+      }
+    )
+    lengths(markerList.t.pw)
+        #   Astro    Excit_A    Excit_B    Excit_C    Excit_D    Excit_E    Excit_F 
+        #     165         26         62         30         64         23         31 
+        # Inhib_A    Inhib_B    Inhib_C    Inhib_D    Inhib_E    Inhib_F Macrophage 
+        #      30          2          5         52         47         17         89 
+        #   Micro      Mural      Oligo        OPC      Tcell 
+        #     144         85        201        117         64
+    
+    markerList.t.1vAll <- lapply(markers.t.1vAll, function(x){
+      rownames(x)[x$log.FDR < log(0.05) & x$non0median == TRUE]
+      }
+    )
+    lengths(markerList.t.1vAll)
+        #   Astro    Excit_A    Excit_B    Excit_C    Excit_D    Excit_E    Excit_F 
+        #     769       4500       3534       4868       3241       4122       3720 
+        # Inhib_A    Inhib_B    Inhib_C    Inhib_D    Inhib_E    Inhib_F Macrophage 
+        #    2631       2104       3085       3692        552        491        429 
+        #   Micro      Mural      Oligo        OPC      Tcell 
+        #     649        305        903       1129        260 
+    
 
 ## Add empty string
 pad <- rep("",40 - min(sapply(markerList.t.pw, length)))
