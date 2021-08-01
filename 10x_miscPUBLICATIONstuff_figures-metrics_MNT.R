@@ -303,8 +303,8 @@ sapply(cellType.idx, function(x){quantile(sce.n14[ ,x]$sum)})
 
 
 
-## Create compiled file for Cell Ranger metrics - MNT 19Jun2020 ====
-n14.samples <- c("Br5161_Amy", "Br5182_NAc_NeuN", "Br5212_DLPFC", "Br5212_sACC", "Br5287_HPC",
+## Create compiled file for Cell Ranger metrics - MNT 29Jul2021 ====
+n14.samples <- c("Br5161_Amy", "Br5182_NAc_NeuN_reseq", "Br5212_DLPFC", "Br5212_sACC", "Br5287_HPC",
                  "Br5161_DLPFC", "Br5161_NAc", "Br5207_NAc_NeuN", "Br5212_HPC", "Br5287_NAc",
                  "Br5161_HPC", "Br5161_sACC", "Br5212_Amy", "Br5212_NAc")
 
@@ -316,24 +316,89 @@ for(i in n14.samples){
 
 n14.metrics.collapsed <- n14.metrics[[1]]
 sharedMetrics <- colnames(n14.metrics.collapsed)
-
 for(i in c(2:14)){
   n14.metrics.collapsed <- rbind(n14.metrics.collapsed, n14.metrics[[i]][ ,sharedMetrics])
 }
 rownames(n14.metrics.collapsed) <- n14.samples
 
+
+## And revision n=10
+samples.revision <- read.table("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021/samples.manifest",
+                               sep="\t", header=F)$V1
+    #  [1] "Br5276_sACC_neun" "Br5400_NAc"       "Br5276_NAc"       "Br5701_NAc_neun" 
+    #  [5] "Br5701_sACC_neun" "Br5207_DLPFC"     "Br5276_Amy_neun"  "Br5400_Amy_neun" 
+    #  [9] "Br5400_sACC"      "Br5701_Amy"
+rev.metrics <- list()
+for(i in samples.revision){
+  tempFile <- paste0("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/premRNA/Feb2021/",i,"/outs/metrics_summary.csv")
+  rev.metrics[[i]] <- read.csv(tempFile, header=TRUE)
+}
+
+rev.metrics.collapsed <- rev.metrics[[1]]
+sharedMetrics <- colnames(rev.metrics.collapsed)
+for(i in c(2:10)){
+  rev.metrics.collapsed <- rbind(rev.metrics.collapsed, rev.metrics[[i]][ ,sharedMetrics])
+}
+rownames(rev.metrics.collapsed) <- samples.revision
+
+colnames(rev.metrics.collapsed) == colnames(n14.metrics.collapsed)  # all TRUE
+
+cellRanger.metrics <- rbind(n14.metrics.collapsed, rev.metrics.collapsed)
+
 # Write this out for future reference
-write.table(n14.metrics.collapsed, row.names=T, col.names=T, sep="\t", quote=F,
-            file="tables/METRICS-n14-analyzed_CellRanger-premRNA-output_MNT.tsv")
+write.table(cellRanger.metrics, row.names=T, col.names=T, sep="\t", quote=F,
+            file="tables/revision/METRICS-n24-analyzed_CellRanger-premRNA-output_MNT2021.tsv")
 # As semi-colon-SV
-write.table(n14.metrics.collapsed, row.names=T, col.names=T, sep=";", quote=F, 
-            file="tables/METRICS-n14-analyzed_CellRanger-premRNA-output_MNT.csv")
+write.table(cellRanger.metrics, row.names=T, col.names=T, sep=";", quote=F, 
+            file="tables/revision/METRICS-n24-analyzed_CellRanger-premRNA-output_MNT2021.csv")
 
 
 # Sequencing depth
-quantile(as.numeric(gsub(",","",n14.metrics.collapsed$Number.of.Reads)))
-#       0%       25%       50%       75%      100%
-#118752669 148651409 253012622 274925035 296198922
+quantile(as.numeric(gsub(",","",cellRanger.metrics$Number.of.Reads)))
+            #       0%       25%       50%       75%      100%
+            #118752669 148651409 253012622 274925035 296198922  (formerly, n=14 preprint)
+    # Revision n=24:
+    #        0%       25%       50%       75%      100% 
+    # 118752669 253695421 284257444 418976634 479112744
+
+
+## Version with additional batch info
+load("rdas/revision/all-n24-samples_across-regions-analyses_MNT2021.rda", verbose=T)
+ref.sampleInfo <- ref.sampleInfo[-which(rownames(ref.sampleInfo)=="br5182.nac.neun"), ]
+
+## Re-order, so can cbind
+# Add those new 'de-identified' donor IDs
+donorRef <- data.frame(donor=unique(sce.allRegions$donor),
+                       pub.donorID=paste0("donor", 1:8))
+
+ref.sampleInfo$DonorID.pub <- donorRef$pub.donorID[match(ref.sampleInfo$donor,
+                                                         donorRef$donor)]
+ref.sampleInfo <- ref.sampleInfo[match(gsub("_",".",tolower(rownames(cellRanger.metrics))),
+                                               rownames(ref.sampleInfo)), ]
+rownames(ref.sampleInfo) <- rownames(cellRanger.metrics)
+colnames(ref.sampleInfo) <- c("SampleID","Region","DonorID.BrNum","Sex","Process.Batch",
+                              "Protocol","Sequencer","DonorID.pub")
+# Re-organize (don't need 'sampleID' bc redundant)
+ref.sampleInfo <- ref.sampleInfo[ ,c("DonorID.pub","DonorID.BrNum","Sex","Region",
+                                     "Process.Batch","Protocol","Sequencer")]
+
+# Add FACS machine
+ref.sampleInfo$Sorter <- "BD_FACSAriaII"
+ref.sampleInfo$Sorter[rownames(ref.sampleInfo) %in% samples.revision] <- "BioRad_S3e"
+ref.sampleInfo <- ref.sampleInfo[ ,c(1:6,8,7)]
+
+
+sampleMetrics.full <- cbind(ref.sampleInfo, cellRanger.metrics)
+
+
+# Write this out for future reference
+write.table(sampleMetrics.full, row.names=T, col.names=T, sep="\t", quote=F,
+            file="tables/revision/METRICS-n24_CellRanger-premRNA-output_wBatchInfo_MNT2021.tsv")
+# As semi-colon-SV
+write.table(sampleMetrics.full, row.names=T, col.names=T, sep=";", quote=F, 
+            file="tables/revision/METRICS-n24_CellRanger-premRNA-output_wBatchInfo_MNT2021.csv")
+
+
 
 
 ## NAc, all n=8 ===
@@ -854,19 +919,26 @@ dev.off()
 
 
 ## Supplementary Table 1 === ===
-sheet2 <- read.csv("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10x-snRNA-seq_Pilot_Subject_Info_rev2021.csv",
+pheno <- read.csv("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/10x-snRNA-seq_Pilot_Subject_Info_rev2021.csv",
                    header=T, sep=",")
-sheet2 <- sheet2[ ,c("brnum", "sex", "race", "agedeath", "primarydx", "pmi")]
-colnames(sheet2) <- c("BrNum", "Sex", "Race", "AgeDeath", "PrimaryDx", "PMI")
+# Add more 'de-identifying' donor ID used in figs
+donorRef <- data.frame(donor=unique(sce.allRegions$donor),
+                       pub.donorID=paste0("donor", 1:8))
+donorRef$donor <- gsub("br","Br",donorRef$donor)
 
-sheet1 <- sheet1[!duplicated(sheet1$BrNum), 1:3]
-sheet2$BrNum == sheet1$BrNum # order good
+pheno$pub.donorID <- donorRef$pub.donorID[match(pheno$brnum, donorRef$donor)]
 
-suppTab1 <- cbind(sheet2, sheet1[ ,"BestRIN PFC"])
-colnames(suppTab1)[7] <- "PFC_RIN"
+# Re-order
+pheno <- pheno[order(pheno$pub.donorID), c("pub.donorID", "brnum", "sex", "agedeath", "race", "primarydx",
+                                           "pmi","pmi_confidence_level","smoking","codeine","morphine","bmi_calculated")]
 
-write.table(suppTab1, row.names=F, col.names=T, sep="\t", quote=F,
-            file="tables/suppTab1_SampleInformation.tsv")
+# Cleaner names
+colnames(pheno) <- c("DonorID.pub","BrNum", "Sex", "AgeDeath_yrs", "Race", "PrimaryDx",
+                     "PMI_hrs", "PMI_confidence_level",
+                     "Smoking","Codeine","Morphine","BMI")
+
+write.table(pheno, row.names=F, col.names=T, sep="\t", quote=F,
+            file="tables/revision/suppTab1_SampleInformation_MNT2021.tsv")
 
 
 
@@ -926,6 +998,20 @@ for(i in names(region.idx)){
   )
 }
 dev.off()
+
+
+# How many total neurons?
+length(c(grep("Inhib", sce.allRegions$cellType),
+         grep("Excit", sce.allRegions$cellType),
+         grep("Neu", sce.allRegions$cellType),
+         grep("MSN",sce.allRegions$cellType)))
+  # [1] 28150
+
+
+
+
+
+
 
 
 ### For LeCo/iSEE ==========================
@@ -1010,46 +1096,46 @@ keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate
           return(sce_small)
         }
 
-## NAc === ===
-load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-# Publication tSNE
-load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
-    rm(sce.all.tsne.10pcs)
-
-# Already has 'ambig.lowNtrxts' removed, so remove these and just assign to $cellType
-sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
-
-reducedDim(sce.nac, "TSNE") <- reducedDim(sce.all.tsne.15pcs, "TSNE")
-
-# Reduce
-sce.nac.red <- create_small_sce(sce.nac)
-# Check
-head(colData(sce.nac.red))
-head(rowData(sce.nac.red))
-plotTSNE(sce.nac.red, colour_by="cell_type")
-
-sce.nac <- sce.nac.red
-
-#dir.create("rdas/forAmazonS3/")
-save(sce.nac, file="rdas/forAmazonS3/SCE_NAc_tran-etal.rda")
-
-
-## AMY === ===
-load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-# Publication tSNE
-load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
-
-# Already has 'Ambig.lowNtrxts' removed, so remove these and just assign to $cellType
-sce.amy <- sce.amy[ ,!sce.amy$cellType.split=="Ambig.lowNtrxts"]
-
-reducedDim(sce.amy, "TSNE") <- reducedDim(sce.amy.tsne.optb, "TSNE")
-
-# Reduce
-sce.amy.red <- create_small_sce(sce.amy, cell_var="cellType.split")
-# Check
-head(colData(sce.amy.red))
-head(rowData(sce.amy.red))
-plotTSNE(sce.amy.red, colour_by="cell_type")
+# ## NAc === ===
+# load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
+# # Publication tSNE
+# load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
+#     rm(sce.all.tsne.10pcs)
+# 
+# # Already has 'ambig.lowNtrxts' removed, so remove these and just assign to $cellType
+# sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
+# 
+# reducedDim(sce.nac, "TSNE") <- reducedDim(sce.all.tsne.15pcs, "TSNE")
+# 
+# # Reduce
+# sce.nac.red <- create_small_sce(sce.nac)
+# # Check
+# head(colData(sce.nac.red))
+# head(rowData(sce.nac.red))
+# plotTSNE(sce.nac.red, colour_by="cell_type")
+# 
+# sce.nac <- sce.nac.red
+# 
+# #dir.create("rdas/forAmazonS3/")
+# save(sce.nac, file="rdas/forAmazonS3/SCE_NAc_tran-etal.rda")
+# 
+# 
+# ## AMY === ===
+# load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
+# # Publication tSNE
+# load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
+# 
+# # Already has 'Ambig.lowNtrxts' removed, so remove these and just assign to $cellType
+# sce.amy <- sce.amy[ ,!sce.amy$cellType.split=="Ambig.lowNtrxts"]
+# 
+# reducedDim(sce.amy, "TSNE") <- reducedDim(sce.amy.tsne.optb, "TSNE")
+# 
+# # Reduce
+# sce.amy.red <- create_small_sce(sce.amy, cell_var="cellType.split")
+# # Check
+# head(colData(sce.amy.red))
+# head(rowData(sce.amy.red))
+# plotTSNE(sce.amy.red, colour_by="cell_type")
 
 
 
