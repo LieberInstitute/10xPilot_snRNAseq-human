@@ -521,19 +521,20 @@ library(pheatmap)
 cell.idx <- splitit(sce.nac$cellType)
 dat <- as.matrix(assay(sce.nac, "logcounts"))
 
-#pdf('pdfs/revision/pubFigures/heatmap-geneExprs_NAc-n8_mean-broadMarkers_MNT2021.pdf', useDingbats=TRUE, height=6, width=7)
-pdf('pdfs/revision/pubFigures/heatmap-geneExprs_NAc-n8_median-broadMarkers_MNT2021.pdf', useDingbats=TRUE, height=6, width=7)
-genes <- c('DRD1','TAC1','DRD2','PENK','PPP1R1B','GAD1','SNAP25','CAMK2A','MBP','PDGFRA','AQP4','CD74','CD163')
-#current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
+pdf('pdfs/revision/pubFigures/heatmap-geneExprs_NAc-n8_mean-broadMarkers_MNT2021.pdf', useDingbats=TRUE, height=6, width=7)
+#pdf('pdfs/revision/pubFigures/heatmap-geneExprs_NAc-n8_median-broadMarkers_MNT2021.pdf', useDingbats=TRUE, height=6, width=7)
+genes <- c('SNAP25','CAMK2A','SLC17A7','GAD1','DRD1','TAC1','DRD2','PENK','PPP1R1B',
+           'MBP','PDGFRA','AQP4','CD74','CD163')
+current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMeans(dat[genes, ii])))
 # # or medians:
-    current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
-    # for some reason `rowMedians()` doesn't keep row names...
-    rownames(current_dat) <- genes
+    # current_dat <- do.call(cbind, lapply(cell.idx, function(ii) rowMedians(dat[genes, ii])))
+    # # for some reason `rowMedians()` doesn't keep row names...
+    # rownames(current_dat) <- genes
 current_dat <- current_dat[ ,c(11:20, 3:7, 21:22,24,23,1:2,9:10,8)]
 pheatmap(current_dat, cluster_rows = FALSE, cluster_cols = FALSE, breaks = seq(0.02, 4, length.out = 101),
          color = colorRampPalette(RColorBrewer::brewer.pal(n = 7, name = "OrRd"))(100), fontsize = 16,
          legend=T)
-grid::grid.text(label="Expression \n (log2)",x=0.95,y=0.60, gp=grid::gpar(fontsize=10))
+grid::grid.text(label="Expression \n (log2)",x=0.95,y=0.61, gp=grid::gpar(fontsize=10))
 dev.off()
 
 
