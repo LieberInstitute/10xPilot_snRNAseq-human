@@ -87,11 +87,11 @@ If you are interested in the raw data, that is the [FASTQ](https://en.wikipedia.
 
 The corresponding [`SingleCellExperiment`](http://bioconductor.org/packages/SingleCellExperiment/) [R](https://cran.r-project.org/)/[Bioconductor](http://bioconductor.org/) objects (with `reducedDims`, annotations, etc.) for each of the five regions across eight donors are publicly hosted at:
 
-* [AMY](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
-* [DLPFC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
-* [HPC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
-* [NAc](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
-* [sACC](https://libd-snrnaseq-pilot.s3.use-east-2.amazonaws.com/TODO)
+* [AMY](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_AMY-n5_tran-etal.rda)
+* [DLPFC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_DLPFC-n3_tran-etal.rda)
+* [HPC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_HPC-n3_tran-etal.rda)
+* [NAc](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_NAc-n8_tran-etal.rda)
+* [sACC](https://libd-snrnaseq-pilot.s3.us-east-2.amazonaws.com/SCE_sACC-n5_tran-etal.rda)
 
 ### Pre-print version
 
