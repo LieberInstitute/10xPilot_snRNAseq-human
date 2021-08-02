@@ -1034,38 +1034,45 @@ rowData(sce.amy.tsne.optb) <- rowdat.sce
 
 
 ### Clean region-specific SCEs Amazon hosting ====================
-keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate","protocol","prelimCluster")
+  # Updated MNT 2021 to clean up SCEs
+  # Notes: Keeping 'drop.' clusters, since other investigators might want to explore
+  #        such technical artifact-driven clusters / QC differently
 
-## Adapted from Leo's `create_small_sce`:
-    create_small_sce <- function(sce_original, cell_var = "cellType") {
+# Assign 'publication' donor IDs
+donor_map <- paste0("donor", seq_len(8))
+names(donor_map) <- c("br5161", "br5212", "br5287", "br5400", "br5276", "br5207", "br5182", "br5701")
 
-          sce_original <- sce_original[, tolower(colData(sce_original)[[cell_var]]) != tolower("ambig.lowNtrxts")]
-          colData(sce_original)[[cell_var]] <- factor(colData(sce_original)[[cell_var]])
-          colData(sce_original)[[cell_var]] <- factor(colData(sce_original)[[cell_var]])
-          
-          message(Sys.time(), " reducing the sce object")
-          sce_small <- sce_original
-          # Just provide raw counts, as opposed to logcounts used for shiny app
-          assays(sce_small) <- assays(sce_small)["counts"]
-          
-          sce_small$sample <- factor(sce_small$sample)
-          sce_small$region <- factor(sce_small$region)
-          sce_small$donor <- factor(sce_small$donor)
-          sce_small$processDate <- factor(paste0(sce_small$processDate,".2019"))
-          sce_small$protocol <- factor(sce_small$protocol)
-          colData(sce_small) <- colData(sce_small)[ ,colnames(colData(sce_small)) %in% keepCols]
-          # Add back in standardized 'cell_type' naming:
-          sce_small$cell_type <- factor(colData(sce_original)[[cell_var]])
-          
-          ## Make the rows more browsable
-          colnames(sce_small) <- paste0(sce_small$sample, '_', sce_small$Barcode)
-          sce_small$Barcode <- make.names(sce_small$Barcode, unique = TRUE)
-          ## Can remove bc just points to location of raw count matrices:
-          metadata(sce_small) <- list()
-          
-          ## It's all "Gene Expression", so we can remove it
-          rowData(sce_small)$Type <- NULL
-          
+keepCols <-  c("Barcode","sum","detected","doubletScore","region","donor","sex",
+               "processBatch","protocol","sequencer","sizeFactor",
+               "prelimCluster","collapsedCluster","cellType")
+
+## Adapted from Leo's `create_small_sce_2021`:
+  create_unif_sce <- function(sce_original) {
+
+      # Assign 'publication' donor IDs
+      stopifnot(all(unique(sce_original$donor) %in% names(donor_map)))
+      sce_original$donor <- unname(donor_map[sce_original$donor])
+      
+      message(Sys.time(), " Uniformizing the sce object")
+      sce_small <- sce_original
+      #assays(sce_small) <- assays(sce_small)["logcounts"] - keep this
+      sce_small$region <- factor(sce_small$region)
+      sce_small$donor <- factor(sce_small$donor)
+      sce_small$sex <- factor(sce_small$sex)
+      sce_small$processBatch <- factor(sce_small$processBatch)
+      sce_small$protocol <- factor(sce_small$protocol)
+      sce_small$sequencer <- factor(sce_small$sequencer)
+      sce_small$cellType <- factor(sce_small$cellType)
+      
+      colData(sce_small) <- colData(sce_small)[ ,keepCols]
+      
+      
+      ## Make the rows more browsable
+      sce_small$Barcode <- make.names(sce_small$Barcode, unique = TRUE)
+      colnames(sce_small) <- paste0(sce_small$donor, '_', sce_small$Barcode)
+      #metadata(sce_small) <- list()  - keep this
+
+          ## What proportion of [all] nuclei is gene X captured in? ===
           message(Sys.time(), " computing propNucleiExprs")
           
           rowData(sce_small)$propNucleiExprs <- apply(
@@ -1075,8 +1082,8 @@ keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate
               mean(x != 0)
             }
           )
-          # The above, by cell type ===
-          cellType.idx <- splitit(colData(sce_original)[[cell_var]])
+          # The above, by cell type:
+          cellType.idx <- splitit(sce_small$cellType)
           rowdat.sce <- rowData(sce_small)
           for(i in names(cellType.idx)){
             message(Sys.time(), " computing propNucleiExprs for ", i)
@@ -1096,47 +1103,88 @@ keepCols <-  c("Barcode","sum","detected","sample","region","donor","processDate
           return(sce_small)
         }
 
-# ## NAc === ===
-# load("rdas/regionSpecific_NAc-ALL-n5_cleaned-combined_SCE_MNTMar2020.rda", verbose=T)
-# # Publication tSNE
-# load("rdas/ztemp_NAc-ALL-n5_SCE-with-tSNEon15-10PCs_MNT.rda", verbose=T)
-#     rm(sce.all.tsne.10pcs)
-# 
-# # Already has 'ambig.lowNtrxts' removed, so remove these and just assign to $cellType
-# sce.nac <- sce.nac.all[ ,!sce.nac.all$cellType=="ambig.lowNtrxts"]
-# 
-# reducedDim(sce.nac, "TSNE") <- reducedDim(sce.all.tsne.15pcs, "TSNE")
-# 
-# # Reduce
-# sce.nac.red <- create_small_sce(sce.nac)
-# # Check
-# head(colData(sce.nac.red))
-# head(rowData(sce.nac.red))
-# plotTSNE(sce.nac.red, colour_by="cell_type")
-# 
-# sce.nac <- sce.nac.red
-# 
-# #dir.create("rdas/forAmazonS3/")
-# save(sce.nac, file="rdas/forAmazonS3/SCE_NAc_tran-etal.rda")
-# 
-# 
-# ## AMY === ===
-# load("rdas/regionSpecific_Amyg-n2_cleaned-combined_SCE_MNTFeb2020.rda", verbose=T)
-# # Publication tSNE
-# load("rdas/ztemp_Amyg-n2_SCE-with-tSNEonOptPCs-minus-PC5_MNT.rda", verbose=T)
-# 
-# # Already has 'Ambig.lowNtrxts' removed, so remove these and just assign to $cellType
-# sce.amy <- sce.amy[ ,!sce.amy$cellType.split=="Ambig.lowNtrxts"]
-# 
-# reducedDim(sce.amy, "TSNE") <- reducedDim(sce.amy.tsne.optb, "TSNE")
-# 
-# # Reduce
-# sce.amy.red <- create_small_sce(sce.amy, cell_var="cellType.split")
-# # Check
-# head(colData(sce.amy.red))
-# head(rowData(sce.amy.red))
-# plotTSNE(sce.amy.red, colour_by="cell_type")
 
+## NAc === ===
+load("rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda", verbose=T)
+
+# This one (only) didn't have a 'collapsedCluster' bc clustering step 2 wasn't needed
+sce.nac$collapsedCluster <- sce.nac$prelimCluster
+    
+# Reduce
+sce.nac.red <- create_unif_sce(sce.nac)
+# Check
+head(colData(sce.nac.red))
+head(rowData(sce.nac.red))
+plotTSNE(sce.nac.red, colour_by="cellType")
+
+sce.nac.tran <- sce.nac.red
+#dir.create("rdas/revision/forAmazonS3/")
+save(sce.nac.tran, file="rdas/revision/forAmazonS3/SCE_NAc-n8_tran-etal.rda")
+
+rm(list=ls(pattern="nac"))
+
+
+## AMY ===
+load("rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+
+# Reduce
+sce.amy.red <- create_unif_sce(sce.amy)
+# Check
+head(colData(sce.amy.red))
+head(rowData(sce.amy.red))
+plotTSNE(sce.amy.red, colour_by="cellType")
+
+sce.amy.tran <- sce.amy.red
+save(sce.amy.tran, file="rdas/revision/forAmazonS3/SCE_AMY-n5_tran-etal.rda")
+
+rm(list=ls(pattern="amy"))
+
+
+## sACC ===
+load("rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+
+# Reduce
+sce.sacc.red <- create_unif_sce(sce.sacc)
+# Check
+head(colData(sce.sacc.red))
+head(rowData(sce.sacc.red))
+plotTSNE(sce.sacc.red, colour_by="cellType")
+
+sce.sacc.tran <- sce.sacc.red
+save(sce.sacc.tran, file="rdas/revision/forAmazonS3/SCE_sACC-n5_tran-etal.rda")
+
+rm(list=ls(pattern="sacc"))
+
+
+## DLPFC ===
+load("rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+
+# Reduce
+sce.dlpfc.red <- create_unif_sce(sce.dlpfc)
+# Check
+head(colData(sce.dlpfc.red))
+head(rowData(sce.dlpfc.red))
+plotTSNE(sce.dlpfc.red, colour_by="cellType")
+
+sce.dlpfc.tran <- sce.dlpfc.red
+save(sce.dlpfc.tran, file="rdas/revision/forAmazonS3/SCE_DLPFC-n3_tran-etal.rda")
+
+rm(list=ls(pattern="dlpfc"))
+
+
+## HPC ===
+load("rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+
+# Reduce
+sce.hpc.red <- create_unif_sce(sce.hpc)
+# Check
+head(colData(sce.hpc.red))
+head(rowData(sce.hpc.red))
+plotTSNE(sce.hpc.red, colour_by="cellType")
+
+sce.hpc.tran <- sce.hpc.red
+
+save(sce.hpc.tran, file="rdas/revision/forAmazonS3/SCE_HPC-n3_tran-etal.rda")
 
 
 
