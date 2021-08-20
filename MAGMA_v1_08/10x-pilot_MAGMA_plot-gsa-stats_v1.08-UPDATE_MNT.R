@@ -342,3 +342,77 @@ grid::grid.text(label="-log10(p-value)", x=0.93, y=0.825, gp=gpar(fontsize=9))
 dev.off()
 
 
+
+### Revision exploration =======
+  #   ?: Cortical vs subcortical for substance use phenotypes?
+
+# (First re-create 'magmaStats_long', through line 95)
+magmaStats_cort.liu <- magmaStats_long[magmaStats_long$Region %in% c("dlpfc","sacc"), ]
+magmaStats_cort.liu <- magmaStats_cort.liu[grep("addxn.", magmaStats_cort.liu$GWAS), ]
+
+magmaStats_sub.liu <- magmaStats_long[magmaStats_long$Region %in% c("hpc","nac","amy"), ]
+magmaStats_sub.liu <- magmaStats_sub.liu[grep("addxn.", magmaStats_sub.liu$GWAS), ]
+
+quantile(magmaStats_cort.liu$Beta[magmaStats_cort.liu$P.adj.fdr < 0.05])
+    #        0%        25%        50%        75%       100% 
+    #0.04411300 0.05888325 0.07044550 0.08067500 0.20759000
+quantile(magmaStats_sub.liu$Beta[magmaStats_sub.liu$P.adj.fdr < 0.05])
+    #      0%      25%      50%      75%     100% 
+    #0.040552 0.061550 0.078397 0.106460 0.305230   -mean is greater too -> t-test?
+
+t.test(magmaStats_sub.liu$Beta[magmaStats_sub.liu$P.adj.fdr < 0.05],
+       magmaStats_cort.liu$Beta[magmaStats_cort.liu$P.adj.fdr < 0.05],
+       alternative="greater")
+    # t = 2.5416, df = 138.5, p-value = 0.006068
+    # alternative hypothesis: true difference in means is greater than 0
+    # 95 percent confidence interval:
+    #   0.005195748         Inf
+    # sample estimates:
+    #   mean of x  mean of y 
+    # 0.09095591 0.07604576
+
+
+### Session info for 20Aug2021 ================================================
+sessionInfo()
+# R version 4.0.4 RC (2021-02-08 r79975)
+# Platform: x86_64-pc-linux-gnu (64-bit)
+# Running under: CentOS Linux 7 (Core)
+# 
+# Matrix products: default
+# BLAS:   /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRblas.so
+# LAPACK: /jhpce/shared/jhpce/core/conda/miniconda3-4.6.14/envs/svnR-4.0.x/R/4.0.x/lib64/R/lib/libRlapack.so
+# 
+# locale:
+#   [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+# [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+# [10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+# 
+# attached base packages:
+#   [1] grid      stats     graphics  grDevices datasets  utils     methods   base     
+# 
+# other attached packages:
+#   [1] jaffelab_0.99.30   rafalib_1.0.0      fields_11.6        spam_2.6-0        
+# [5] dotCall64_1.0-1    ggplot2_3.3.3      RColorBrewer_1.1-2 stringr_1.4.0     
+# [9] readr_1.4.0       
+# 
+# loaded via a namespace (and not attached):
+#   [1] SummarizedExperiment_1.20.0 tidyselect_1.1.1            reshape2_1.4.4             
+# [4] purrr_0.3.4                 gargle_1.2.0                splines_4.0.4              
+# [7] lattice_0.20-41             colorspace_2.0-0            vctrs_0.3.8                
+# [10] generics_0.1.0              stats4_4.0.4                utf8_1.2.1                 
+# [13] rlang_0.4.11                pillar_1.6.0                glue_1.4.2                 
+# [16] withr_2.4.2                 DBI_1.1.1                   BiocGenerics_0.36.1        
+# [19] segmented_1.3-4             plyr_1.8.6                  matrixStats_0.58.0         
+# [22] GenomeInfoDbData_1.2.4      lifecycle_1.0.0             zlibbioc_1.36.0            
+# [25] MatrixGenerics_1.2.1        munsell_0.5.0               gtable_0.3.0               
+# [28] Biobase_2.50.0              IRanges_2.24.1              GenomeInfoDb_1.26.7        
+# [31] parallel_4.0.4              fansi_0.4.2                 Rcpp_1.0.6                 
+# [34] scales_1.1.1                limma_3.46.0                DelayedArray_0.16.3        
+# [37] S4Vectors_0.28.1            XVector_0.30.0              fs_1.5.0                   
+# [40] hms_1.0.0                   stringi_1.5.3               dplyr_1.0.5                
+# [43] GenomicRanges_1.42.0        tools_4.0.4                 bitops_1.0-7               
+# [46] magrittr_2.0.1              maps_3.3.0                  RCurl_1.98-1.3             
+# [49] tibble_3.1.1                crayon_1.4.1                pkgconfig_2.0.3            
+# [52] ellipsis_0.3.2              Matrix_1.3-4                googledrive_2.0.0          
+# [55] assertthat_0.2.1            R6_2.5.0                    compiler_4.0.4
