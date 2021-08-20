@@ -441,6 +441,63 @@ dev.off()
 
 
 
+## For revision - can show more evidence for overlapping another way? =====
+load("rdas/revision/markers-stats_NAc-n8_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+    # markers.nac.t.pw, markers.nac.t.1vAll, medianNon0.nac
+
+colnames(markers.nac.t.pw[["MSN.D1_A"]])
+    # [1] "p.value"             "FDR"                 "summary.stats"       "stats.Astro_A"      
+    # [5] "stats.Astro_B"       "stats.Inhib_A"       "stats.Inhib_B"       "stats.Inhib_C"      
+    # [9] "stats.Inhib_D"       "stats.Inhib_E"       "stats.Macro_infilt"  "stats.Micro"        
+    # [13] "stats.Micro_resting" "stats.MSN.D1_B"      "stats.MSN.D1_C"      "stats.MSN.D1_D"     
+    # [17] "stats.MSN.D1_E"      "stats.MSN.D1_F"      "stats.MSN.D2_A"      "stats.MSN.D2_B"     
+    # [21] "stats.MSN.D2_C"      "stats.MSN.D2_D"      "stats.Oligo_A"       "stats.Oligo_B"      
+    # [25] "stats.OPC"           "stats.OPC_COP"       "non0median"
+
+# E.g. pairwise result:
+head(markers.nac.t.pw[["MSN.D1_A"]][ ,4])
+    # DataFrame with 6 rows and 3 columns
+    #                logFC log.p.value   log.FDR
+    #            <numeric>   <numeric> <numeric>
+    # AGBL1       2.738819   -218.2578 -214.0532
+    # ADAMTS19    2.967084   -393.2135 -388.4605
+    # AP001993.1  0.997718   -140.8300 -136.9631
+    # PRKCH       2.513853   -577.9395 -572.8060
+    # AC068875.1  1.263544   -141.9177 -138.0492
+    # ADAMTSL1    0.992064    -73.2992  -70.0266
+
+sapply(colnames(markers.nac.t.pw[["MSN.D1_A"]])[c(4:26)], function(x){
+  table(markers.nac.t.pw[["MSN.D1_A"]][ ,x]$log.FDR < log(0.05))
+  })
+    # D1_A closest to _D (which is probably expected) and the next closest (aka least # DEGs)
+    #      is to D2_A
+
+# With non0median restriction:
+sapply(colnames(markers.nac.t.pw[["MSN.D1_A"]])[c(4:26)], function(x){
+  table(markers.nac.t.pw[["MSN.D1_A"]][ ,x]$log.FDR < log(0.05) & 
+          markers.nac.t.pw[["MSN.D1_A"]]$non0median == TRUE)
+})
+    # same pattern
+
+
+# And pairwise result from D2_A:
+sapply(colnames(markers.nac.t.pw[["MSN.D2_A"]])[c(4:26)], function(x){
+  table(markers.nac.t.pw[["MSN.D2_A"]][ ,x]$log.FDR < log(0.05) & 
+          markers.nac.t.pw[["MSN.D2_A"]]$non0median == TRUE)["TRUE"]
+})
+    # stats.Astro_A.TRUE       stats.Astro_B.TRUE       stats.Inhib_A.TRUE       stats.Inhib_B.TRUE 
+    #               3944                     3726                     2030                     1521 
+    # stats.Inhib_C.TRUE       stats.Inhib_D.TRUE       stats.Inhib_E.TRUE  stats.Macro_infilt.TRUE 
+    #               1614                     2165                     1221                     2928 
+    #   stats.Micro.TRUE stats.Micro_resting.TRUE      stats.MSN.D1_A.TRUE      stats.MSN.D1_B.TRUE 
+    #               3909                     4725                     *776                     1577 
+    #stats.MSN.D1_C.TRUE      stats.MSN.D1_D.TRUE      stats.MSN.D1_E.TRUE      stats.MSN.D1_F.TRUE 
+    #               1935                     *791                     2296                     1565 
+    #stats.MSN.D2_B.TRUE      stats.MSN.D2_C.TRUE      stats.MSN.D2_D.TRUE       stats.Oligo_A.TRUE 
+    #               1146                     2310                     1196                     3743 
+    # stats.Oligo_B.TRUE           stats.OPC.TRUE       stats.OPC_COP.TRUE 
+    #               4297                     3859                     1857
+
 
 
 
