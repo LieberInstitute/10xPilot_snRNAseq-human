@@ -464,6 +464,106 @@ print(
 )
 dev.off()
 
+
+### MNT revision add ========
+  #   -> What are depleted in AMY's Astro_B, compared to the rest?
+
+    # Same mod
+    mod <- with(colData(sce.astro), model.matrix(~ donor))
+    mod <- mod[ , -1, drop=F]
+    
+    markers.astro.t.1vAll <- list()
+    for(i in levels(sce.astro$cellType)){
+      # Make temporary contrast
+      sce.astro$contrast <- ifelse(sce.astro$cellType==i, 1, 0)
+      # Test cluster vs. all others
+      markers.astro.t.1vAll[[i]] <- findMarkers(sce.astro, groups=sce.astro$contrast,
+                                              assay.type="logcounts", design=mod, test="t",
+                                              std.lfc=TRUE,
+                                              direction="up", pval.type="all", full.stats=T)
+    }
+    
+    
+    # Re-organize like with other region-specific markers stats:
+    markers.astro.t.1vAll <- lapply(markers.astro.t.1vAll, function(x){
+      # Basically take the 'stats.[1 or 0]' since is redundant with the 'summary'-level stats
+      lapply(x, function(y){ y[ ,4] }) 
+    })
+    
+    #Re-name std.lfc column and the entries; add non-0-median info
+    for(i in names(markers.astro.t.1vAll)){
+      colnames(markers.astro.t.1vAll[[i]][["0"]])[1] <- "std.logFC"
+      colnames(markers.astro.t.1vAll[[i]][["1"]])[1] <- "std.logFC"
+      # Add non0median Boolean - might be informative for both sets of stats
+      markers.astro.t.1vAll[[i]][["0"]] <- cbind(markers.astro.t.1vAll[[i]][["0"]],
+                                               medianNon0.astro[[i]][match(rownames(markers.astro.t.1vAll[[i]][["0"]]),
+                                                                         names(medianNon0.astro[[i]]))])
+      colnames(markers.astro.t.1vAll[[i]][["0"]])[4] <- "non0median"
+      
+      # "1" aka 'enriched'
+      markers.astro.t.1vAll[[i]][["1"]] <- cbind(markers.astro.t.1vAll[[i]][["1"]],
+                                               medianNon0.astro[[i]][match(rownames(markers.astro.t.1vAll[[i]][["1"]]),
+                                                                         names(medianNon0.astro[[i]]))])
+      colnames(markers.astro.t.1vAll[[i]][["1"]])[4] <- "non0median"
+      
+      # Then re-name the entries to more interpretable, because we'll keeping both contrasts
+      names(markers.astro.t.1vAll[[i]]) <- paste0(i,c("_depleted", "_enriched"))
+    }
+    
+    
+    ## Let's save this
+    save(markers.astro.t.1vAll, medianNon0.astro,
+         file="rdas/revision/markers-stats_acrossRegions-astros_findMarkers_MNT2021.rda")
+    
+    # Explore some expression
+    plotExpressionCustom(sce.astro.hold, anno_name="cellType", features=head(rownames(markers.astro.t.1vAll[["amy_Astro_B"]][["amy_Astro_B_depleted"]]),n=12),
+                         features_name="Downregulated in AMY Astro_B", ncol=4, scales="free_y") +
+      xlab("") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+            axis.title.y = element_text(angle = 90, size = 12),
+            axis.text.y = element_text(size = 10),
+            plot.title = element_text(size = 12),
+            panel.grid.major=element_line(colour="grey95", size=0.8),
+            panel.grid.minor=element_line(colour="grey95", size=0.4))
+
+    sapply(markers.astro.t.1vAll, function(x){table(head(x[[1]]$non0median,n=40))})
+        #       amy_Astro_A amy_Astro_B dlpfc_Astro hpc_Astro_A hpc_Astro_B nac_Astro_A
+        # FALSE          26          22          21          34          15           8
+        # TRUE           14          18          19           6          25          32
+        #       nac_Astro_B sacc_Astro_A sacc_Astro_B
+        # FALSE          24           33            6
+        # TRUE           16            7           34
+            # So each population has its own set of genes specifically depleted
+
+    # For AMY Astro_B, those are (median expression == 0):
+    printThese <- head(rownames(markers.astro.t.1vAll[["amy_Astro_B"]][["amy_Astro_B_depleted"]])[
+                      markers.astro.t.1vAll[["amy_Astro_B"]][["amy_Astro_B_depleted"]]$non0median==FALSE
+                    ],n=22)
+
+    head(which(markers.astro.t.1vAll[["amy_Astro_B"]][["amy_Astro_B_depleted"]]$non0median==FALSE),n=22)
+        # PTPRZ1     GABRB1  LINC00461      NHSL1       TCF4      PDE7B       FUT9 
+        #      7         12         16         19         22         23         24 
+        #  SASH1       AKT3      MAST4       NFIB    ATP13A4        APC AC091826.2 
+        #     25         27         28         29         30         31         32 
+        #   SOX6    CARMIL1      PREX2    DENND1A       MBD5       GNAQ     ZFAND3 
+        #     33         34         35         36         37         38         39 
+        # STXBP5 
+        #     40 
+    
+    plotExpressionCustom(sce.astro.hold, anno_name="cellType", features=printThese,
+                         features_name="Downregulated in AMY Astro_B", ncol=4, scales="free_y") +
+      xlab("") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+            axis.title.y = element_text(angle = 90, size = 12),
+            axis.text.y = element_text(size = 10),
+            plot.title = element_text(size = 12),
+            panel.grid.major=element_line(colour="grey95", size=0.8),
+            panel.grid.minor=element_line(colour="grey95", size=0.4))
+    
+    
+    # end revision exploration ==========
+
+
 # Plot the $sum densities
 coldat <- as.data.frame(colData(sce.astro))
 coldat$log10.sum <- log10(coldat$sum)
@@ -869,6 +969,73 @@ plotExpressionCustom(sce.hold, anno_name="cellType", features=c(head(rownames(ma
 dev.off()
 
 
+## Gene ontology of these broad 'excit' / 'inhib' MSN markers? ===========
+#BiocManager::install("clusterProfiler")
+library(clusterProfiler)
+
+# (load markers, above)
+
+# Make marker lists - be pretty strict here (take FDR < 0.0001)
+markerList.msns <- lapply(markers.excit.msns, function(x){rownames(x)[x$log.FDR < log(0.0001)]})
+lengths(markerList.msns)
+    #MSN.excit MSN.inhib 
+    #     4187      3174
+length(intersect(markerList.msns[["MSN.excit"]], markerList.msns[["MSN.inhib"]])) # none
+
+# Input list
+inputList.msns <- list(MSN.excit=rowData(sce.nac)$gene_id[match(markerList.msns[["MSN.excit"]],
+                                                           rownames(sce.nac))],
+                  MSN.inhib=rowData(sce.nac)$gene_id[match(markerList.msns[["MSN.inhib"]],
+                                                           rownames(sce.nac))]
+                  )
+
+# Convert and remove probes without conversion (Entrez) ID's
+inputList.msns <- lapply(inputList.msns, function(x) bitr(x, fromType="ENSEMBL",
+                                                toType="ENTREZID", OrgDb="org.Hs.eg.db", drop = TRUE)[,2])
+    # Warning messages:
+    #   1: In bitr(x, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = "org.Hs.eg.db",  :
+    #                13.47% of input gene IDs are fail to map...
+    #              2: In bitr(x, fromType = "ENSEMBL", toType = "ENTREZID", OrgDb = "org.Hs.eg.db",  :
+    #                           8.79% of input gene IDs are fail to map...
+    # Resulting lengths
+    # MSN.excit MSN.inhib 
+    #      3654      2913 
+
+# Set gene universe
+geneMap <- rowRanges(sce.nac)
+geneUniverse = bitr(geneMap$gene_id, fromType="ENSEMBL",
+                    toType="ENTREZID", OrgDb="org.Hs.eg.db", drop = TRUE)[,2]
+    #Warning message:
+    # In bitr(geneMap$gene_id, fromType = "ENSEMBL", toType = "ENTREZID",  :
+    #           30.36% of input gene IDs are fail to map...
+
+
+# GO & KEGG enrichment test:
+goBP_msns <- compareCluster(inputList.msns, fun = "enrichGO",
+                                 universe = geneUniverse, OrgDb = org.Hs.eg.db,
+                                 ont = "BP", pvalueCutoff = 0.05, readable= TRUE)
+goMF_msns <- compareCluster(inputList.msns, fun = "enrichGO",
+                                 universe = geneUniverse, OrgDb = org.Hs.eg.db,
+                                 ont = "MF", pvalueCutoff = 0.05, readable= TRUE)
+goCC_msns <- compareCluster(inputList.msns, fun = "enrichGO",
+                                 universe = geneUniverse, OrgDb = org.Hs.eg.db,
+                                 ont = "CC", pvalueCutoff = 0.05, readable= TRUE)
+KEGG_msns = compareCluster(inputList.msns, fun ='enrichKEGG', universe = geneUniverse,
+                                organism = "hsa", pvalueCutoff=0.05)
+
+save(goBP_msns, goMF_msns, goCC_msns, KEGG_msns,
+     file="rdas/revision/clusterGOs_excit-vs-inhib-MSNs_fdr-0.0001_MNT2021.rda")
+
+# Print some enriched pathways
+pdf("pdfs/revision/pubFigures/suppFig_NAc_excit-vs-inhib-MSN_GO-KEGG_MNT2021.pdf", width=6)
+dotplot(goBP_msns, font.size=9, title = "MSN 'excit' vs. 'inhib':\nBiological Process GO", showCategory=12)
+dotplot(goMF_msns, font.size=9, title = "MSN 'excit' vs. 'inhib':\nMolecular Function GO", showCategory=12)
+dotplot(goCC_msns, font.size=9, title = "MSN 'excit' vs. 'inhib':\nCellular Component GO", showCategory=12)
+dotplot(KEGG_msns, font.size=9, title = "MSN 'excit' vs. 'inhib':\nKEGG Process", showCategory=12)
+dev.off()
+
+
+
 
 # Session info for 28Jul2021 ==============
 sessionInfo()
@@ -891,49 +1058,58 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] dynamicTreeCut_1.63-1       dendextend_1.14.0           gridExtra_2.3              
-# [4] pheatmap_1.0.12             RColorBrewer_1.1-2          lattice_0.20-41            
-# [7] limma_3.46.0                jaffelab_0.99.30            rafalib_1.0.0              
-# [10] DropletUtils_1.10.3         batchelor_1.6.3             scran_1.18.7               
-# [13] scater_1.18.6               ggplot2_3.3.3               org.Hs.eg.db_3.12.0        
-# [16] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
-# [19] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0
-# [22] SummarizedExperiment_1.20.0 Biobase_2.50.0              GenomicRanges_1.42.0       
-# [25] GenomeInfoDb_1.26.7         IRanges_2.24.1              S4Vectors_0.28.1           
-# [28] BiocGenerics_0.36.1         MatrixGenerics_1.2.1        matrixStats_0.58.0         
+#   [1] clusterProfiler_3.18.1      gridExtra_2.3               pheatmap_1.0.12            
+# [4] RColorBrewer_1.1-2          lattice_0.20-41             limma_3.46.0               
+# [7] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
+# [10] batchelor_1.6.3             scran_1.18.7                org.Hs.eg.db_3.12.0        
+# [13] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
+# [16] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        scater_1.18.6              
+# [19] ggplot2_3.3.3               SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [22] Biobase_2.50.0              GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
+# [25] IRanges_2.24.1              S4Vectors_0.28.1            BiocGenerics_0.36.1        
+# [28] MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
-#   [1] googledrive_1.0.1         ggbeeswarm_0.6.0          colorspace_2.0-0         
-# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
-# [7] XVector_0.30.0            BiocNeighbors_1.8.2       rstudioapi_0.13          
-# [10] farver_2.1.0              bit64_4.0.5               fansi_0.4.2              
-# [13] xml2_1.3.2                splines_4.0.4             R.methodsS3_1.8.1        
-# [16] sparseMatrixStats_1.2.1   cachem_1.0.4              Rsamtools_2.6.0          
-# [19] ResidualMatrix_1.0.0      dbplyr_2.1.1              R.oo_1.24.0              
-# [22] HDF5Array_1.18.1          compiler_4.0.4            httr_1.4.2               
-# [25] dqrng_0.3.0               assertthat_0.2.1          Matrix_1.3-4             
-# [28] fastmap_1.1.0             lazyeval_0.2.2            BiocSingular_1.6.0       
-# [31] prettyunits_1.1.1         tools_4.0.4               rsvd_1.0.5               
-# [34] igraph_1.2.6              gtable_0.3.0              glue_1.4.2               
-# [37] GenomeInfoDbData_1.2.4    dplyr_1.0.5               rappdirs_0.3.3           
-# [40] Rcpp_1.0.6                vctrs_0.3.8               Biostrings_2.58.0        
-# [43] rhdf5filters_1.2.0        rtracklayer_1.50.0        DelayedMatrixStats_1.12.3
-# [46] stringr_1.4.0             beachmat_2.6.4            lifecycle_1.0.0          
-# [49] irlba_2.3.3               statmod_1.4.35            XML_3.99-0.6             
-# [52] edgeR_3.32.1              zlibbioc_1.36.0           scales_1.1.1             
-# [55] hms_1.0.0                 ProtGenerics_1.22.0       rhdf5_2.34.0             
-# [58] curl_4.3                  memoise_2.0.0             segmented_1.3-4          
-# [61] biomaRt_2.46.3            stringi_1.5.3             RSQLite_2.2.7            
-# [64] BiocParallel_1.24.1       rlang_0.4.11              pkgconfig_2.0.3          
-# [67] bitops_1.0-7              purrr_0.3.4               Rhdf5lib_1.12.1          
-# [70] labeling_0.4.2            GenomicAlignments_1.26.0  cowplot_1.1.1            
-# [73] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
-# [76] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
-# [79] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
-# [82] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
-# [85] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
-# [88] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
-# [91] blob_1.2.1                digest_0.6.27             R.utils_2.10.1           
-# [94] openssl_1.4.3             munsell_0.5.0             beeswarm_0.4.0           
-# [97] viridisLite_0.4.0         vipor_0.4.5               askpass_1.1   
+#   [1] shadowtext_0.0.8          fastmatch_1.1-3           BiocFileCache_1.14.0     
+# [4] plyr_1.8.6                igraph_1.2.6              lazyeval_0.2.2           
+# [7] splines_4.0.4             BiocParallel_1.24.1       digest_0.6.27            
+# [10] GOSemSim_2.16.1           viridis_0.6.0             GO.db_3.12.1             
+# [13] fansi_0.4.2               magrittr_2.0.1            memoise_2.0.0            
+# [16] graphlayouts_0.7.1        Biostrings_2.58.0         R.utils_2.10.1           
+# [19] askpass_1.1               enrichplot_1.10.2         prettyunits_1.1.1        
+# [22] colorspace_2.0-0          ggrepel_0.9.1             blob_1.2.1               
+# [25] rappdirs_0.3.3            dplyr_1.0.5               crayon_1.4.1             
+# [28] RCurl_1.98-1.3            scatterpie_0.1.6          glue_1.4.2               
+# [31] polyclip_1.10-0           gtable_0.3.0              zlibbioc_1.36.0          
+# [34] XVector_0.30.0            DelayedArray_0.16.3       BiocSingular_1.6.0       
+# [37] Rhdf5lib_1.12.1           HDF5Array_1.18.1          scales_1.1.1             
+# [40] DOSE_3.16.0               DBI_1.1.1                 edgeR_3.32.1             
+# [43] Rcpp_1.0.6                viridisLite_0.4.0         progress_1.2.2           
+# [46] dqrng_0.3.0               bit_4.0.4                 rsvd_1.0.5               
+# [49] ResidualMatrix_1.0.0      httr_1.4.2                fgsea_1.16.0             
+# [52] ellipsis_0.3.2            farver_2.1.0              pkgconfig_2.0.3          
+# [55] XML_3.99-0.6              R.methodsS3_1.8.1         scuttle_1.0.4            
+# [58] dbplyr_2.1.1              locfit_1.5-9.4            utf8_1.2.1               
+# [61] labeling_0.4.2            reshape2_1.4.4            tidyselect_1.1.1         
+# [64] rlang_0.4.11              munsell_0.5.0             tools_4.0.4              
+# [67] cachem_1.0.4              downloader_0.4            generics_0.1.0           
+# [70] RSQLite_2.2.7             stringr_1.4.0             fastmap_1.1.0            
+# [73] bit64_4.0.5               tidygraph_1.2.0           purrr_0.3.4              
+# [76] ggraph_2.0.5              sparseMatrixStats_1.2.1   R.oo_1.24.0              
+# [79] DO.db_2.9                 xml2_1.3.2                biomaRt_2.46.3           
+# [82] compiler_4.0.4            rstudioapi_0.13           beeswarm_0.4.0           
+# [85] curl_4.3                  tweenr_1.0.2              tibble_3.1.1             
+# [88] statmod_1.4.35            stringi_1.5.3             bluster_1.0.0            
+# [91] ProtGenerics_1.22.0       Matrix_1.3-4              vctrs_0.3.8              
+# [94] pillar_1.6.0              lifecycle_1.0.0           rhdf5filters_1.2.0       
+# [97] BiocManager_1.30.12       BiocNeighbors_1.8.2       cowplot_1.1.1            
+# [100] data.table_1.14.0         bitops_1.0-7              irlba_2.3.3              
+# [103] qvalue_2.22.0             rtracklayer_1.50.0        R6_2.5.0                 
+# [106] vipor_0.4.5               MASS_7.3-53.1             assertthat_0.2.1         
+# [109] rhdf5_2.34.0              openssl_1.4.3             withr_2.4.2              
+# [112] GenomicAlignments_1.26.0  Rsamtools_2.6.0           GenomeInfoDbData_1.2.4   
+# [115] hms_1.0.0                 grid_4.0.4                beachmat_2.6.4           
+# [118] tidyr_1.1.3               rvcheck_0.1.8             DelayedMatrixStats_1.12.3
+# [121] segmented_1.3-4           googledrive_2.0.0         ggforce_0.3.3            
+# [124] ggbeeswarm_0.6.0 
 
