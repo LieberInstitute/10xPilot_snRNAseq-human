@@ -127,7 +127,7 @@ The following object is masked from ‘package:S4Vectors’:
 
     expand
 
-here() starts at /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
+here() starts at /dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
 2020-09-08 16:17:53 options used
 $ARGS
 character(0)
@@ -155,7 +155,7 @@ Loading objects:
 2020-09-08 16:18:01 saving the rse file for later at NAc_gene/working_rse.Rdata
 2020-09-08 16:18:31 working RSE dimensions
 [1] 58037   205
-2020-09-08 16:18:31 reading the bim file /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
+2020-09-08 16:18:31 reading the bim file /dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs
 2020-09-08 16:19:20 number of features kept: 56888
 2020-09-08 16:19:21 number of genes per chr
 

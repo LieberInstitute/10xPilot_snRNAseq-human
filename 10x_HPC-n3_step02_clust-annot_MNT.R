@@ -30,7 +30,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 
 
 # Load 'pilot' samples
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
     # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
     rm(pilot.data.unfiltered, e.out)
@@ -98,7 +98,7 @@ save(sce.hpc, chosen.hvgs.hpc, ref.sampleInfo,
 
 
 ### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
     # sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo
 
@@ -214,7 +214,7 @@ names(cluster_colors) <- unique(clust.treeCut[order.dendrogram(dend)])
 labels_colors(dend) <- cluster_colors[as.character(clust.treeCut[order.dendrogram(dend)])]
 
 # Print for future reference
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf",width=9)
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_HC-prelimCluster-relationships_MNT2021.pdf",width=9)
 par(cex=1.1, font=2)
 plot(dend, main="3x HPC prelim-kNN-cluster relationships")
 dev.off()
@@ -229,7 +229,7 @@ clusterRefTab.hpc <- data.frame(origClust=order.dendrogram(dend),
 sce.hpc$collapsedCluster <- factor(clusterRefTab.hpc$merged[match(sce.hpc$prelimCluster, clusterRefTab.hpc$origClust)])
 
 # Print some visualizations:
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf")
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_reducedDims-with-collapsedClusters_MNT2021.pdf")
 plotReducedDim(sce.hpc, dimred="PCA_corrected", ncomponents=5, colour_by="collapsedCluster", point_alpha=0.5)
 plotTSNE(sce.hpc, colour_by="sampleID", point_alpha=0.5)
 plotTSNE(sce.hpc, colour_by="protocol", point_alpha=0.5)
@@ -256,7 +256,7 @@ markers.mathys.custom = list(
   'Tcell' = c('SKAP1', 'ITK', 'CD247')
 )
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf",
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf",
     height=6, width=8)
 for(i in 1:length(markers.mathys.custom)){
   print(
@@ -338,7 +338,7 @@ sce.hpc$cellType <- factor(sce.hpc$cellType)
 
 
 ## Re-print marker expression with cell type labels ===
-# load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
+# load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
 #      verbose=T)
 cell_colors.hpc <- cluster_colors[order(as.integer(names(cluster_colors)))]
 names(cell_colors.hpc) <- annotationTab.hpc$cellType
@@ -355,7 +355,7 @@ cell_colors.hpc
 
 ## Save
 save(sce.hpc, chosen.hvgs.hpc, pc.choice.hpc, ref.sampleInfo, clusterRefTab.hpc, annotationTab.hpc, cell_colors.hpc,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_HPC-n3_cleaned-combined_SCE_MNT2021.rda")
 
 
 pdf("pdfs/revision/regionSpecific_HPC-n3_marker-logExprs_collapsedClusters_MNT2021.pdf", height=4.5, width=10)

@@ -30,7 +30,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 ## From findMarkers() ====
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers_MNTMar2020.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers_MNTMar2020.rda",
      verbose=T)
     # markers.dlpfc.t.design.log, markers.dlpfc.t.design.countsN
     rm(markers.dlpfc.t.design.log, markers.dlpfc.t.design.countsN)
@@ -608,7 +608,7 @@ dev.off()
 ### 24Apr2020: using single-nucleus-level stats for enrichment ==========================================
   #   - as it's believed these are more 'real' markers
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_DLPFC_n2_findMarkers-SN-LEVEL_MNTApr2020.rda",
      verbose=T)
     # markers.dlpfc.t.design
 
@@ -625,7 +625,7 @@ sapply(markers.dlpfc.t.design, function(x){table(x$FDR<0.05)})
     # TRUE              37     236     191     133      25      29      26   532   148   154
 
 ## Load SCE for rowData
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/regionSpecific_DLPFC-n2_SCE_cellTypesSplit-fromST_Apr2020.rda", verbose=T)
     # sce.dlpfc.st, clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo
     rm(clusterRefTab.dlpfc, chosen.hvgs.dlpfc, ref.sampleInfo)
 

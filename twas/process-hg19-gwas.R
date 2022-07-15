@@ -103,7 +103,7 @@ names(hg38_gwas_aoi)[3] <- "BP"
 # read bim file with unique rsIDs
 uniq_bim <-
     fread(
-        "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs.bim"
+        "/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs.bim"
     )
 
 colnames(uniq_bim) <- c("CHR", "SNP", "dummy", "BP", "A1", "A2")

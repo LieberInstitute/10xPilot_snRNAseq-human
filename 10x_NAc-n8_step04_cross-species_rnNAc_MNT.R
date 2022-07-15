@@ -45,7 +45,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 ### Setting up homologous gene IDs, for mapping b/tw species =============
 
 ## Load SCE with new info
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_NAc-n8_cleaned-combined_MNT2021.rda",
      verbose=T)
     # sce.nac, chosen.hvgs.nac, pc.choice.nac, ref.sampleInfo, annotationTab.nac, cell_colors.nac
 
@@ -255,7 +255,7 @@ write.table(sce.nac$Barcode, file="pdfs/exploration/DayLab-ratNAc/10xCounts/libd
 
 
 ## Now try reading back in and comparing === === ===
-path.test <- file.path("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/10xCounts")
+path.test <- file.path("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/DayLab-ratNAc/10xCounts")
 sce.test <- read10xCounts(path.test, col.names=TRUE)
     ## issues such as "/genes.tsv': No such file or directory" (& mtx file & barcodes.tsv)...
      #      -> just re-named those in the test dir and re-did
@@ -554,7 +554,7 @@ dev.off()
 
 
 ## Final small exploration: Rat Grm8-MSNs ~ MSN.D1.3? ================
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_NAc-n5_findMarkers-SN-LEVEL_MNTApr2020.rda", verbose=T)
     # markers.nac.t.design, markers.nac.t.1vAll
 load("/dcl01/ajaffe/data/lab/singleCell/day_rat_snRNAseq/markers-stats_DayLab-ratNAc_findMarkers-SN-LEVEL_MNTMay2020.rda",
      verbose=T)

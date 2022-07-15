@@ -20,7 +20,7 @@ library(jaffelab)
 # ===
 
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
     # sce.sacc, chosen.hvgs.sacc, ref.sampleInfo, ref.sampleInfo.rev,
 
@@ -34,7 +34,7 @@ metadata(pc.choice.sacc)$chosen
 
 
     ## Plot n Clusters vs. d PCs
-    pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_sACC-n5_getClusteredPCs_MNT2021.pdf")
+    pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_sACC-n5_getClusteredPCs_MNT2021.pdf")
     plot(pc.choice.sacc$n.pcs, pc.choice.sacc$n.clusters,
          main=paste0("Combined sACC (n=5) samples (d PCs choice = ", metadata(pc.choice.sacc)$chosen, ")"))
     abline(v=metadata(pc.choice.sacc)$chosen, col="red", lty="dashed", lwd=0.8)  
@@ -43,7 +43,7 @@ metadata(pc.choice.sacc)$chosen
 
 # Save
 save(sce.sacc, chosen.hvgs.sacc, pc.choice.sacc, ref.sampleInfo, ref.sampleInfo.rev,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_sACC-n5_cleaned-combined_SCE_MNT2021.rda")
 
 rm(list=ls())
 sessionInfo()

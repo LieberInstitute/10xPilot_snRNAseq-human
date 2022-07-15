@@ -194,5 +194,5 @@ Here, nuclei are clustered across all brain regions, together, and then annotate
 
 ## LIBD internal
 
-* JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
+* JHPCE location: `/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
 * FASTQ files: `/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ`

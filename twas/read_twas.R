@@ -86,7 +86,7 @@ twas <- map(file_types, function(ftype) {
     pmap_dfr(arg_grid, function(region, type, feature) {
         ## Construct the path to the files
         path <- file.path(
-            "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas",
+            "/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas",
             paste0(region, "_", feature),
             type
         )

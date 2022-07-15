@@ -31,7 +31,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 #   ** Approach - pseudo-bulk on sample:cellType stratification, then treat as SCE, so that
 #                 can use 'findMarkers()' function that utilizes different tests
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
      verbose=T)
     ## sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
 
@@ -149,7 +149,7 @@ sapply(markers.all.n12.t.design.countsN, function(x){table(x$FDR<0.05)[2]})
 
 # Save prelim results
 #save(markers.all.n12.t.design.log, markers.all.n12.t.design.countsN,
-#     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_panBrain_findMarkers_MNTMar2020.rda")
+#     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/markers-stats_panBrain_findMarkers_MNTMar2020.rda")
 
 
 ### ANOVA to find the most variable covars ================================================
@@ -183,7 +183,7 @@ names(varCompAnalysis) = rownames(lc)
 names(varCompAnalysis.don1st) = rownames(lc)
 
 save(sce.all.n12.PB, varCompAnalysis, varCompAnalysis.don1st,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/varCompAnalysis_MNTApr2020.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/varCompAnalysis_MNTApr2020.rda")
 
 
 ## make boxplots
@@ -400,7 +400,7 @@ genes2plot <- lapply(markerList.sorted, function(x){head(x, n=40)})
 
 
 ## Let's plot some expression of these to see how much are 'real' (not driven by outliers)
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
      verbose=T)
 ## sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
 
@@ -634,7 +634,7 @@ dev.off()
   #                   once we accepted the sn-level tests to yield more robust results
 
 # Load SCE
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/all-FACS-homogenates_n12_PAN-BRAIN-Analyses_MNTFeb2020.rda",
      verbose=T)
     # sce.all.n12, chosen.hvgs.all.n12, pc.choice.n12, ref.sampleInfo, clusterRefTab.all.n12
 
@@ -721,7 +721,7 @@ markerList.t.1vAll <- lapply(markers.n12.t.1vAll, function(x){
 genes.top40.t.1vAll <- lapply(markerList.t.1vAll, function(x){head(x, n=40)})
 
 for(i in names(genes.top40.t.1vAll)){
-  png(paste0("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/panBrainMarkers/panBrain_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
+  png(paste0("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/panBrainMarkers/panBrain_t-sn-level_1vALL_top40markers-",i,"_logExprs_May2020.png"), height=1900, width=1200)
   print(
     plotExpression(sce.all.n12, exprs_values = "logcounts", features=genes.top40.t.1vAll[[i]],
                    x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7, ncol=5,
