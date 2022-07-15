@@ -21,7 +21,7 @@ library(rtracklayer)
 #### AS SUBMITTED JOB ====
 
 ### Read in preprint 'samples.manifest.full' for streamlining
-samples.prepr <- read.table("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/samples.manifest.full",
+samples.prepr <- read.table("/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/samples.manifest.full",
                             sep="\t", header=F)$V5
 
     # Drop Br5287-DLPFC (poor quality sample; dropped for preprint) and the test sucrose samples

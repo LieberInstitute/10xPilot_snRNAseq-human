@@ -6,10 +6,10 @@
 library(ShortRead)
 library(jaffelab)
 
-FASTQ.dir <- "/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021/"
+FASTQ.dir <- "/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Feb2021/"
 
 ### Read in (2021) 'samples.manifest'
-samples.rev <- read.table("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021/samples.manifest",
+samples.rev <- read.table("/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Feb2021/samples.manifest",
                                sep="\t", header=F)$V1
 
 R1files <- data.frame(

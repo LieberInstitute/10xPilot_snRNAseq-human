@@ -363,7 +363,7 @@ rownames(n14.metrics.collapsed) <- n14.samples
 
 
 ## And revision n=10
-samples.revision <- read.table("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021/samples.manifest",
+samples.revision <- read.table("/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Feb2021/samples.manifest",
                                sep="\t", header=F)$V1
     #  [1] "Br5276_sACC_neun" "Br5400_NAc"       "Br5276_NAc"       "Br5701_NAc_neun" 
     #  [5] "Br5701_sACC_neun" "Br5207_DLPFC"     "Br5276_Amy_neun"  "Br5400_Amy_neun" 

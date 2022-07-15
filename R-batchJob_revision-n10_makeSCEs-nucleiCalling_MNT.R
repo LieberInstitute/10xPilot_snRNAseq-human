@@ -21,7 +21,7 @@ library(rtracklayer)
 #### AS SUBMITTED JOB ====
 
 ### Read in (2021) 'samples.manifest' for streamlining
-samples.revision <- read.table("/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021/samples.manifest",
+samples.revision <- read.table("/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Feb2021/samples.manifest",
                                sep="\t", header=F)$V1
 
 # Make list of paths

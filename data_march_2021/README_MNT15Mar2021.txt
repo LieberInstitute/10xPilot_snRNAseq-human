@@ -1,6 +1,6 @@
 ## MNT comment 15Mar2021
 # All of these sample data have been moved to their respective 'donor_tissue' dir in
-MOVETO=/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Feb2021
+MOVETO=/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Feb2021
 # (where the n14+ pilot expansion data FASTQs are)
 
 ## 3 samples (these were Frankenstein-prepped and sorted/run through 10x Chromium in-house

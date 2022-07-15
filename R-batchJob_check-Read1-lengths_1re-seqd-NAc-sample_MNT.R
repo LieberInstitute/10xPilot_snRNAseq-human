@@ -5,7 +5,7 @@
 library(ShortRead)
 library(jaffelab)
 
-FASTQ.dir <- "/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ/Br5182_NAc_reseq/"
+FASTQ.dir <- "/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published/Br5182_NAc_reseq/"
 files.dirs <- list.files(FASTQ.dir, pattern="^S")
 
 R1files <- data.frame(
