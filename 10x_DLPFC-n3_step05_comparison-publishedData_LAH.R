@@ -352,16 +352,16 @@ round(cor_t_dlpfc, 3)
 theSeq.all = seq(-.95, .95, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-pfc_with_LIBD-10x-DLPFC_LAH2021.pdf")
-pheatmap(cor_t_dlpfc,
-         color=my.col.all,
-         cluster_cols=F, cluster_rows=F,
-         breaks=theSeq.all,
-         fontsize=9.5, fontsize_row=11, fontsize_col=11,
-         display_numbers=T, number_format="%.2f", fontsize_number=5.0,
-         legend_breaks=c(seq(-0.95,0.95,by=0.475)),
-         main="Correlation of cluster-specific t's between LIBD DLPFC to \n PFC from (Velmeshev et al. Science 2019)")
-dev.off()
+# pdf("pdfs/revision/exploration/overlap-velmeshev-ASD-pfc_with_LIBD-10x-DLPFC_LAH2021.pdf")
+# pheatmap(cor_t_dlpfc,
+#          color=my.col.all,
+#          cluster_cols=F, cluster_rows=F,
+#          breaks=theSeq.all,
+#          fontsize=9.5, fontsize_row=11, fontsize_col=11,
+#          display_numbers=T, number_format="%.2f", fontsize_number=5.0,
+#          legend_breaks=c(seq(-0.95,0.95,by=0.475)),
+#          main="Correlation of cluster-specific t's between LIBD DLPFC to \n PFC from (Velmeshev et al. Science 2019)")
+# dev.off()
 
 ### What if compared between both the .acc set of stats vs the .pfc?? =============
 

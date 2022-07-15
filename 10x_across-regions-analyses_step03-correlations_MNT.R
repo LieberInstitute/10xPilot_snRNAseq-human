@@ -641,6 +641,52 @@ plotExpressionCustom(sce.dlpfc, anno_name="cellType", features_name="some AMY 'I
                      features=c("VIP", "CALB2", "CRH", "PTHLH"), ncol=2) +
   
 
+### Final revision add - 23-24Aug2021 ==========
+  # Q: Is the 'excit-signature' MSNs clustering with mostly excitatory neurons
+  #    robust to bootstrapping?
+
+#install.packages("pvclust")
+library(pvclust)
+
+## Extract clusters from `pheatmap`
+ #    (reference: https://www.biostars.org/p/287512/)
+out <- pheatmap(cor_t_defined.neu, 
+                show_rownames=T, cluster_cols=T, cluster_rows=T, scale="none",
+                cex=1, clustering_distance_rows="euclidean", cex=1,
+                clustering_distance_cols="euclidean", clustering_method="complete",
+                border_color=FALSE, fontsize_row=6.2, fontsize_col=6.2,)
+
+# Test `pvclust()`
+set.seed(109)
+test.pvclust <- pvclust(cor_t_defined.neu, method.dist="euclidean",
+                        method.hclust="complete", nboot=10)
+
+plot(test.pvclust, cex=0.7, hang=-1)
+
+table(rownames(cor_t_defined.neu[out$tree_row[["order"]],]) == 
+        rownames(cor_t_defined.neu[test.pvclust$hclust$order,]))
+     # all 69 TRUE - good.
+
+set.seed(109)
+boot.pvclust <- pvclust(cor_t_defined.neu, method.dist="euclidean",
+                        method.hclust="complete", nboot=5000)
+    # With 56G RAM interactively, took ~15min without parallelization
+
+## What if performed on the original ts.neu?
+# Just do the default 1000 bootstraps:
+set.seed(109)
+boot.onTs <- pvclust(ts.defined.neu, method.dist="euclidean",
+                     method.hclust="complete", nboot=1000)
+
+# Plot both iterations
+pdf("pdfs/revision/acrossRegions_correlation_Neuronal-ts_pvclust-dendrogram_MNT2021.pdf", width=10, height=6)
+plot(boot.pvclust, cex=0.7, hang=-1, cex.pv=.6, main="pvclust on correlation matrix (nboot=5000)")
+plot(boot.onTs, cex=0.7, hang=-1, cex.pv=.6, main="pvclust on input cluster-defining t's (nboot=1000, default)")
+pvrect(boot.onTs, alpha=0.95)
+dev.off()
+
+save(boot.pvclust, boot.onTs, file="rdas/revision/zforRef_pvclust_tests_MNT2021.rda")
+
 
 ### NAc 'excit' MSNs vs others?? =============================
   # 'MSN.D1_A', 'MSN.D1_D', 'MSN.D2_A', 'MSN.D2_B' vs the rest
@@ -1037,7 +1083,7 @@ dev.off()
 
 
 
-# Session info for 28Jul2021 ==============
+# Session info for 23Aug2021 ==============
 sessionInfo()
 # R version 4.0.4 RC (2021-02-08 r79975)
 # Platform: x86_64-pc-linux-gnu (64-bit)
@@ -1058,58 +1104,49 @@ sessionInfo()
 # [9] base     
 # 
 # other attached packages:
-#   [1] clusterProfiler_3.18.1      gridExtra_2.3               pheatmap_1.0.12            
+#   [1] pvclust_2.2-0               gridExtra_2.3               pheatmap_1.0.12            
 # [4] RColorBrewer_1.1-2          lattice_0.20-41             limma_3.46.0               
 # [7] jaffelab_0.99.30            rafalib_1.0.0               DropletUtils_1.10.3        
-# [10] batchelor_1.6.3             scran_1.18.7                org.Hs.eg.db_3.12.0        
-# [13] EnsDb.Hsapiens.v86_2.99.0   ensembldb_2.14.1            AnnotationFilter_1.14.0    
-# [16] GenomicFeatures_1.42.3      AnnotationDbi_1.52.0        scater_1.18.6              
-# [19] ggplot2_3.3.3               SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
+# [10] batchelor_1.6.3             scran_1.18.7                scater_1.18.6              
+# [13] ggplot2_3.3.3               org.Hs.eg.db_3.12.0         EnsDb.Hsapiens.v86_2.99.0  
+# [16] ensembldb_2.14.1            AnnotationFilter_1.14.0     GenomicFeatures_1.42.3     
+# [19] AnnotationDbi_1.52.0        SingleCellExperiment_1.12.0 SummarizedExperiment_1.20.0
 # [22] Biobase_2.50.0              GenomicRanges_1.42.0        GenomeInfoDb_1.26.7        
 # [25] IRanges_2.24.1              S4Vectors_0.28.1            BiocGenerics_0.36.1        
 # [28] MatrixGenerics_1.2.1        matrixStats_0.58.0         
 # 
 # loaded via a namespace (and not attached):
-#   [1] shadowtext_0.0.8          fastmatch_1.1-3           BiocFileCache_1.14.0     
-# [4] plyr_1.8.6                igraph_1.2.6              lazyeval_0.2.2           
-# [7] splines_4.0.4             BiocParallel_1.24.1       digest_0.6.27            
-# [10] GOSemSim_2.16.1           viridis_0.6.0             GO.db_3.12.1             
-# [13] fansi_0.4.2               magrittr_2.0.1            memoise_2.0.0            
-# [16] graphlayouts_0.7.1        Biostrings_2.58.0         R.utils_2.10.1           
-# [19] askpass_1.1               enrichplot_1.10.2         prettyunits_1.1.1        
-# [22] colorspace_2.0-0          ggrepel_0.9.1             blob_1.2.1               
-# [25] rappdirs_0.3.3            dplyr_1.0.5               crayon_1.4.1             
-# [28] RCurl_1.98-1.3            scatterpie_0.1.6          glue_1.4.2               
-# [31] polyclip_1.10-0           gtable_0.3.0              zlibbioc_1.36.0          
-# [34] XVector_0.30.0            DelayedArray_0.16.3       BiocSingular_1.6.0       
-# [37] Rhdf5lib_1.12.1           HDF5Array_1.18.1          scales_1.1.1             
-# [40] DOSE_3.16.0               DBI_1.1.1                 edgeR_3.32.1             
-# [43] Rcpp_1.0.6                viridisLite_0.4.0         progress_1.2.2           
-# [46] dqrng_0.3.0               bit_4.0.4                 rsvd_1.0.5               
-# [49] ResidualMatrix_1.0.0      httr_1.4.2                fgsea_1.16.0             
-# [52] ellipsis_0.3.2            farver_2.1.0              pkgconfig_2.0.3          
-# [55] XML_3.99-0.6              R.methodsS3_1.8.1         scuttle_1.0.4            
-# [58] dbplyr_2.1.1              locfit_1.5-9.4            utf8_1.2.1               
-# [61] labeling_0.4.2            reshape2_1.4.4            tidyselect_1.1.1         
-# [64] rlang_0.4.11              munsell_0.5.0             tools_4.0.4              
-# [67] cachem_1.0.4              downloader_0.4            generics_0.1.0           
-# [70] RSQLite_2.2.7             stringr_1.4.0             fastmap_1.1.0            
-# [73] bit64_4.0.5               tidygraph_1.2.0           purrr_0.3.4              
-# [76] ggraph_2.0.5              sparseMatrixStats_1.2.1   R.oo_1.24.0              
-# [79] DO.db_2.9                 xml2_1.3.2                biomaRt_2.46.3           
-# [82] compiler_4.0.4            rstudioapi_0.13           beeswarm_0.4.0           
-# [85] curl_4.3                  tweenr_1.0.2              tibble_3.1.1             
-# [88] statmod_1.4.35            stringi_1.5.3             bluster_1.0.0            
-# [91] ProtGenerics_1.22.0       Matrix_1.3-4              vctrs_0.3.8              
-# [94] pillar_1.6.0              lifecycle_1.0.0           rhdf5filters_1.2.0       
-# [97] BiocManager_1.30.12       BiocNeighbors_1.8.2       cowplot_1.1.1            
-# [100] data.table_1.14.0         bitops_1.0-7              irlba_2.3.3              
-# [103] qvalue_2.22.0             rtracklayer_1.50.0        R6_2.5.0                 
-# [106] vipor_0.4.5               MASS_7.3-53.1             assertthat_0.2.1         
-# [109] rhdf5_2.34.0              openssl_1.4.3             withr_2.4.2              
-# [112] GenomicAlignments_1.26.0  Rsamtools_2.6.0           GenomeInfoDbData_1.2.4   
-# [115] hms_1.0.0                 grid_4.0.4                beachmat_2.6.4           
-# [118] tidyr_1.1.3               rvcheck_0.1.8             DelayedMatrixStats_1.12.3
-# [121] segmented_1.3-4           googledrive_2.0.0         ggforce_0.3.3            
-# [124] ggbeeswarm_0.6.0 
+#   [1] googledrive_2.0.0         ggbeeswarm_0.6.0          colorspace_2.0-0         
+# [4] ellipsis_0.3.2            scuttle_1.0.4             bluster_1.0.0            
+# [7] XVector_0.30.0            fs_1.5.0                  BiocNeighbors_1.8.2      
+# [10] rstudioapi_0.13           farver_2.1.0              bit64_4.0.5              
+# [13] fansi_0.4.2               xml2_1.3.2                splines_4.0.4            
+# [16] R.methodsS3_1.8.1         sparseMatrixStats_1.2.1   cachem_1.0.4             
+# [19] Rsamtools_2.6.0           ResidualMatrix_1.0.0      dbplyr_2.1.1             
+# [22] R.oo_1.24.0               HDF5Array_1.18.1          compiler_4.0.4           
+# [25] httr_1.4.2                dqrng_0.3.0               assertthat_0.2.1         
+# [28] Matrix_1.3-4              fastmap_1.1.0             lazyeval_0.2.2           
+# [31] gargle_1.2.0              BiocSingular_1.6.0        prettyunits_1.1.1        
+# [34] tools_4.0.4               rsvd_1.0.5                igraph_1.2.6             
+# [37] gtable_0.3.0              glue_1.4.2                GenomeInfoDbData_1.2.4   
+# [40] dplyr_1.0.5               rappdirs_0.3.3            Rcpp_1.0.6               
+# [43] vctrs_0.3.8               Biostrings_2.58.0         rhdf5filters_1.2.0       
+# [46] rtracklayer_1.50.0        DelayedMatrixStats_1.12.3 stringr_1.4.0            
+# [49] beachmat_2.6.4            lifecycle_1.0.0           irlba_2.3.3              
+# [52] statmod_1.4.35            XML_3.99-0.6              edgeR_3.32.1             
+# [55] zlibbioc_1.36.0           scales_1.1.1              hms_1.0.0                
+# [58] ProtGenerics_1.22.0       rhdf5_2.34.0              curl_4.3                 
+# [61] memoise_2.0.0             segmented_1.3-4           biomaRt_2.46.3           
+# [64] stringi_1.5.3             RSQLite_2.2.7             BiocParallel_1.24.1      
+# [67] rlang_0.4.11              pkgconfig_2.0.3           bitops_1.0-7             
+# [70] purrr_0.3.4               Rhdf5lib_1.12.1           GenomicAlignments_1.26.0 
+# [73] bit_4.0.4                 tidyselect_1.1.1          magrittr_2.0.1           
+# [76] R6_2.5.0                  generics_0.1.0            DelayedArray_0.16.3      
+# [79] DBI_1.1.1                 pillar_1.6.0              withr_2.4.2              
+# [82] RCurl_1.98-1.3            tibble_3.1.1              crayon_1.4.1             
+# [85] utf8_1.2.1                BiocFileCache_1.14.0      viridis_0.6.0            
+# [88] progress_1.2.2            locfit_1.5-9.4            grid_4.0.4               
+# [91] blob_1.2.1                R.utils_2.10.1            openssl_1.4.3            
+# [94] munsell_0.5.0             beeswarm_0.4.0            viridisLite_0.4.0        
+# [97] vipor_0.4.5               askpass_1.1
 

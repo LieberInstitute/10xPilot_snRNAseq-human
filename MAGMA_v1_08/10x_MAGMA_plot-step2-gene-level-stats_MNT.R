@@ -722,6 +722,57 @@ dev.off()
 
 
 
+## MNT Feb2022 - some exploration ======
+### MSN.D1_C is the strongest associating with 'SmkInit'
+# There're only four pairwise-specific D1_C markers printed - might be too strict
+markers.nac.enriched <- lapply(markers.nac.t.1vAll, function(x){x[[2]]})
+markerList.nac <- lapply(markers.nac.enriched, function(x){rownames(x)[x$log.FDR < log(1e-6) & x$non0median==T]})
+
+D1_E.markers.enriched <- markerList.nac[["MSN.D1_E"]]
+
+table(D1_E.markers.enriched %in% liu.pascal.list[["CigDay"]]$Gene.Symbol &
+        D1_E.markers.enriched %in% geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT>3])
+
+
+printThese <- D1_E.markers.enriched[D1_E.markers.enriched %in% liu.pascal.list[["CigDay"]]$Gene.Symbol &
+                                      D1_E.markers.enriched %in% geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT>3]]
+#or (not filtering on only those reported in the PASCAL results):
+#printThese <- D1_E.markers.enriched[D1_E.markers.enriched %in% geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT>3]]
+
+
+pdf("MAGMA_v1_08/graphics/MAGMA-CigDay-Zover3.0_MSN.D1_E-enrichedGenes.pdf", width=12)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=head(printThese,9), scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+dev.off()
+
+
+
+## Alternatively - not filtering on only those reported in the PASCAL results
+printThese <- D1_E.markers.enriched[D1_E.markers.enriched %in% geneStats[["CigDay"]]$Symbol.uniq[geneStats[["CigDay"]]$ZSTAT>3]]
+
+pdf("MAGMA_v1_08/graphics/MAGMA-CigDay-Zover3.0_MSN.D1_E-enrichedGenes_NOT-PASCAL-filtered.pdf", width=12)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=head(printThese,9), scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=printThese[10:18], scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=printThese[19:27], scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=printThese[28:36], scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+plotExpressionCustom(sce.nac, anno_name="cellType", features_name="MSN.D1_E-containing 'CigDay'", ncol=3,
+                     features=printThese[37:42], scales="free_y") +
+  scale_color_manual(values=cell_colors.nac)
+dev.off()
+
+
+
+
+
 ### Session info for 20Jul2021 ====================================
 sessionInfo()
 

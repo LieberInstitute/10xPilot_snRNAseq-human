@@ -258,6 +258,46 @@ as.data.frame(prop.table(table(sce.amy$cellType.split)))
 # 11   Oligo 0.527651170
 # 12     OPC 0.095259799
 
+
+## For BrBa-AnJa, et al (PTSD) REVISION ===========
+# print: c("NPY", "CORT", "CRHBP", "DLL3", "NXPH2", "SST")
+#        c("FERMT3", "CRHBP", "FOLR2", "PTGS1", "SLCO1C1", "P2RY13", "GLT8D2")
+load("rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda", verbose=T)
+# sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo
+
+sce.amy = sce.amy[,!grepl("drop", sce.amy$cellType)]
+sce.amy$cellType = droplevels(sce.amy$cellType)
+
+printThese <- list('first' = c("NPY", "CORT", "CRHBP", "DLL3", "NXPH2", "SST"),
+                   'second' = c("FERMT3", "CRHBP", "FOLR2", "PTGS1", "SLCO1C1", "P2RY13", "GLT8D2"))
+
+pdf("pdfs/pubFigures/zforBrBa-AnJa_AMY-cellType_requestedExprsPlots_Nov2021.pdf", height=6, width=8)
+for(i in 1:length(printThese)){
+  print(
+    plotExpression(sce.amy, exprs_values = "logcounts", features=c(printThese[[i]]),
+                   x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                   ncol=3, add_legend=F) + stat_summary(fun = median, fun.min = median, fun.max = median,
+                                                        geom = "crossbar", width = 0.3,
+                                                        colour="black") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+  )
+}
+dev.off()
+
+pdf("pdfs/pubFigures/zforBrBa-AnJa_AMY-cellType_CORT-Exprs_Nov2021.pdf", height=4, width=6)
+print(
+  plotExpression(sce.amy, exprs_values = "logcounts", features="CORT",
+                 x="cellType", colour_by="cellType", point_alpha=0.5, point_size=.7,
+                 add_legend=F, theme_size=18) + stat_summary(fun = median, fun.min = median, fun.max = median,
+                                                        geom = "crossbar", width = 0.3,
+                                                        colour="black") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20))  
+)
+dev.off()
+
+sum(assay(sce.amy, "counts")["CORT", ]) # 0
+
+
 ### METRICS ====================================================
 
 ## Metrics and stuff for paper, all n=14 samples that went into analyses ===
