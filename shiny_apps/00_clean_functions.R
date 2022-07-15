@@ -136,7 +136,7 @@ create_small_sce_2021 <- function(sce_original) {
     }
     rowData(sce_small) <- rowdat.sce
 
-    print(c(lobstr::obj_size(sce_original), lobstr::obj_size(sce_small)) / 1024^3)
+    print(c(lobstr::obj_size(sce_original), lobstr::obj_size(sce_small)) )
 
     return(sce_small)
 }

@@ -42,7 +42,7 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 ### Setting up homologous gene IDs, for mapping b/tw species =============
 
 ## 10x-pilot human Amyg SCE
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=T)
 #rm(chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy, cell_colors.amy)
 
@@ -241,7 +241,7 @@ rownames(ts.mmMeA) <- rowData(sce.mm.sub)$JAX.geneID[match(fixTo, rownames(sce.m
 
 ## Human t stats subset/re-ordering ===
 # Bring in human stats; create t's
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/markers-stats_Amyg-n5_findMarkers-SN-LEVEL_MNT2021.rda", verbose=T)
     # markers.amy.t.pw, markers.amy.wilcox.block, markers.amy.t.1vAll, medianNon0.amy
     rm(markers.amy.t.pw, markers.amy.wilcox.block)
 
@@ -279,7 +279,7 @@ my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 # Re-order mouse labels - move MG/MU to after neuronal subclusters
 cor_t_amy <- cor_t_amy[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_MNT2021.pdf")
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_MNT2021.pdf")
 pheatmap(cor_t_amy,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
@@ -367,7 +367,7 @@ cor_t_mouse <- cor_t_mouse[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
 cor_t_top <- cor_t_top[ ,c(1,2, 5,13:20,6:12, 3,4, 21:23)]
 
 # Print all four iterations
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_wValues_MNT2021.pdf")
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/overlap-mouseMeA-2019_x_LIBD-10x-AMY_allGenes_wValues_MNT2021.pdf")
 pheatmap(cor_t_amy,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,
@@ -700,7 +700,7 @@ cor_t_amy_sub <- ifelse(cor_t_amy_sub >= 0.5, 0.5, cor_t_amy_sub)
 theSeq.all = seq(-.5, .5, by = 0.01)
 my.col.all <- colorRampPalette(brewer.pal(7, "BrBG"))(length(theSeq.all)-1)
 
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_FINAL_May2020.pdf",width=8)
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/exploration/HongLab-UCLA_mmMeA/overlap-mouseMeA-2019-fullSubclusters_with_LIBD-10x-AMY_SN-LEVEL-stats_FINAL_May2020.pdf",width=8)
 pheatmap(cor_t_amy_sub,
          color=my.col.all,
          cluster_cols=F, cluster_rows=F,

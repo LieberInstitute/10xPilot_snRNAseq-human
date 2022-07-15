@@ -29,13 +29,13 @@ tableau20 = c("#1F77B4", "#AEC7E8", "#FF7F0E", "#FFBB78", "#2CA02C",
 # ===
 
 # Load 'pilot' samples
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n14_preprint_SCEs_processing-QC_MNTMar2021.rda",
      verbose=T)
     # pilot.data, pilot.data.unfiltered, e.out, ref.sampleInfo
     rm(pilot.data.unfiltered, e.out)
 
 # Load 2021 expansion set
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda", verbose=T)
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/all-FACS-n10_2021rev_SCEs_processing-QC_MNTMar2021.rda", verbose=T)
     # pilot.data.2, pilot.data.2.unfiltered, e.out.2, ref.sampleInfo.rev
     rm(pilot.data.2.unfiltered, e.out.2)
 
@@ -107,7 +107,7 @@ save(sce.amy, chosen.hvgs.amy, ref.sampleInfo, ref.sampleInfo.rev,
 
 
 ### Picking up with optimally-defined PC space ===
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda",
      verbose=TRUE)
     # sce.amy, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo, ref.sampleInfo.rev
 
@@ -154,7 +154,7 @@ ref.sampleInfo <- rbind(ref.sampleInfo, ref.sampleInfo.rev)
 
 # Save for now
 save(sce.amy, chosen.hvgs.amy, pc.choice.amy, ref.sampleInfo,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
 ### Step 2: Hierarchical clustering of pseudo-bulked ("PB'd") counts
@@ -365,7 +365,7 @@ cell_colors.amy
 
 # Save
 save(sce.amy, chosen.hvgs.amy, pc.choice.amy, clusterRefTab.amy, ref.sampleInfo, annotationTab.amy, cell_colors.amy,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_Amyg-n5_cleaned-combined_SCE_MNT2021.rda")
 
 
 

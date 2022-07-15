@@ -156,7 +156,7 @@ The following object is masked from ‘package:stats’:
 
 Loading required package: grid
 Loading required package: futile.logger
-here() starts at /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
+here() starts at /dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL
 
 Attaching package: ‘data.table’
 

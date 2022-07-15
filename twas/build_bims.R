@@ -104,7 +104,7 @@ print(dim(rse))
 ## Using the files where the SNV names have been made unique
 ## using make.names(unique = TRUE)
 ## Details at filter_data/filter_snps.R
-bim_file <- "/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs"
+bim_file <- "/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/filter_data/unique_snps_bim/LIBD_merged_h650_1M_Omni5M_Onmi2pt5_Macrogen_QuadsPlus_dropBrains_maf01_hwe6_geno10_hg38_filtered_NAc_Nicotine_uniqueSNPs"
 
 message(paste(Sys.time(), "reading the bim file", bim_file))
 bim <- fread(

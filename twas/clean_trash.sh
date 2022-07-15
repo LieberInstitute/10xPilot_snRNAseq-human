@@ -8,7 +8,7 @@
 echo "**** Job starts ****"
 date
 
-rm -fr /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/trash/*
+rm -fr /dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/trash/*
 
 echo "**** Job ends ****"
 date

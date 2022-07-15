@@ -21,12 +21,23 @@ Finally, we have two versions of this resource. The initial version was shared o
 
 ### Peer-reviewed
 
-TODO
+Matthew N. Tran, Kristen R. Maynard, Abby Spangler, Louise A. Huuki, Kelsey D. Montgomery, Vijay Sadashivaiah, Madhavi Tippani, Brianna K. Barry, Dana B. Hancock, Stephanie C. Hicks, Joel E. Kleinman, Thomas M. Hyde, Leonardo Collado-Torres, Andrew E. Jaffe, Keri Martinowich. Single-nucleus transcriptome analysis reveals cell-type-specific molecular signatures across reward circuitry in the human brain. _Neuron_ 109, 3088-3103.E5. https://doi.org/10.1016/j.neuron.2021.09.001
 
 Here's the citation information on [BibTeX](https://en.wikipedia.org/wiki/BibTeX) format.
 
 ```
-TODO
+@article {Tran2021,
+	author = {Matthew N. Tran and Kristen R. Maynard and Abby Spangler and Louise A. Huuki and Kelsey D. Montgomery and Vijay Sadashivaiah and Madhavi Tippani and Brianna K. Barry and Dana B. Hancock and Stephanie C. Hicks and Joel E. Kleinman and Thomas M. Hyde and Leonardo Collado-Torres and Andrew E. Jaffe and Keri Martinowich},
+	title = {Single-nucleus transcriptome analysis reveals cell-type-specific molecular signatures across reward circuitry in the human brain},
+	url = {https://doi.org/10.1016/j.neuron.2021.09.001},
+	year = {2021},
+	doi = {10.1016/j.neuron.2021.09.001},
+	publisher = {Elsevier {BV}},
+	volume = {109},
+	number = {19},
+	pages = {3088--3103.e5},
+	journal = {Neuron}
+}
 ```
 
 ### Pre-print
@@ -183,5 +194,5 @@ Here, nuclei are clustered across all brain regions, together, and then annotate
 
 ## LIBD internal
 
-* JHPCE location: `/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
+* JHPCE location: `/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
 * FASTQ files: `/dcl01/ajaffe/data/lab/singleCell/10x_pilot/FASTQ`

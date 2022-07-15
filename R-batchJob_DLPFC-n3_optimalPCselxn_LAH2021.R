@@ -21,7 +21,7 @@ library(Rtsne)
 # ===
 
 
-load("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda",
+load("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda",
      verbose=TRUE)
     # sce.dlpfc, chosen.hvgs.dlpfc
 
@@ -35,7 +35,7 @@ metadata(pc.choice.dlpfc)$chosen
 
 
 ## Plot n Clusters vs. d PCs
-pdf("/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_DLPFC-n3_getClusteredPCs-results-w100pcs_LAH2021.pdf")
+pdf("/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/pdfs/revision/regionSpecific_DLPFC-n3_getClusteredPCs-results-w100pcs_LAH2021.pdf")
 plot(pc.choice.dlpfc$n.pcs, pc.choice.dlpfc$n.clusters,
      main=paste0("Combined DLPFC (n=3) samples (d PCs choice = ", metadata(pc.choice.dlpfc)$chosen, ")"))
 abline(v=metadata(pc.choice.dlpfc)$chosen, col="red", lty="dashed", lwd=0.8)  
@@ -44,7 +44,7 @@ dev.off()
 
 # Save
 save(sce.dlpfc, chosen.hvgs.dlpfc, pc.choice.dlpfc, ref.sampleInfo, ref.sampleInfo.rev,
-     file="/dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
+     file="/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/rdas/revision/regionSpecific_DLPFC-n3_cleaned-combined_SCE_LAH2021.rda")
 
 # sgejobs::job_single('R-batchJob_DLPFC-n3_optimalPCselxn_LAH2021', create_shell = TRUE, queue= 'bluejay', memory = '50G', command = "Rscript R-batchJob_DLPFC-n3_optimalPCselxn_LAH2021.R")
 ## Reproducibility information

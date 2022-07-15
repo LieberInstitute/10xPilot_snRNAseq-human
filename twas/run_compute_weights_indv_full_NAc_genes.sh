@@ -19,7 +19,7 @@ mkdir -p NAc_gene/tmp_files
 mkdir -p NAc_gene/out_files
 
 # For GEMMA
-ln -s /dcl01/lieber/ajaffe/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/ NAc_gene/output
+ln -s /dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL/twas/NAc_gene/ NAc_gene/output
 
 ## For running the main script
 qsub compute_weights_indv_full_NAc_genes.sh
