@@ -191,8 +191,10 @@ Here, nuclei are clustered across all brain regions, together, and then annotate
   * [top 40 genes](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/blob/master/tables/top40genesLists_panBrain-n12_cellType_SN-LEVEL-tests_May2020.csv)
   * [exploration plots](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/tree/master/pdfs/exploration/panBrainMarkers)
 
+## Contact
 
-## LIBD internal
-
-* JHPCE location: `/dcs04/lieber/marmaypag/Tran_LIBD001/Matt/MNT_thesis/snRNAseq/10x_pilot_FINAL`
-* FASTQ files: `/dcs04/lieber/lcolladotor/rawDataTDSC_LIBD001/raw-data/2021-10-15_Tran2021_published`
+We welcome public questions, bug reports, and suggestions through
+[LieberInstitute/10xPilot_snRNAseq-human/issues](https://github.com/LieberInstitute/10xPilot_snRNAseq-human/issues).
+Public discussions help other researchers find the answer later, so
+please use GitHub issues whenever possible and avoid posting sensitive
+or private data.
